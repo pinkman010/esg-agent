@@ -1,0 +1,38 @@
+{
+  "manifest_version": "1.0",
+  "created_at": "2026-06-25",
+  "sources": [
+    {
+      "relative_path": "data/knowledge_base/peer_reports/Envision Energy 2024-zh.pdf",
+      "document_type": "esg_report",
+      "title": "Envision Energy 2024 ESG Report (Chinese)",
+      "publisher": "Envision Energy",
+      "language": "zh-CN",
+      "reporting_period": {
+        "start": "2024-01-01",
+        "end": "2024-12-31"
+      },
+      "official_source_url": "https://www.envision-group.com/sustainability",
+      "download_or_verified_date": "2026-06-24",
+      "file_size_bytes": 15202630,
+      "page_count": 78,
+      "sha256": "57360DCDA8E6256726BE5D2A49F8921E13187B40AE44661549903F702DF38068",
+      "intended_use": "P0 单报告披露分析的企业披露事实来源；用于证据定位、人工复核和评测。",
+      "provenance_status": "official_catalogue_verified_local_copy_not_binary_matched"
+    },
+    {
+      "relative_path": "data/knowledge_base/standards/gri_reference/GRI_Standards_Official_Consolidated_Set_en.pdf",
+      "document_type": "gri_standards_consolidated_set",
+      "title": "Consolidated Set of the GRI Standards",
+      "publisher": "Global Reporting Initiative (GRI)",
+      "language": "en",
+      "official_source_url": "https://www.globalreporting.org/pdf.ashx?id=12024",
+      "download_or_verified_date": "2026-06-24",
+      "file_size_bytes": 25992242,
+      "page_count": 1022,
+      "sha256": "5FA47C6680D10DCFF7E3781952F95C7B2AD58A27972812330F7AD40F034FF466",
+      "intended_use": "GRI 英文权威原始参考资料；P0 实际适用条款、版本和生效日期以后续 p0_gri_manifest 为准。",
+      "provenance_status": "official_download_sha256_verified"
+    }
+  ]
+}

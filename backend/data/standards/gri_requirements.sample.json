@@ -1,0 +1,18 @@
+[
+  {
+    "standard_id": "GRI",
+    "standard_version": "2021",
+    "disclosure_id": "GRI 302",
+    "requirement_id": "GRI 302-1-a",
+    "requirement_text": "Seed subset only: disclose total energy consumption within the organization.",
+    "keywords": ["energy", "consumption", "organization"]
+  },
+  {
+    "standard_id": "GRI",
+    "standard_version": "2021",
+    "disclosure_id": "GRI 305",
+    "requirement_id": "GRI 305-1-a",
+    "requirement_text": "Seed subset only: disclose gross direct Scope 1 GHG emissions.",
+    "keywords": ["scope 1", "greenhouse gas", "emissions"]
+  }
+]

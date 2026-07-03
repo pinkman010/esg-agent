@@ -1,0 +1,100 @@
+# 环境变量文件
+.env
+.env.*
+!.env.example
+
+# Python 缓存和测试输出
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Python 虚拟环境和 uv 本地缓存
+.venv/
+.uv-cache/
+.uv-python/
+
+# Node / Next.js 依赖和构建产物
+node_modules/
+.pnpm-store/
+.next/
+coverage/
+dist/
+*.tsbuildinfo
+
+# 二进制文档和办公文件
+*.pdf
+*.doc
+*.docx
+*.xls
+*.xlsx
+*.xlsm
+
+# 敏感凭证和证书
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+
+# 本地数据库、备份和转储文件
+*.db
+*.sqlite
+*.sqlite3
+*.dump
+*.bak
+
+# 压缩包和归档文件
+*.zip
+*.7z
+*.rar
+*.tar
+*.tar.gz
+
+# 操作系统生成文件
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# IDE 本地配置
+.idea/
+.vscode/
+
+# 测试和浏览器报告
+playwright-report/
+test-results/
+junit.xml
+
+# 后端运行时文件
+# 保留目录占位文件，忽略上传报告、派生文件和导出文件。
+backend/data/runtime/*
+!backend/data/runtime/.gitkeep
+
+!backend/data/runtime/uploads/
+backend/data/runtime/uploads/*
+!backend/data/runtime/uploads/.gitkeep
+
+!backend/data/runtime/derived/
+backend/data/runtime/derived/*
+!backend/data/runtime/derived/.gitkeep
+
+!backend/data/runtime/exports/
+backend/data/runtime/exports/*
+!backend/data/runtime/exports/.gitkeep
+
+# 本地 Codex / 自动化状态
+.superpowers/
+.agents/
+.playwright-mcp/
+
+# 项目临时文件
+tmp/
+
+# 日志文件
+*.log
+
+# 本地 agent 协作说明
+AGENTS.md

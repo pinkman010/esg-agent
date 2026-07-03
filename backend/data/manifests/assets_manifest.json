@@ -1,0 +1,74 @@
+﻿{
+    "assets":  [
+                   {
+                       "source_path":  "../envision/data/knowledge_base/peer_reports/Envision Energy 2024-zh.pdf",
+                       "target_path":  "backend/data/reports/Envision Energy 2024-zh.pdf",
+                       "sha256":  "57360dcda8e6256726be5d2a49f8921e13187b40ae44661549903f702df38068",
+                       "size_bytes":  15202630,
+                       "asset_type":  "esg_report",
+                       "migration_reason":  "First real-report validation source for single-report ESG disclosure workflow.",
+                       "material_status":  "raw",
+                       "copied_at":  "2026-07-02",
+                       "source_protection":  "source copied only; original source directory was not modified"
+                   },
+                   {
+                       "source_path":  "../envision/data/knowledge_base/standards/gri_reference/GRI_Standards_Official_Consolidated_Set_en.pdf",
+                       "target_path":  "backend/data/standards/gri/GRI_Standards_Official_Consolidated_Set_en.pdf",
+                       "sha256":  "5fa47c6680d10dcff7e3781952f95c7b2ad58a27972812330f7ad40f034ff466",
+                       "size_bytes":  25992242,
+                       "asset_type":  "gri_standard_pdf",
+                       "migration_reason":  "Official GRI reference material for first real-standard validation.",
+                       "material_status":  "raw",
+                       "copied_at":  "2026-07-02",
+                       "source_protection":  "source copied only; original source directory was not modified"
+                   },
+                   {
+                       "source_path":  "../envision/data/knowledge_base/manifests/p0_source_manifest.json",
+                       "target_path":  "backend/data/manifests/source_manifest.json",
+                       "sha256":  "cf3a86ba43ee82759736db950b314a30fbac0b7fb013ceae91e3fc0f1542adf8",
+                       "size_bytes":  1727,
+                       "asset_type":  "source_manifest",
+                       "migration_reason":  "Preserves provenance metadata for copied report and GRI standard.",
+                       "material_status":  "source_metadata",
+                       "copied_at":  "2026-07-02",
+                       "source_protection":  "source copied only; original source directory was not modified"
+                   },
+                   {
+                       "source_path":  "../envision/data/knowledge_base/manifests/p0_gri_disclosure_manifest.json",
+                       "target_path":  "backend/data/manifests/gri_disclosure_manifest.json",
+                       "sha256":  "e6c0920313713a59859ad497540335a220ddfb0f290cb7ae448ef7bd470657e9",
+                       "size_bytes":  80151,
+                       "asset_type":  "gri_manifest",
+                       "migration_reason":  "Provides scoped GRI disclosure manifest for first real-standard validation.",
+                       "material_status":  "derived_metadata",
+                       "copied_at":  "2026-07-02",
+                       "source_protection":  "source copied only; original source directory was not modified"
+                   },
+                   {
+                       "source_path":  "../envision/data/knowledge_base/manifests/p0_gri_requirement_pack.json",
+                       "target_path":  "backend/data/manifests/gri_requirement_pack.json",
+                       "sha256":  "efeddba23f93e7cb08cdbfed94999229560bb6a27ee6f44a3d770c64f1e62487",
+                       "size_bytes":  272070,
+                       "asset_type":  "gri_requirement_pack",
+                       "migration_reason":  "Provides structured GRI requirement pack derived from official standard PDF.",
+                       "material_status":  "derived_metadata",
+                       "copied_at":  "2026-07-02",
+                       "source_protection":  "source copied only; original source directory was not modified"
+                   },
+                   {
+                       "source_path":  "../envision/data/knowledge_base/manifests/p0_gri_requirement_checklist.json",
+                       "target_path":  "backend/data/manifests/gri_requirement_checklist.json",
+                       "sha256":  "77a5341e33c223fb1602cbc788cc4a9b29e2077650f087ef4f7421ddd7851f81",
+                       "size_bytes":  631660,
+                       "asset_type":  "gri_requirement_checklist",
+                       "migration_reason":  "Provides checklist-level GRI requirements for first real-standard validation.",
+                       "material_status":  "derived_metadata",
+                       "copied_at":  "2026-07-02",
+                       "source_protection":  "source copied only; original source directory was not modified"
+                   }
+               ],
+    "notes":  [
+                  "Only approved source materials may be copied into this project.",
+                  "Original source repositories must not be deleted, overwritten, or rolled back."
+              ]
+}
