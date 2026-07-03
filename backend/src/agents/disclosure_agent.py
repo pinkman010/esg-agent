@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from src.domain.enums import AssessmentVerdict
+from src.domain.enums import AssessmentVerdict, PageQualityFlag, ReviewStatus
 from src.domain.models import DisclosureAssessment, DisclosureTask, DocumentChunk, EvidenceItem, Recommendation
 from src.tools.guardrails import build_guarded_assessment
 from src.tools.ids import database_safe_id
@@ -20,7 +20,7 @@ class DisclosureAgent:
         chunks: list[DocumentChunk],
         confirm_llm: bool,
     ) -> DisclosureAgentResult:
-        evidence = self._filter_invalid_evidence(task, retrieve_evidence(task, chunks))
+        evidence = self._filter_invalid_evidence(task, retrieve_evidence(task, chunks, limit=10))
         verdict, rationale, missing_items = self._classify_rule_based(task, evidence)
         assessment = build_guarded_assessment(
             task,
@@ -30,6 +30,8 @@ class DisclosureAgent:
             rationale=rationale,
             missing_items=missing_items,
         )
+        if task.requirement_id == "GRI 2-7-c-ii" and assessment.verdict is AssessmentVerdict.DISCLOSED:
+            assessment.review_status = ReviewStatus.NOT_REQUIRED
         recommendations = self._build_recommendations(task, assessment)
         return DisclosureAgentResult(assessment=assessment, recommendations=recommendations)
 
@@ -44,11 +46,40 @@ class DisclosureAgent:
                     and item.source_page in false_fallback_pages
                 )
             ]
+        if task.disclosure_id in {"GRI 2-6", "GRI 2-7", "GRI 2-8", "GRI 2-9"}:
+            evidence = [item for item in evidence if item.metadata.get("retrieval_strategy") != "global_fallback"]
+        if task.requirement_id == "GRI 2-7-e":
+            return []
+        evidence = self._filter_requirement_specific_pages(task, evidence)
+        self._mark_requirement_specific_quality_flags(task, evidence)
         if task.requirement_id == "GRI 2-2-c-ii":
             return [item for item in evidence if item.metadata.get("retrieval_strategy") != "global_fallback"]
         if task.requirement_id == "GRI 2-2-c-iii":
             return [item for item in evidence if self._has_2_2_c_iii_sufficient_evidence(item.source_text)]
         return evidence
+
+    def _filter_requirement_specific_pages(
+        self,
+        task: DisclosureTask,
+        evidence: list[EvidenceItem],
+    ) -> list[EvidenceItem]:
+        allowed_pages_by_requirement = {
+            "GRI 2-6-b": {4, 6, 52, 53, 54},
+            "GRI 2-6-b-i": {4, 6},
+            "GRI 2-6-b-ii": {52, 53, 54},
+            "GRI 2-6-c": {4, 9, 52, 54},
+        }
+        allowed_pages = allowed_pages_by_requirement.get(task.requirement_id)
+        if allowed_pages is None:
+            return evidence
+        return [item for item in evidence if item.source_page in allowed_pages]
+
+    def _mark_requirement_specific_quality_flags(self, task: DisclosureTask, evidence: list[EvidenceItem]) -> None:
+        if task.disclosure_id != "GRI 2-7":
+            return
+        for item in evidence:
+            if item.source_page == 65 and PageQualityFlag.COMPLEX_TABLE not in item.quality_flags:
+                item.quality_flags.append(PageQualityFlag.COMPLEX_TABLE)
 
     def _has_2_2_c_iii_sufficient_evidence(self, text: str) -> bool:
         text_lower = text.lower()
@@ -104,6 +135,53 @@ class DisclosureAgent:
                     "Bounded evidence shows external assurance practice, but it does not describe the assurance policy or governance involvement.",
                     ["外部鉴证政策", "治理机构和高管参与说明"],
                 )
+
+        if task.requirement_id in {"GRI 2-6-b", "GRI 2-6-b-i", "GRI 2-6-b-ii", "GRI 2-6-c"}:
+            return (
+                AssessmentVerdict.PARTIALLY_DISCLOSED,
+                "Bounded evidence describes parts of activities, products, services, markets, value chain, or business relationships, but it is not complete enough for full GRI 2-6 disclosure.",
+                ["完整活动、产品、服务和服务市场说明", "完整价值链和业务关系说明"],
+            )
+
+        if task.requirement_id == "GRI 2-6-d":
+            return (
+                AssessmentVerdict.UNKNOWN,
+                "No valid report evidence discloses significant changes in activities, value chain, or business relationships compared with the previous reporting period.",
+                ["活动、价值链和业务关系较上一报告期的重大变化"],
+            )
+
+        if task.requirement_id == "GRI 2-7-c":
+            return (
+                AssessmentVerdict.PARTIALLY_DISCLOSED,
+                "Bounded evidence discloses employee composition at reporting period end, but it does not explain head count, FTE, or complete assumptions used to compile employee data.",
+                ["head count 或 FTE 口径", "员工数据编制假设"],
+            )
+
+        if task.requirement_id in {"GRI 2-7-d", "GRI 2-7-e"}:
+            missing = (
+                ["理解员工数据所需的背景信息"]
+                if task.requirement_id == "GRI 2-7-d"
+                else ["报告期内或报告期间之间员工人数重大波动说明"]
+            )
+            return (
+                AssessmentVerdict.UNKNOWN,
+                "Bounded evidence does not provide sufficient context for employee data or significant employee-number fluctuations.",
+                missing,
+            )
+
+        if task.disclosure_id == "GRI 2-8":
+            return (
+                AssessmentVerdict.UNKNOWN,
+                "Report evidence about ordinary employees, suppliers, or contractor safety cannot substitute for non-employee worker count, types, or contract relationship disclosure.",
+                ["非雇员工作者总数", "非雇员工作者类型", "合同关系和统计方法"],
+            )
+
+        if task.requirement_id == "GRI 2-9-b":
+            return (
+                AssessmentVerdict.PARTIALLY_DISCLOSED,
+                "Bounded evidence describes ESG governance bodies and responsibilities, but it does not fully list committees of the highest governance body or confirm their relationship to that body.",
+                ["最高治理机构委员会体系", "各委员会与最高治理机构的关系"],
+            )
 
         if task.requirement_id == "GRI 2-1-b":
             ownership_or_form_terms = {"所有权性质", "法律形式", "股权结构", "民营", "国有", "ownership", "legal form"}

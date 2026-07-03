@@ -262,3 +262,45 @@ def test_gri_adapter_adds_chinese_keywords_for_gri_2_3_2_4_2_5(tmp_path):
     assert "无信息重述" in keywords_by_id["GRI 2-4-a"]
     assert "鉴证报告" in keywords_by_id["GRI 2-5-a"]
     assert "独立有限鉴证" in keywords_by_id["GRI 2-5-b"]
+
+
+def test_gri_adapter_adds_chinese_keywords_for_gri_2_6_2_7_2_8_2_9(tmp_path):
+    path = tmp_path / "gri-checklist.json"
+    path.write_text(
+        json.dumps(
+            {
+                "metadata": {"manifest_version": "test"},
+                "requirements": [
+                    {
+                        "requirement_id": f"current_gap:GRI2:{disclosure}:{suffix}",
+                        "canonical_disclosure_id": disclosure,
+                        "requirement_text": requirement_text,
+                        "requirement_type": "requirement",
+                        "is_mandatory": True,
+                        "scoring_role": "hard_score",
+                        "standard_year": "2021",
+                        "assessment_mode": "current_gap",
+                    }
+                    for disclosure, suffix, requirement_text in [
+                        ("2-5", "b:ii", "report assurance standards and scope;"),
+                        ("2-6", "b", "describe activities, products, services and markets;"),
+                        ("2-6", "c", "describe the value chain and business relationships;"),
+                        ("2-7", "c:ii", "report methodologies and assumptions used to compile employee data;"),
+                        ("2-8", "a", "report workers who are not employees;"),
+                        ("2-9", "b", "list committees of the highest governance body;"),
+                    ]
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    requirements = GRIAdapter(path).load_requirements()
+    keywords_by_id = {requirement.requirement_id: requirement.keywords for requirement in requirements}
+
+    assert "鉴证标准" in keywords_by_id["GRI 2-5-b-ii"]
+    assert "主要业务" in keywords_by_id["GRI 2-6-b"]
+    assert "价值链" in keywords_by_id["GRI 2-6-c"]
+    assert "截至报告期末" in keywords_by_id["GRI 2-7-c-ii"]
+    assert "非雇员工作者" in keywords_by_id["GRI 2-8-a"]
+    assert "ESG治理架构" in keywords_by_id["GRI 2-9-b"]

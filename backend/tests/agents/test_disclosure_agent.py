@@ -1,5 +1,5 @@
 from src.agents.disclosure_agent import DisclosureAgent
-from src.domain.enums import AssessmentVerdict, EvidenceSourceMethod, ReviewStatus
+from src.domain.enums import AssessmentVerdict, EvidenceSourceMethod, PageQualityFlag, ReviewStatus
 from src.domain.models import DisclosureTask, DocumentChunk
 
 
@@ -503,3 +503,335 @@ def test_disclosure_agent_filters_new_global_fallback_false_hits():
     assert result.assessment.verdict is AssessmentVerdict.UNKNOWN
     assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
     assert result.assessment.evidence == []
+
+
+def test_disclosure_agent_accepts_2_5_b_ii_assurance_basis_with_ocr_flag():
+    task = DisclosureTask(
+        task_id="task-2-5-b-ii",
+        run_id="run-1",
+        report_id="report-1",
+        standard_id="GRI 2",
+        standard_version="2021",
+        disclosure_id="GRI 2-5",
+        requirement_id="GRI 2-5-b-ii",
+        requirement_text="report the assurance standards and basis.",
+        keywords=["鉴证报告", "鉴证标准"],
+        candidate_pages=[77],
+        candidate_page_source="gri_report_index",
+        index_page=71,
+    )
+    chunk = DocumentChunk(
+        chunk_id="chunk-assurance-basis",
+        report_id="report-1",
+        text="独立有限鉴证报告 远景能源ESG报告 2024",
+        source_page=77,
+        source_method=EvidenceSourceMethod.PDFPLUMBER,
+        source_file_hash="hash-1",
+    )
+
+    result = DisclosureAgent().analyze(task, [chunk], confirm_llm=False)
+
+    assert result.assessment.verdict is AssessmentVerdict.DISCLOSED
+    assert result.assessment.review_status is ReviewStatus.NOT_REQUIRED
+    assert result.assessment.evidence[0].requires_ocr is True
+    assert result.assessment.evidence[0].needs_ocr_or_vlm is True
+
+
+def test_disclosure_agent_marks_2_6_business_and_value_chain_evidence_as_partial():
+    cases = [
+        (
+            "GRI 2-6-b",
+            ["主要业务", "责任采购", "全球企业", "深化合作", "供应商准入", "供应商退出"],
+            [
+                (4, "全球企业 深化合作"),
+                (6, "远景能源主要业务包括智能风电、智慧储能系统和绿氢解决方案。"),
+                (52, "责任采购，产业共荣。远景能源致力于实施负责任、可持续的采购。"),
+                (53, "供应商准入 尽职调查"),
+                (54, "供应商退出 供应商培训 SMI CN100"),
+            ],
+            [4, 6, 52, 53, 54],
+        ),
+        (
+            "GRI 2-6-b-i",
+            ["主要业务", "智能风电", "智慧储能", "全球企业", "深化合作", "供应商退出"],
+            [
+                (4, "全球企业 深化合作"),
+                (6, "远景能源主要业务包括智能风电、智慧储能系统和绿氢解决方案。"),
+                (54, "供应商退出 供应商培训 SMI CN100"),
+            ],
+            [4, 6],
+        ),
+        (
+            "GRI 2-6-b-ii",
+            ["责任采购", "可持续供应链", "主要业务", "全球企业", "深化合作", "供应商准入", "供应商退出"],
+            [
+                (4, "全球企业 深化合作"),
+                (6, "远景能源主要业务包括智能风电、智慧储能系统和绿氢解决方案。"),
+                (52, "责任采购，产业共荣。远景能源致力于实施负责任、可持续的采购。"),
+                (53, "供应商准入 尽职调查"),
+                (54, "供应商退出 供应商培训 SMI CN100"),
+            ],
+            [52, 53, 54],
+        ),
+        (
+            "GRI 2-6-c",
+            ["business", "relationships", "ESG 合作网络", "价值链", "供应商大会", "全球企业", "深化合作", "SMI", "CN100"],
+            [
+                (4, "全球企业 深化合作"),
+                (6, "business relationships generic company overview"),
+                (9, "ESG 合作网络 UNGC RE100 SBTi CDP IEA WEF"),
+                (52, "责任采购覆盖价值链合作伙伴。"),
+                (53, "business relationships generic supplier process"),
+                (54, "SMI CN100 供应商大会推动产业共荣。"),
+            ],
+            [4, 9, 52, 54],
+        ),
+    ]
+    for requirement_id, keywords, page_texts, expected_pages in cases:
+        task = DisclosureTask(
+            task_id=f"task-{requirement_id}",
+            run_id="run-1",
+            report_id="report-1",
+            standard_id="GRI 2",
+            standard_version="2021",
+            disclosure_id="GRI 2-6",
+            requirement_id=requirement_id,
+            requirement_text="describe activities, value chain and business relationships.",
+            keywords=keywords,
+            candidate_pages=[4, 6, 9, 52, 53, 54],
+            candidate_page_source="gri_report_index+requirement_supplement",
+            index_page=71,
+        )
+        chunks = [
+            DocumentChunk(
+                chunk_id=f"chunk-{requirement_id}-{source_page}",
+                report_id="report-1",
+                text=text,
+                source_page=source_page,
+                source_method=EvidenceSourceMethod.PDFPLUMBER,
+                source_file_hash="hash-1",
+            )
+            for source_page, text in page_texts
+        ]
+
+        result = DisclosureAgent().analyze(task, chunks, confirm_llm=False)
+
+        assert result.assessment.verdict is AssessmentVerdict.PARTIALLY_DISCLOSED
+        assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+        assert [item.source_page for item in result.assessment.evidence] == expected_pages
+
+
+def test_disclosure_agent_keeps_2_6_d_major_changes_unknown_and_filters_fallback():
+    task = DisclosureTask(
+        task_id="task-2-6-d",
+        run_id="run-1",
+        report_id="report-1",
+        standard_id="GRI 2",
+        standard_version="2021",
+        disclosure_id="GRI 2-6",
+        requirement_id="GRI 2-6-d",
+        requirement_text="report significant changes compared to the previous reporting period.",
+        keywords=["重大变化", "业务关系变化"],
+        candidate_pages=[4, 6, 9, 52, 53, 54],
+        candidate_page_source="gri_report_index+requirement_supplement",
+        index_page=71,
+    )
+    chunk = DocumentChunk(
+        chunk_id="chunk-invalid-fallback",
+        report_id="report-1",
+        text="温室气体核算方法说明中出现重大变化字样，但不涉及活动、价值链或业务关系变化。",
+        source_page=64,
+        source_method=EvidenceSourceMethod.PDFPLUMBER,
+        source_file_hash="hash-1",
+    )
+
+    result = DisclosureAgent().analyze(task, [chunk], confirm_llm=False)
+
+    assert result.assessment.verdict is AssessmentVerdict.UNKNOWN
+    assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+    assert result.assessment.evidence == []
+
+
+def test_disclosure_agent_marks_2_7_c_employee_compilation_context_as_partial():
+    task = DisclosureTask(
+        task_id="task-2-7-c",
+        run_id="run-1",
+        report_id="report-1",
+        standard_id="GRI 2",
+        standard_version="2021",
+        disclosure_id="GRI 2-7",
+        requirement_id="GRI 2-7-c",
+        requirement_text="describe methodologies and assumptions used to compile employee data.",
+        keywords=["截至报告期末", "员工组成", "人员结构"],
+        candidate_pages=[33, 65],
+        candidate_page_source="gri_report_index+requirement_supplement",
+        index_page=71,
+    )
+    chunk = DocumentChunk(
+        chunk_id="chunk-employee-structure",
+        report_id="report-1",
+        text="人员结构 截至报告期末，远景能源员工组成按性别、职级和年龄划分。",
+        source_page=33,
+        source_method=EvidenceSourceMethod.PDFPLUMBER,
+        source_file_hash="hash-1",
+    )
+
+    result = DisclosureAgent().analyze(task, [chunk], confirm_llm=False)
+
+    assert result.assessment.verdict is AssessmentVerdict.PARTIALLY_DISCLOSED
+    assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+    assert "head count 或 FTE 口径" in result.assessment.missing_items
+
+
+def test_disclosure_agent_accepts_2_7_c_ii_reporting_period_end_basis():
+    task = DisclosureTask(
+        task_id="task-2-7-c-ii",
+        run_id="run-1",
+        report_id="report-1",
+        standard_id="GRI 2",
+        standard_version="2021",
+        disclosure_id="GRI 2-7",
+        requirement_id="GRI 2-7-c-ii",
+        requirement_text="whether employee numbers are reported at the end of the reporting period.",
+        keywords=["截至报告期末", "员工组成"],
+        candidate_pages=[33, 65],
+        candidate_page_source="gri_report_index+requirement_supplement",
+        index_page=71,
+    )
+    chunk = DocumentChunk(
+        chunk_id="chunk-employee-period-end",
+        report_id="report-1",
+        text="人员结构 截至报告期末，远景能源员工组成按性别、职级和年龄划分。",
+        source_page=33,
+        source_method=EvidenceSourceMethod.PDFPLUMBER,
+        source_file_hash="hash-1",
+        quality_flags=[PageQualityFlag.COMPLEX_TABLE],
+    )
+
+    result = DisclosureAgent().analyze(task, [chunk], confirm_llm=False)
+
+    assert result.assessment.verdict is AssessmentVerdict.DISCLOSED
+    assert result.assessment.review_status is ReviewStatus.NOT_REQUIRED
+
+
+def test_disclosure_agent_marks_2_7_kpi_page_65_as_complex_table():
+    task = DisclosureTask(
+        task_id="task-2-7-c",
+        run_id="run-1",
+        report_id="report-1",
+        standard_id="GRI 2",
+        standard_version="2021",
+        disclosure_id="GRI 2-7",
+        requirement_id="GRI 2-7-c",
+        requirement_text="describe methodologies and assumptions used to compile employee data.",
+        keywords=["员工组成", "社会绩效"],
+        candidate_pages=[33, 65],
+        candidate_page_source="gri_report_index+requirement_supplement",
+        index_page=71,
+    )
+    chunk = DocumentChunk(
+        chunk_id="chunk-employee-kpi-table",
+        report_id="report-1",
+        text="社会绩效 员工组成 2024 2023 2022 男性 女性 新进员工 离职员工 员工流失率",
+        source_page=65,
+        source_method=EvidenceSourceMethod.PDFPLUMBER,
+        source_file_hash="hash-1",
+    )
+
+    result = DisclosureAgent().analyze(task, [chunk], confirm_llm=False)
+
+    assert result.assessment.evidence[0].source_page == 65
+    assert PageQualityFlag.COMPLEX_TABLE in result.assessment.evidence[0].quality_flags
+
+
+def test_disclosure_agent_keeps_2_7_e_unknown_without_employee_fluctuation_evidence():
+    task = DisclosureTask(
+        task_id="task-2-7-e",
+        run_id="run-1",
+        report_id="report-1",
+        standard_id="GRI 2",
+        standard_version="2021",
+        disclosure_id="GRI 2-7",
+        requirement_id="GRI 2-7-e",
+        requirement_text="report significant fluctuations in employee numbers during or between reporting periods.",
+        keywords=["重大波动", "员工人数变化", "员工流失率"],
+        candidate_pages=[33, 65],
+        candidate_page_source="gri_report_index+requirement_supplement",
+        index_page=71,
+    )
+    chunk = DocumentChunk(
+        chunk_id="chunk-employee-kpi",
+        report_id="report-1",
+        text="社会绩效 员工组成 2024 2023 2022 新进员工 离职员工 员工流失率",
+        source_page=65,
+        source_method=EvidenceSourceMethod.PDFPLUMBER,
+        source_file_hash="hash-1",
+    )
+
+    result = DisclosureAgent().analyze(task, [chunk], confirm_llm=False)
+
+    assert result.assessment.verdict is AssessmentVerdict.UNKNOWN
+    assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+    assert result.assessment.evidence == []
+
+
+def test_disclosure_agent_keeps_2_8_non_employee_worker_items_unknown_and_filters_fallback():
+    task = DisclosureTask(
+        task_id="task-2-8-a",
+        run_id="run-1",
+        report_id="report-1",
+        standard_id="GRI 2",
+        standard_version="2021",
+        disclosure_id="GRI 2-8",
+        requirement_id="GRI 2-8-a",
+        requirement_text="report workers who are not employees.",
+        keywords=["非雇员工作者", "承包商", "供应商"],
+        candidate_pages=[52, 63, 71],
+        candidate_page_source="gri_report_index",
+        index_page=71,
+    )
+    chunk = DocumentChunk(
+        chunk_id="chunk-ordinary-employee",
+        report_id="report-1",
+        text="普通员工关怀、供应商管理和承包商安全内容不能替代非雇员工作者数量披露。",
+        source_page=32,
+        source_method=EvidenceSourceMethod.PDFPLUMBER,
+        source_file_hash="hash-1",
+    )
+
+    result = DisclosureAgent().analyze(task, [chunk], confirm_llm=False)
+
+    assert result.assessment.verdict is AssessmentVerdict.UNKNOWN
+    assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+    assert result.assessment.evidence == []
+
+
+def test_disclosure_agent_marks_2_9_b_esg_governance_architecture_as_partial():
+    task = DisclosureTask(
+        task_id="task-2-9-b",
+        run_id="run-1",
+        report_id="report-1",
+        standard_id="GRI 2",
+        standard_version="2021",
+        disclosure_id="GRI 2-9",
+        requirement_id="GRI 2-9-b",
+        requirement_text="list committees of the highest governance body responsible for decision-making on impacts.",
+        keywords=["ESG治理架构", "ESG委员会", "ESG办公室", "ESG议题执行小组"],
+        candidate_pages=[13],
+        candidate_page_source="gri_report_index",
+        index_page=71,
+    )
+    chunk = DocumentChunk(
+        chunk_id="chunk-esg-governance",
+        report_id="report-1",
+        text="ESG治理架构 ESG委员会为公司ESG最高决策机构，ESG办公室是ESG常设管理机构，ESG议题执行小组为ESG战略执行层。",
+        source_page=13,
+        source_method=EvidenceSourceMethod.PDFPLUMBER,
+        source_file_hash="hash-1",
+    )
+
+    result = DisclosureAgent().analyze(task, [chunk], confirm_llm=False)
+
+    assert result.assessment.verdict is AssessmentVerdict.PARTIALLY_DISCLOSED
+    assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+    assert "最高治理机构委员会体系" in result.assessment.missing_items

@@ -277,3 +277,92 @@ def test_single_report_workflow_supplements_candidate_pages_for_entity_attribute
     assert enriched[1].candidate_pdf_pages == [6, 28]
     assert enriched[1].candidate_report_pages == [5, 27]
     assert enriched[1].candidate_page_source == "gri_report_index+requirement_supplement"
+
+
+def test_single_report_workflow_supplements_candidate_pages_for_current_50_rules(tmp_path):
+    pack_path = tmp_path / "gri_requirement_pack.json"
+    pack_path.write_text(
+        json.dumps(
+            {
+                "requirements": [
+                    {"canonical_disclosure_id": "2-6", "report_index_pdf_page": 71, "report_index_report_page": 70},
+                    {"canonical_disclosure_id": "2-7", "report_index_pdf_page": 71, "report_index_report_page": 70},
+                    {"canonical_disclosure_id": "2-9", "report_index_pdf_page": 71, "report_index_report_page": 70},
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    workflow = SingleReportWorkflow(
+        None,
+        FakeParser(),
+        FakeAdapter(),
+        DisclosureAgent(),
+        requirement_pack_path=pack_path,
+    )
+    pages = [
+        PageExtraction(report_id="report-1", page_number=4, text="全球企业和政府深化合作。"),
+        PageExtraction(report_id="report-1", page_number=6, text="主要业务包括智能风电、智慧储能系统和绿氢解决方案。"),
+        PageExtraction(report_id="report-1", page_number=9, text="ESG 合作网络拓展。"),
+        PageExtraction(report_id="report-1", page_number=13, text="ESG 治理架构 ESG委员会 ESG办公室 ESG议题执行小组。"),
+        PageExtraction(report_id="report-1", page_number=33, text="人员结构 截至报告期末，员工组成。"),
+        PageExtraction(report_id="report-1", page_number=52, text="责任采购，产业共荣 可持续供应链管理。"),
+        PageExtraction(report_id="report-1", page_number=53, text="供应商准入 供应商尽职调查。"),
+        PageExtraction(report_id="report-1", page_number=54, text="供应商退出 供应商培训与赋能。"),
+        PageExtraction(report_id="report-1", page_number=65, text="社会绩效 员工组成 2024 2023 2022。"),
+        PageExtraction(
+            report_id="report-1",
+            page_number=71,
+            text=(
+                "2-6 活动、价值链和其他业务关系 关于远景能源 5 ESG合作网络拓展 8\n"
+                "2-7 员工 人才招聘与雇佣 31 附录 62\n"
+                "2-9 管治架构和组成 ESG治理架构 12"
+            ),
+        ),
+    ]
+    from src.domain.models import DisclosureTask
+
+    tasks = [
+        DisclosureTask(
+            task_id="task-2-6-b",
+            run_id="run-1",
+            report_id="report-1",
+            standard_id="GRI 2",
+            standard_version="2021",
+            disclosure_id="GRI 2-6",
+            requirement_id="GRI 2-6-b",
+            requirement_text="describe activities, products, services and markets;",
+            keywords=["主要业务"],
+        ),
+        DisclosureTask(
+            task_id="task-2-7-c",
+            run_id="run-1",
+            report_id="report-1",
+            standard_id="GRI 2",
+            standard_version="2021",
+            disclosure_id="GRI 2-7",
+            requirement_id="GRI 2-7-c",
+            requirement_text="describe methodologies and assumptions used to compile employee data;",
+            keywords=["人员结构"],
+        ),
+        DisclosureTask(
+            task_id="task-2-9-b",
+            run_id="run-1",
+            report_id="report-1",
+            standard_id="GRI 2",
+            standard_version="2021",
+            disclosure_id="GRI 2-9",
+            requirement_id="GRI 2-9-b",
+            requirement_text="list committees of the highest governance body;",
+            keywords=["ESG治理架构"],
+        ),
+    ]
+
+    enriched = workflow._attach_report_index_candidates(pages, tasks)
+
+    assert enriched[0].candidate_pdf_pages == [4, 6, 9, 52, 53, 54]
+    assert enriched[0].candidate_report_pages == [3, 5, 8, 51, 52, 53]
+    assert enriched[1].candidate_pdf_pages == [32, 33, 63, 65]
+    assert enriched[1].candidate_report_pages == [31, 32, 62, 64]
+    assert enriched[2].candidate_pdf_pages == [13]
+    assert enriched[2].candidate_report_pages == [12]

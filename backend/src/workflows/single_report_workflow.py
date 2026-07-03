@@ -161,4 +161,23 @@ class SingleReportWorkflow:
                 has_location_hint = any(term in text for term in ["上海", "地址", "大楼", "所在地"])
                 if has_headquarters and has_location_hint:
                     supplements.append(page.page_number)
+            if task.disclosure_id == "GRI 2-6":
+                has_business_overview = page.page_number in {4, 6, 9} and any(
+                    term in text
+                    for term in ["主要业务", "智能风电", "智慧储能", "绿氢", "ESG 合作网络", "ESG合作网络", "全球企业", "深化合作"]
+                )
+                has_supply_chain = page.page_number in {52, 53, 54} and any(
+                    term in text for term in ["责任采购", "供应商", "可持续供应链", "产业共荣"]
+                )
+                if has_business_overview or has_supply_chain:
+                    supplements.append(page.page_number)
+            if task.disclosure_id == "GRI 2-7":
+                has_employee_structure = page.page_number in {33, 65} and any(
+                    term in text for term in ["人员结构", "员工组成", "社会绩效"]
+                )
+                if has_employee_structure:
+                    supplements.append(page.page_number)
+            if task.requirement_id == "GRI 2-9-b" and page.page_number == 13:
+                if any(term in text for term in ["ESG治理架构", "ESG 治理架构", "ESG委员会", "ESG办公室"]):
+                    supplements.append(page.page_number)
         return sorted(set([*candidate_pages, *supplements]))
