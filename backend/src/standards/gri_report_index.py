@@ -38,12 +38,15 @@ def build_report_index(
 
         row = _find_disclosure_row(disclosure_id, page.text)
         report_pages = _extract_report_pages_for_disclosure(disclosure_id, page.text)
-        if not report_pages and not (row and _is_no_information_restatement_row(row)):
+        if not report_pages and not (row and (_is_no_information_restatement_row(row) or _is_omission_note_row(row))):
             continue
 
         offset = index_pdf_page - index_report_page
-        if row and _is_no_information_restatement_row(row):
+        source = "gri_report_index"
+        if row and (_is_no_information_restatement_row(row) or _is_omission_note_row(row)):
             candidate_pages = [index_pdf_page]
+            if _is_omission_note_row(row):
+                source = "gri_report_index_omission_note"
         else:
             candidate_pages = sorted({report_page + offset for report_page in report_pages if report_page > 0})
         result[disclosure_id] = GRIReportIndexEntry(
@@ -52,6 +55,7 @@ def build_report_index(
             index_page=index_pdf_page,
             report_index_pdf_page=index_pdf_page,
             report_index_report_page=index_report_page,
+            source=source,
         )
 
     return result
@@ -98,3 +102,7 @@ def _is_slash_only_row(row: str) -> bool:
 
 def _is_no_information_restatement_row(row: str) -> bool:
     return "无信息重述" in row
+
+
+def _is_omission_note_row(row: str) -> bool:
+    return "从略披露" in row

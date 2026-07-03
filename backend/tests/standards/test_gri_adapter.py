@@ -304,3 +304,45 @@ def test_gri_adapter_adds_chinese_keywords_for_gri_2_6_2_7_2_8_2_9(tmp_path):
     assert "截至报告期末" in keywords_by_id["GRI 2-7-c-ii"]
     assert "非雇员工作者" in keywords_by_id["GRI 2-8-a"]
     assert "ESG治理架构" in keywords_by_id["GRI 2-9-b"]
+
+
+def test_gri_adapter_adds_chinese_keywords_for_gri_2_10_to_2_20_governance_rules(tmp_path):
+    path = tmp_path / "gri-checklist.json"
+    path.write_text(
+        json.dumps(
+            {
+                "metadata": {"manifest_version": "test"},
+                "requirements": [
+                    {
+                        "requirement_id": f"current_gap:GRI2:{disclosure}:{suffix}",
+                        "canonical_disclosure_id": disclosure,
+                        "requirement_text": requirement_text,
+                        "requirement_type": "requirement",
+                        "is_mandatory": True,
+                        "scoring_role": "hard_score",
+                        "standard_year": "2021",
+                        "assessment_mode": "current_gap",
+                    }
+                    for disclosure, suffix, requirement_text in [
+                        ("2-9", "a", "describe its governance structure;"),
+                        ("2-10", "a", "describe nomination and selection processes;"),
+                        ("2-12", "a", "describe the role of the highest governance body in overseeing impacts;"),
+                        ("2-13", "a:i", "whether senior executives are responsible for impact management;"),
+                        ("2-19", "a", "describe remuneration policies;"),
+                        ("2-20", "a", "describe the process to determine remuneration;"),
+                    ]
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    requirements = GRIAdapter(path).load_requirements()
+    keywords_by_id = {requirement.requirement_id: requirement.keywords for requirement in requirements}
+
+    assert "ESG治理架构" in keywords_by_id["GRI 2-9-a"]
+    assert "从略披露" in keywords_by_id["GRI 2-10-a"]
+    assert "ESG委员会" in keywords_by_id["GRI 2-12-a"]
+    assert "季度汇报" in keywords_by_id["GRI 2-13-a-i"]
+    assert "从略披露" in keywords_by_id["GRI 2-19-a"]
+    assert "因商业保密限制从略披露" in keywords_by_id["GRI 2-20-a"]

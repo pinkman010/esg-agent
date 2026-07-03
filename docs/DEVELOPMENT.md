@@ -172,6 +172,8 @@ pnpm generate:api
 - 生成 `tmp/review/current_20_review_final_contract.csv`：20 个 requirement、21 行、14 条 evidence，结果分布保持不变；无 evidence 的 unknown 行导出布尔字段统一为 `false`，未调用外部模型。
 - 根据 `current_50_review.csv` 人工复核结论，增加 `GRI 2-6`、`GRI 2-7`、`GRI 2-8`、`GRI 2-9-b` 的中文关键词、候选页补充和子项级充分性规则：`2-6` 使用业务概况、ESG 合作网络和责任采购页作为部分披露证据，`2-7-c` 使用人员结构和 KPI 页，`2-7-c-ii` 的“截至报告期末”可支撑披露，`2-8` 严格保持非雇员工作者口径，普通员工、供应商和承包商安全内容不能替代，`2-9-b` 使用 ESG 治理架构页作为部分披露证据。
 - 生成 `tmp/review/current_50_review_after_rules.csv`：50 个 requirement、63 行、35 条 evidence；按 requirement 聚合后为 10 条 `disclosed`、12 条 `partially_disclosed`、28 条 `unknown`，10 条 `not_required`、40 条 `needs_manual_review`；35 条 evidence 均为 `index_page_bounded`，0 条 `global_fallback`；修复 `page_label` 中文乱码，`GRI 2-6` 子项 evidence 页码收窄，`GRI 2-7-e` 清空无效 evidence，`GRI 2-5-b-ii` 使用 PDF 第 77 页并标记 `requires_ocr=true`，未调用外部模型。
+- 根据 `current_100_review.csv` 人工复核结论，增加治理类 disclosure 规则：`global_fallback` 在 agent 层全部清空；GRI 索引中的“从略披露”行作为 `omission_note` evidence 保留但不提升 `disclosed`；`GRI 2-9-a/b`、`GRI 2-12`、`GRI 2-13` 白名单子项可使用 PDF 第 13 页 ESG 治理架构作为 partial evidence；`GRI 2-9-c`、`GRI 2-11`、`GRI 2-10`、`GRI 2-19`、`GRI 2-20` 不使用 PDF 第 13 页支撑。
+- 生成 `tmp/review/current_100_review_after_rules.csv`：100 个 requirement、113 行、61 条 evidence；按 requirement 聚合后为 10 条 `disclosed`、22 条 `partially_disclosed`、68 条 `unknown`，10 条 `not_required`、90 条 `needs_manual_review`；61 条 evidence 均为 `index_page_bounded`，0 条 `global_fallback`；其中 16 条为 `omission_note`，覆盖 `GRI 2-10`、`GRI 2-19`、`GRI 2-20`，未调用外部模型。
 
 ### 2026-07-02
 

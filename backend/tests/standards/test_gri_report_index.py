@@ -86,6 +86,39 @@ def test_build_report_index_uses_no_restatement_index_note_as_candidate_page():
     assert index["2-4"].index_page == 71
 
 
+def test_build_report_index_uses_omission_note_as_candidate_page():
+    pages = [
+        PageExtraction(
+            report_id="report-1",
+            page_number=71,
+            text=(
+                "2-10 最高管治机构的提名和遴选 因商业保密限制从略披露 /\n"
+                "2-11 最高管治机构的主席 ESG治理架构 12\n"
+                "2-19 薪酬政策 因不适用而从略披露 /"
+            ),
+        )
+    ]
+    pack_items = [
+        {
+            "canonical_disclosure_id": "2-10",
+            "report_index_pdf_page": 71,
+            "report_index_report_page": 70,
+        },
+        {
+            "canonical_disclosure_id": "2-19",
+            "report_index_pdf_page": 71,
+            "report_index_report_page": 70,
+        },
+    ]
+
+    index = build_report_index(pages, pack_items)
+
+    assert index["2-10"].candidate_pages == [71]
+    assert index["2-10"].source == "gri_report_index_omission_note"
+    assert index["2-19"].candidate_pages == [71]
+    assert index["2-19"].source == "gri_report_index_omission_note"
+
+
 def test_build_report_index_stops_before_same_line_next_disclosure():
     pages = [
         PageExtraction(

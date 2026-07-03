@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import re
 
 from src.domain.enums import AssessmentVerdict, PageQualityFlag, ReviewStatus
 from src.domain.models import DisclosureAssessment, DisclosureTask, DocumentChunk, EvidenceItem, Recommendation
@@ -36,6 +37,7 @@ class DisclosureAgent:
         return DisclosureAgentResult(assessment=assessment, recommendations=recommendations)
 
     def _filter_invalid_evidence(self, task: DisclosureTask, evidence: list[EvidenceItem]) -> list[EvidenceItem]:
+        evidence = [item for item in evidence if item.metadata.get("retrieval_strategy") != "global_fallback"]
         false_fallback_pages = {23, 60, 64}
         if task.disclosure_id in {"GRI 2-3", "GRI 2-5"}:
             evidence = [
@@ -46,12 +48,11 @@ class DisclosureAgent:
                     and item.source_page in false_fallback_pages
                 )
             ]
-        if task.disclosure_id in {"GRI 2-6", "GRI 2-7", "GRI 2-8", "GRI 2-9"}:
-            evidence = [item for item in evidence if item.metadata.get("retrieval_strategy") != "global_fallback"]
         if task.requirement_id == "GRI 2-7-e":
             return []
         evidence = self._filter_requirement_specific_pages(task, evidence)
         self._mark_requirement_specific_quality_flags(task, evidence)
+        self._mark_omission_note_evidence(task, evidence)
         if task.requirement_id == "GRI 2-2-c-ii":
             return [item for item in evidence if item.metadata.get("retrieval_strategy") != "global_fallback"]
         if task.requirement_id == "GRI 2-2-c-iii":
@@ -69,6 +70,8 @@ class DisclosureAgent:
             "GRI 2-6-b-ii": {52, 53, 54},
             "GRI 2-6-c": {4, 9, 52, 54},
         }
+        if task.requirement_id.startswith("GRI 2-9-c") or task.disclosure_id == "GRI 2-11":
+            return []
         allowed_pages = allowed_pages_by_requirement.get(task.requirement_id)
         if allowed_pages is None:
             return evidence
@@ -80,6 +83,42 @@ class DisclosureAgent:
         for item in evidence:
             if item.source_page == 65 and PageQualityFlag.COMPLEX_TABLE not in item.quality_flags:
                 item.quality_flags.append(PageQualityFlag.COMPLEX_TABLE)
+
+    def _mark_omission_note_evidence(self, task: DisclosureTask, evidence: list[EvidenceItem]) -> None:
+        omission_terms = ("从略披露", "因商业保密限制从略披露", "因不适用而从略披露")
+        for item in evidence:
+            target_row = self._target_disclosure_row(task.disclosure_id, item.source_text)
+            if target_row is None or not any(term in target_row for term in omission_terms):
+                continue
+            item.evidence_preview = target_row
+            if any(term in target_row for term in omission_terms):
+                item.metadata["evidence_type"] = "omission_note"
+                if "因商业保密限制从略披露" in target_row:
+                    item.metadata["omission_reason"] = "confidentiality"
+                elif "因不适用而从略披露" in target_row:
+                    item.metadata["omission_reason"] = "not_applicable"
+
+    def _target_disclosure_row(self, disclosure_id: str, text: str) -> str | None:
+        raw_disclosure_id = disclosure_id.removeprefix("GRI ").strip()
+        pattern = re.compile(rf"(?<![\d-]){re.escape(raw_disclosure_id)}(?![\d-])")
+        lines = text.splitlines()
+        for index, line in enumerate(lines):
+            match = pattern.search(line)
+            if match is None:
+                continue
+            row_parts = [line[match.start() :]]
+            for next_line in lines[index + 1 :]:
+                if re.match(r"^\s*(?:\d{1,3}-\d{1,3}|GRI\s+\d+)", next_line.strip()):
+                    break
+                row_parts.append(next_line)
+            return self._before_next_disclosure_token(" ".join(" ".join(row_parts).split()))
+        return None
+
+    def _before_next_disclosure_token(self, row: str) -> str:
+        match = re.search(r"\s(?:\d{1,3}-\d{1,3}|GRI\s+\d+)\s", row[1:])
+        if match is None:
+            return row
+        return row[: match.start() + 1].strip()
 
     def _has_2_2_c_iii_sufficient_evidence(self, text: str) -> bool:
         text_lower = text.lower()
@@ -112,6 +151,13 @@ class DisclosureAgent:
 
         evidence_text = "\n".join(item.source_text for item in bounded_evidence)
         evidence_text_lower = evidence_text.lower()
+        if any(item.metadata.get("evidence_type") == "omission_note" for item in evidence):
+            return (
+                AssessmentVerdict.UNKNOWN,
+                "The report index contains an omission note, but no substantive disclosure evidence was found.",
+                ["实质披露内容", "从略披露原因对应的人工复核"],
+            )
+
         if task.requirement_id == "GRI 2-3-a":
             period_terms = {"报告期", "2024年1月1日", "2024 年 1 月 1 日", "2024-01-01"}
             frequency_terms = {"报告频率", "报告周期", "年度报告", "每年", "annual"}
@@ -176,11 +222,24 @@ class DisclosureAgent:
                 ["非雇员工作者总数", "非雇员工作者类型", "合同关系和统计方法"],
             )
 
-        if task.requirement_id == "GRI 2-9-b":
+        allowed_governance_impact_items = {
+            "GRI 2-9-a",
+            "GRI 2-9-b",
+            "GRI 2-12-a",
+            "GRI 2-12-b",
+            "GRI 2-12-b-i",
+            "GRI 2-12-b-ii",
+            "GRI 2-12-c",
+            "GRI 2-13-a",
+            "GRI 2-13-a-i",
+            "GRI 2-13-a-ii",
+            "GRI 2-13-b",
+        }
+        if task.requirement_id in allowed_governance_impact_items:
             return (
                 AssessmentVerdict.PARTIALLY_DISCLOSED,
-                "Bounded evidence describes ESG governance bodies and responsibilities, but it does not fully list committees of the highest governance body or confirm their relationship to that body.",
-                ["最高治理机构委员会体系", "各委员会与最高治理机构的关系"],
+                "Bounded evidence describes ESG governance bodies, responsibilities, and reporting lines, but it does not fully establish the highest-governance-body mandate or complete impact-management process.",
+                ["最高治理机构委员会体系", "最高治理机构正式授权", "完整影响管理流程和充分性说明"],
             )
 
         if task.requirement_id == "GRI 2-1-b":

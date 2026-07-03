@@ -835,3 +835,206 @@ def test_disclosure_agent_marks_2_9_b_esg_governance_architecture_as_partial():
     assert result.assessment.verdict is AssessmentVerdict.PARTIALLY_DISCLOSED
     assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
     assert "最高治理机构委员会体系" in result.assessment.missing_items
+
+
+def test_disclosure_agent_marks_allowed_governance_impact_items_as_partial():
+    allowed_requirement_ids = [
+        "GRI 2-9-a",
+        "GRI 2-9-b",
+        "GRI 2-12-a",
+        "GRI 2-12-b",
+        "GRI 2-12-b-i",
+        "GRI 2-12-b-ii",
+        "GRI 2-12-c",
+        "GRI 2-13-a",
+        "GRI 2-13-a-i",
+        "GRI 2-13-a-ii",
+        "GRI 2-13-b",
+    ]
+    chunk = DocumentChunk(
+        chunk_id="chunk-governance-architecture",
+        report_id="report-1",
+        text=(
+            "ESG治理架构 ESG委员会为公司ESG最高决策机构，由CEO任主席，成员包括CPO、CFO、COO、CSO。"
+            "ESG办公室由CSO直接领导，向ESG委员会季度汇报，ESG议题执行小组月度拉通。"
+        ),
+        source_page=13,
+        source_method=EvidenceSourceMethod.PDFPLUMBER,
+        source_file_hash="hash-1",
+    )
+
+    for requirement_id in allowed_requirement_ids:
+        task = DisclosureTask(
+            task_id=f"task-{requirement_id}",
+            run_id="run-1",
+            report_id="report-1",
+            standard_id="GRI 2",
+            standard_version="2021",
+            disclosure_id="-".join(requirement_id.split("-")[:2]),
+            requirement_id=requirement_id,
+            requirement_text="describe governance roles for impact management.",
+            keywords=["ESG治理架构", "ESG委员会", "ESG办公室", "季度汇报"],
+            candidate_pages=[13],
+            candidate_page_source="gri_report_index",
+            index_page=71,
+        )
+
+        result = DisclosureAgent().analyze(task, [chunk], confirm_llm=False)
+
+        assert result.assessment.verdict is AssessmentVerdict.PARTIALLY_DISCLOSED
+        assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+        assert [item.source_page for item in result.assessment.evidence] == [13]
+
+
+def test_disclosure_agent_does_not_use_governance_architecture_for_forbidden_governance_items():
+    forbidden_requirement_ids = ["GRI 2-9-c", "GRI 2-9-c-i", "GRI 2-11-a", "GRI 2-11-b"]
+    chunk = DocumentChunk(
+        chunk_id="chunk-governance-architecture",
+        report_id="report-1",
+        text="ESG治理架构 ESG委员会由CEO任主席，成员包括CPO、CFO、COO、CSO。",
+        source_page=13,
+        source_method=EvidenceSourceMethod.PDFPLUMBER,
+        source_file_hash="hash-1",
+    )
+
+    for requirement_id in forbidden_requirement_ids:
+        task = DisclosureTask(
+            task_id=f"task-{requirement_id}",
+            run_id="run-1",
+            report_id="report-1",
+            standard_id="GRI 2",
+            standard_version="2021",
+            disclosure_id="-".join(requirement_id.split("-")[:2]),
+            requirement_id=requirement_id,
+            requirement_text="report complete governance composition or chair details.",
+            keywords=["ESG治理架构", "ESG委员会", "CEO"],
+            candidate_pages=[13],
+            candidate_page_source="gri_report_index",
+            index_page=71,
+        )
+
+        result = DisclosureAgent().analyze(task, [chunk], confirm_llm=False)
+
+        assert result.assessment.verdict is AssessmentVerdict.UNKNOWN
+        assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+        assert result.assessment.evidence == []
+
+
+def test_disclosure_agent_keeps_omission_note_evidence_without_upgrading_verdict():
+    for requirement_id in ["GRI 2-10-a", "GRI 2-19-a", "GRI 2-20-a"]:
+        disclosure_id = "-".join(requirement_id.split("-")[:2])
+        task = DisclosureTask(
+            task_id=f"task-{requirement_id}",
+            run_id="run-1",
+            report_id="report-1",
+            standard_id="GRI 2",
+            standard_version="2021",
+            disclosure_id=disclosure_id,
+            requirement_id=requirement_id,
+            requirement_text="omitted disclosure due to confidentiality.",
+            keywords=["从略披露", "因商业保密限制从略披露"],
+            candidate_pages=[71],
+            candidate_page_source="gri_report_index_omission_note",
+            index_page=71,
+        )
+        chunk = DocumentChunk(
+            chunk_id=f"chunk-omission-{requirement_id}",
+            report_id="report-1",
+            text=f"{disclosure_id.removeprefix('GRI ')} 因商业保密限制从略披露 /",
+            source_page=71,
+            source_method=EvidenceSourceMethod.PDFPLUMBER,
+            source_file_hash="hash-1",
+        )
+
+        result = DisclosureAgent().analyze(task, [chunk], confirm_llm=False)
+
+        assert result.assessment.verdict is AssessmentVerdict.UNKNOWN
+        assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+        assert result.assessment.evidence[0].source_page == 71
+        assert result.assessment.evidence[0].metadata["evidence_type"] == "omission_note"
+        assert disclosure_id.removeprefix("GRI ") in result.assessment.evidence[0].evidence_preview
+
+
+def test_disclosure_agent_marks_omission_note_only_for_target_index_row():
+    index_text = (
+        "2-4 信息重述 无信息重述 /\n"
+        "2-10 最高管治机构的提名和遴选 因商业保密限制从略披露 /\n"
+        "2-20 确定薪酬的程序 因商业保密限制从略披露 / 2-21 年度总薪酬比率 因商业保密限制从略披露 /"
+    )
+    restatement_task = DisclosureTask(
+        task_id="task-2-4-a",
+        run_id="run-1",
+        report_id="report-1",
+        standard_id="GRI 2",
+        standard_version="2021",
+        disclosure_id="GRI 2-4",
+        requirement_id="GRI 2-4-a",
+        requirement_text="report restatements of information.",
+        keywords=["信息重述", "无信息重述"],
+        candidate_pages=[71],
+        candidate_page_source="gri_report_index",
+        index_page=71,
+    )
+    remuneration_task = DisclosureTask(
+        task_id="task-2-20-a",
+        run_id="run-1",
+        report_id="report-1",
+        standard_id="GRI 2",
+        standard_version="2021",
+        disclosure_id="GRI 2-20",
+        requirement_id="GRI 2-20-a",
+        requirement_text="describe process to determine remuneration.",
+        keywords=["从略披露", "因商业保密限制从略披露"],
+        candidate_pages=[71],
+        candidate_page_source="gri_report_index_omission_note",
+        index_page=71,
+    )
+    chunk = DocumentChunk(
+        chunk_id="chunk-index",
+        report_id="report-1",
+        text=index_text,
+        source_page=71,
+        source_method=EvidenceSourceMethod.PDFPLUMBER,
+        source_file_hash="hash-1",
+    )
+
+    restatement = DisclosureAgent().analyze(restatement_task, [chunk], confirm_llm=False)
+    remuneration = DisclosureAgent().analyze(remuneration_task, [chunk], confirm_llm=False)
+
+    assert restatement.assessment.verdict is AssessmentVerdict.DISCLOSED
+    assert restatement.assessment.evidence[0].metadata.get("evidence_type") is None
+    assert remuneration.assessment.verdict is AssessmentVerdict.UNKNOWN
+    assert remuneration.assessment.evidence[0].metadata["evidence_type"] == "omission_note"
+    assert "2-20 确定薪酬的程序 因商业保密限制从略披露 /" in remuneration.assessment.evidence[0].evidence_preview
+    assert "2-21" not in remuneration.assessment.evidence[0].evidence_preview
+
+
+def test_disclosure_agent_clears_global_fallback_for_omitted_remuneration_process():
+    task = DisclosureTask(
+        task_id="task-2-20-a",
+        run_id="run-1",
+        report_id="report-1",
+        standard_id="GRI 2",
+        standard_version="2021",
+        disclosure_id="GRI 2-20",
+        requirement_id="GRI 2-20-a",
+        requirement_text="describe process to determine remuneration.",
+        keywords=["薪酬", "流程"],
+        candidate_pages=[71],
+        candidate_page_source="gri_report_index_omission_note",
+        index_page=71,
+    )
+    chunk = DocumentChunk(
+        chunk_id="chunk-wrong-employee-page",
+        report_id="report-1",
+        text="挑战者代表聚焦流程与人，帮助公司人才进化。",
+        source_page=33,
+        source_method=EvidenceSourceMethod.PDFPLUMBER,
+        source_file_hash="hash-1",
+    )
+
+    result = DisclosureAgent().analyze(task, [chunk], confirm_llm=False)
+
+    assert result.assessment.verdict is AssessmentVerdict.UNKNOWN
+    assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+    assert result.assessment.evidence == []
