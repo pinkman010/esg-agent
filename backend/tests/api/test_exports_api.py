@@ -6,7 +6,7 @@ from sqlalchemy import select
 
 from src.db.models import AuditEventRecord
 from src.db.repositories import Repository
-from src.domain.enums import AssessmentVerdict, EvidenceSourceMethod, ReviewStatus, RunStatus
+from src.domain.enums import AssessmentVerdict, EvidenceSourceMethod, PageQualityFlag, ReviewStatus, RunStatus
 from src.domain.models import AnalysisRun, DisclosureAssessment, EvidenceItem, Report, ReviewDecision
 
 
@@ -24,7 +24,28 @@ def seed_export_data(session):
         requirement_id="GRI 302-1-a",
         verdict=AssessmentVerdict.DISCLOSED,
         rationale="Evidence found.",
-        evidence=[EvidenceItem(evidence_id="evidence-1", run_id="run-1", report_id="report-1", source_text="Energy", source_page=1, source_file_hash="hash-1", source_method=EvidenceSourceMethod.PDFPLUMBER)],
+        evidence=[
+            EvidenceItem(
+                evidence_id="evidence-1",
+                run_id="run-1",
+                report_id="report-1",
+                source_text="独立有限鉴证报告",
+                source_page=77,
+                source_pdf_page=77,
+                source_report_page=76,
+                source_file_hash="hash-1",
+                source_method=EvidenceSourceMethod.PDFPLUMBER,
+                quality_flags=[PageQualityFlag.SHORT_TEXT, PageQualityFlag.IMAGE_BODY_NOT_EXTRACTED],
+                needs_ocr_or_vlm=True,
+                requires_ocr=True,
+                requires_vlm=False,
+                ocr_or_vlm_reason="assurance_page_text_too_short",
+                metadata={
+                    "candidate_pdf_pages": [77],
+                    "candidate_report_pages": [76],
+                },
+            )
+        ],
         review_status=ReviewStatus.NOT_REQUIRED,
     )
     repo.save_assessment(assessment)
@@ -42,8 +63,27 @@ async def test_export_api_returns_json_and_csv(api_client, api_session):
 
     assert assessments_json.status_code == 200
     assert assessments_json.json()[0]["assessment_id"] == "assessment-1"
+    assert assessments_json.json()[0]["source_pdf_page"] == 77
+    assert assessments_json.json()[0]["source_report_page"] == 76
+    assert assessments_json.json()[0]["page_label"] == "PDF 第 77 页 / 报告页 76"
+    assert assessments_json.json()[0]["needs_ocr_or_vlm"] is True
+    assert assessments_json.json()[0]["requires_ocr"] is True
+    assert assessments_json.json()[0]["requires_vlm"] is False
+    assert assessments_json.json()[0]["evidence_preview"] == "独立有限鉴证报告"
+    assert assessments_json.json()[0]["candidate_pdf_pages"] == [77]
+    assert assessments_json.json()[0]["candidate_report_pages"] == [76]
     assert assessments_csv.status_code == 200
     assert "assessment_id" in assessments_csv.text
+    assert "source_pdf_page" in assessments_csv.text
+    assert "source_report_page" in assessments_csv.text
+    assert "page_label" in assessments_csv.text
+    assert "PDF 第 77 页 / 报告页 76" in assessments_csv.text
+    assert "needs_ocr_or_vlm" in assessments_csv.text
+    assert "requires_ocr" in assessments_csv.text
+    assert "requires_vlm" in assessments_csv.text
+    assert "evidence_preview" in assessments_csv.text
+    assert "candidate_pdf_pages" in assessments_csv.text
+    assert "candidate_report_pages" in assessments_csv.text
     assert review_json.json()[0]["decision_id"] == "decision-1"
     assert "decision_id" in review_csv.text
     event_types = api_session.scalars(

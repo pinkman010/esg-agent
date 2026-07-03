@@ -74,6 +74,112 @@ def test_chunk_to_evidence_uses_database_safe_id_for_realistic_long_inputs():
     assert evidence.metadata["chunk_id"] == chunk.chunk_id
 
 
+def test_chunk_to_evidence_builds_preview_around_matched_keyword():
+    task = DisclosureTask(
+        task_id="task-2-4-a",
+        run_id="run-1",
+        report_id="report-1",
+        standard_id="GRI 2",
+        standard_version="2021",
+        disclosure_id="GRI 2-4",
+        requirement_id="GRI 2-4-a",
+        requirement_text="report restatements of information.",
+        keywords=["信息重述", "无信息重述"],
+    )
+    chunk = DocumentChunk(
+        chunk_id="chunk-index",
+        report_id="report-1",
+        text=f"{'页首目录文本 ' * 40} 2-4 信息重述 无信息重述 / 2-5 外部鉴证 附录三：鉴证报告 76",
+        source_page=71,
+        source_method=EvidenceSourceMethod.PDFPLUMBER,
+        source_file_hash="hash-1",
+    )
+
+    evidence = chunk_to_evidence(task, chunk)
+
+    assert "2-4 信息重述 无信息重述 /" in evidence.evidence_preview
+    assert "页首目录文本 页首目录文本 页首目录文本" not in evidence.evidence_preview
+
+
+def test_chunk_to_evidence_skips_non_matching_header_lines_for_preview():
+    task = DisclosureTask(
+        task_id="task-2-4-a",
+        run_id="run-1",
+        report_id="report-1",
+        standard_id="GRI 2",
+        standard_version="2021",
+        disclosure_id="GRI 2-4",
+        requirement_id="GRI 2-4-a",
+        requirement_text="report restatements of information.",
+        keywords=["信息重述", "无信息重述"],
+    )
+    chunk = DocumentChunk(
+        chunk_id="chunk-index",
+        report_id="report-1",
+        text="目录 概述 环境 人 产品 治理 附录\n2-4 信息重述 无信息重述 /\n2-5 外部鉴证 附录三：鉴证报告 76",
+        source_page=71,
+        source_method=EvidenceSourceMethod.PDFPLUMBER,
+        source_file_hash="hash-1",
+    )
+
+    evidence = chunk_to_evidence(task, chunk)
+
+    assert evidence.evidence_preview == "2-4 信息重述 无信息重述 /"
+
+
+def test_chunk_to_evidence_preview_keeps_reporting_period_date_near_keyword():
+    task = DisclosureTask(
+        task_id="task-2-3-a",
+        run_id="run-1",
+        report_id="report-1",
+        standard_id="GRI 2",
+        standard_version="2021",
+        disclosure_id="GRI 2-3",
+        requirement_id="GRI 2-3-a",
+        requirement_text="report reporting period and frequency.",
+        keywords=["报告期", "报告频率"],
+    )
+    chunk = DocumentChunk(
+        chunk_id="chunk-period",
+        report_id="report-1",
+        text="本报告覆盖公司2024年1月1日至12月31日\n（以下简称“报告期”）期间的信息和数据。",
+        source_page=3,
+        source_method=EvidenceSourceMethod.PDFPLUMBER,
+        source_file_hash="hash-1",
+    )
+
+    evidence = chunk_to_evidence(task, chunk)
+
+    assert "2024年1月1日至12月31日" in evidence.evidence_preview
+    assert "报告期" in evidence.evidence_preview
+
+
+def test_chunk_to_evidence_preview_prefers_email_over_contact_heading():
+    task = DisclosureTask(
+        task_id="task-2-3-d",
+        run_id="run-1",
+        report_id="report-1",
+        standard_id="GRI 2",
+        standard_version="2021",
+        disclosure_id="GRI 2-3",
+        requirement_id="GRI 2-3-d",
+        requirement_text="report contact point for questions about the report.",
+        keywords=["联系方式", "联系邮箱", "获取及回应本报告", "f_esg_office"],
+    )
+    chunk = DocumentChunk(
+        chunk_id="chunk-contact",
+        report_id="report-1",
+        text="获取及回应本报告\n欢迎读者提出建议。\nE-mail：f_esg_office@envision-energy.com",
+        source_page=3,
+        source_method=EvidenceSourceMethod.PDFPLUMBER,
+        source_file_hash="hash-1",
+    )
+
+    evidence = chunk_to_evidence(task, chunk)
+
+    assert "f_esg_office@envision-energy.com" in evidence.evidence_preview
+
+
 def test_retrieve_evidence_prefers_candidate_pages_and_records_strategy():
     task = DisclosureTask(
         task_id="run-1:GRI 2-1-a",

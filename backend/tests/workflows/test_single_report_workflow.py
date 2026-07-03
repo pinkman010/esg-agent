@@ -199,6 +199,81 @@ def test_single_report_workflow_attaches_report_index_candidate_pages(repo_sessi
     assert task.keywords == ["legal", "name"]
     evidence = repo_session.scalar(select(EvidenceItemRecord).where(EvidenceItemRecord.run_id == run.run_id))
     assert evidence.source_page == 6
+    assert evidence.source_pdf_page == 6
+    assert evidence.source_report_page == 5
     assert evidence.evidence_metadata["retrieval_strategy"] == "index_page_bounded"
     assert evidence.evidence_metadata["candidate_pages"] == [6]
+    assert evidence.evidence_metadata["candidate_pdf_pages"] == [6]
+    assert evidence.evidence_metadata["candidate_report_pages"] == [5]
     assert evidence.evidence_metadata["index_page"] == 71
+    assert evidence.evidence_metadata["source_pdf_page"] == 6
+    assert evidence.evidence_metadata["source_report_page"] == 5
+
+
+def test_single_report_workflow_supplements_candidate_pages_for_entity_attributes(tmp_path):
+    pack_path = tmp_path / "gri_requirement_pack.json"
+    pack_path.write_text(
+        json.dumps(
+            {
+                "requirements": [
+                    {
+                        "canonical_disclosure_id": "2-1",
+                        "report_index_pdf_page": 71,
+                        "report_index_report_page": 70,
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    workflow = SingleReportWorkflow(
+        None,
+        FakeParser(),
+        FakeAdapter(),
+        DisclosureAgent(),
+        requirement_pack_path=pack_path,
+    )
+    pages = [
+        PageExtraction(report_id="report-1", page_number=1, text="远景能源有限公司 Envision Energy Co., Ltd."),
+        PageExtraction(report_id="report-1", page_number=3, text="报告主体为远景能源有限公司。"),
+        PageExtraction(report_id="report-1", page_number=6, text="关于远景能源"),
+        PageExtraction(report_id="report-1", page_number=28, text="上海总部大楼持续推进绿色运营。"),
+        PageExtraction(report_id="report-1", page_number=71, text="2-1 组织详细情况 关于远景能源 5"),
+    ]
+    from src.domain.models import DisclosureTask
+
+    tasks = [
+        DisclosureTask(
+            task_id="task-2-1-a",
+            run_id="run-1",
+            report_id="report-1",
+            standard_id="GRI 2",
+            standard_version="2021",
+            disclosure_id="GRI 2-1",
+            requirement_id="GRI 2-1-a",
+            requirement_text="report its legal name;",
+            keywords=["有限公司"],
+        ),
+        DisclosureTask(
+            task_id="task-2-1-c",
+            run_id="run-1",
+            report_id="report-1",
+            standard_id="GRI 2",
+            standard_version="2021",
+            disclosure_id="GRI 2-1",
+            requirement_id="GRI 2-1-c",
+            requirement_text="report the location of its headquarters;",
+            keywords=["总部"],
+        ),
+    ]
+
+    enriched = workflow._attach_report_index_candidates(pages, tasks)
+
+    assert enriched[0].candidate_pages == [1, 3, 6]
+    assert enriched[0].candidate_pdf_pages == [1, 3, 6]
+    assert enriched[0].candidate_report_pages == [None, 2, 5]
+    assert enriched[0].candidate_page_source == "gri_report_index+requirement_supplement"
+    assert enriched[1].candidate_pages == [6, 28]
+    assert enriched[1].candidate_pdf_pages == [6, 28]
+    assert enriched[1].candidate_report_pages == [5, 27]
+    assert enriched[1].candidate_page_source == "gri_report_index+requirement_supplement"

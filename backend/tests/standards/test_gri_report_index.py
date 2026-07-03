@@ -41,7 +41,30 @@ def test_build_report_index_extracts_candidate_pdf_pages_from_index_text():
     assert index["2-1"].index_page == 71
 
 
-def test_build_report_index_ignores_not_disclosed_slash_only_rows():
+def test_report_index_entry_can_convert_pdf_page_to_report_page():
+    pages = [
+        PageExtraction(
+            report_id="report-1",
+            page_number=71,
+            text="2-5 外部鉴证 附录三：鉴证报告 76",
+        )
+    ]
+    pack_items = [
+        {
+            "canonical_disclosure_id": "2-5",
+            "report_index_pdf_page": 71,
+            "report_index_report_page": 70,
+        }
+    ]
+
+    index = build_report_index(pages, pack_items)
+
+    entry = index["2-5"]
+    assert entry.candidate_pages == [77]
+    assert entry.to_report_page(77) == 76
+
+
+def test_build_report_index_uses_no_restatement_index_note_as_candidate_page():
     pages = [
         PageExtraction(
             report_id="report-1",
@@ -59,7 +82,8 @@ def test_build_report_index_ignores_not_disclosed_slash_only_rows():
 
     index = build_report_index(pages, pack_items)
 
-    assert "2-4" not in index
+    assert index["2-4"].candidate_pages == [71]
+    assert index["2-4"].index_page == 71
 
 
 def test_build_report_index_stops_before_same_line_next_disclosure():

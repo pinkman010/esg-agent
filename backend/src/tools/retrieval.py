@@ -8,6 +8,8 @@ def retrieve_evidence(task: DisclosureTask, chunks: list[DocumentChunk], limit: 
         retrieval_metadata = {
             "retrieval_strategy": "index_page_bounded",
             "candidate_pages": task.candidate_pages,
+            "candidate_pdf_pages": task.candidate_pdf_pages,
+            "candidate_report_pages": task.candidate_report_pages,
             "candidate_page_source": task.candidate_page_source,
             "index_page": task.index_page,
         }
@@ -27,6 +29,8 @@ def retrieve_evidence(task: DisclosureTask, chunks: list[DocumentChunk], limit: 
             {
                 "retrieval_strategy": "global_fallback",
                 "candidate_pages": task.candidate_pages,
+                "candidate_pdf_pages": task.candidate_pdf_pages,
+                "candidate_report_pages": task.candidate_report_pages,
                 "candidate_page_source": task.candidate_page_source,
                 "index_page": task.index_page,
             },

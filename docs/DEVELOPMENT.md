@@ -151,6 +151,25 @@ pnpm generate:api
 - 修复 GRI 索引页双列表格解析污染问题：同一行中右侧 disclosure 的页码不再并入左侧 disclosure 候选页。
 - 真实 PDF `confirm_llm=false` 验收通过：10 个 assessment、5 条 evidence、7 条 recommendation、1 条 `index_page_bounded` evidence、4 条 `global_fallback` evidence、9 条待复核 assessment，四个导出接口均返回 `200`。
 - 本次未调用外部模型；fallback evidence 和低质量页 evidence 只能作为人工复核入口，不能作为最终合规结论。
+- 根据 `tmp/fallback_review.csv` 人工复核结论，调整披露判定门禁：`global_fallback` evidence 只能作为可疑线索，不再支撑 `disclosed`。
+- 为 `GRI 2-2-a` 增加中文检索词：报告边界、实际运营场所、统计口径、合并范围、纳入报告；命中候选页但只披露报告边界时，判为 `partially_disclosed` 并记录缺失项。
+- 为 `GRI 2-2-c-ii` 增加合并口径、并购、收购、实体处置等中文检索词；无候选页正确证据时保持 `unknown + needs_manual_review`。
+- 重新跑真实 PDF `confirm_llm=false` 验收：10 个 assessment、3 条 evidence、9 条 recommendation、2 条 `index_page_bounded` evidence、1 条 `global_fallback` evidence、9 条待复核 assessment，四个导出接口均返回 `200`，未调用外部模型。
+- 根据 bounded evidence 人工复核结论，增加 `GRI 2-2-c-iii` 充分性规则：候选页只说明报告期、资料来源、编制流程或报告边界时，不能支撑 `disclosed`，改为 `unknown + needs_manual_review` 并记录缺失的合并方法与差异说明。
+- 再次跑真实 PDF `confirm_llm=false` 验收：10 个 assessment、3 条 evidence、10 条 recommendation、2 条 `index_page_bounded` evidence、1 条 `global_fallback` evidence、10 条待复核 assessment，四个导出接口均返回 `200`，未调用外部模型。
+- 根据前 10 条 requirement 人工复核结论，增加 `GRI 2-1` 与 `GRI 2-2-c` 的中文关键词、候选页补充和充分性规则：`2-1-a` 可使用封面/报告说明页公司全称，`2-1-c` 可补充总部页，`2-1-d` 与 `2-2-c` 只支持部分披露，`2-2-c-ii` 无效 fallback evidence 被过滤。
+- 重新跑真实 PDF `confirm_llm=false` 验收：10 个 assessment、7 条 evidence、9 条 recommendation、7 条 `index_page_bounded` evidence、0 条 `global_fallback` evidence；结果为 1 条 `disclosed`、4 条 `partially_disclosed`、5 条 `unknown`，四个导出接口均返回 `200`，未调用外部模型。
+- 根据 `current_10_review_after_rules.csv` 人工复核结论，保留前 10 条 verdict/review_status 分布，并将 `GRI 2-2-c-iii` 的第 3 页 insufficient evidence 过滤出有效 evidence；再次跑真实 PDF `confirm_llm=false` 验收：10 个 assessment、6 条 evidence、9 条 recommendation、6 条 `index_page_bounded` evidence、0 条 `global_fallback` evidence，四个导出接口均返回 `200`，未调用外部模型。
+- 后续 GRI 结构化字段引用以实际存在字段为准：`report_index_pdf_page`、`report_index_report_page`、`evidence_expectation`、`official_pdf_page_candidates`；不得引用不存在的 `report_index_target_pages` 或 `expected_evidence_type`。
+- 根据 `current_20_review.csv` 人工复核结论，增加 `GRI 2-3`、`GRI 2-4`、`GRI 2-5` 的中文关键词、索引备注和充分性规则：`2-3-a` 报告期只能支撑部分披露，`2-3-d` 联系邮箱可支撑披露，`2-4` 使用 GRI 索引页“无信息重述”，`2-5` 使用鉴证报告页，`source_page=23/60/64` 的 `global_fallback` 误命中被过滤。
+- 生成 `tmp/review/current_20_review_after_rules.csv`：20 个 requirement、21 行、14 条 evidence，结果为 7 条 `disclosed`、6 条 `partially_disclosed`、7 条 `unknown`；7 条 `not_required`、13 条 `needs_manual_review`；14 条 evidence 均为 `index_page_bounded`，0 条 `global_fallback`，未调用外部模型。
+- 增加 evidence 页码双轨字段：`source_pdf_page` 用于程序定位，`source_report_page` 用于人工阅读和 GRI 索引展示；保留 `source_page` 兼容旧 API，并在 CSV/JSON 导出中增加 `page_label`。
+- 对低文本鉴证页增加 `needs_ocr_or_vlm` 和 `ocr_or_vlm_reason` 标记；本阶段只做路由预留，不调用 OCR/VLM。
+- 生成 `tmp/review/current_20_review_after_page_fields.csv`：20 个 requirement、21 行、14 条 evidence，结果分布保持 7 条 `disclosed`、6 条 `partially_disclosed`、7 条 `unknown`；`GRI 2-5` evidence 展示为 `PDF 第 77 页 / 报告页 76`，并标记 `assurance_page_text_too_short`，未调用外部模型。
+- 补齐字段契约：新增 `candidate_pdf_pages`、`candidate_report_pages`、`requires_ocr`、`requires_vlm`、`evidence_preview`；低文本鉴证页追加 `short_text` 和 `image_body_not_extracted` 质量标记，同时保留旧字段兼容。
+- 生成 `tmp/review/current_20_review_after_contract_fields.csv`：20 个 requirement、21 行、14 条 evidence，结果分布保持不变；`GRI 2-5` 三条 evidence 均为 `requires_ocr=true`、`requires_vlm=false`，未调用外部模型。
+- 修复 `evidence_preview` 页首截断问题：preview 改为基于 requirement 关键词的命中窗口，并优先选择包含邮箱、日期和更多关键词的候选片段；`GRI 2-4` preview 稳定显示 `2-4 信息重述 无信息重述 /`。
+- 生成 `tmp/review/current_20_review_final_contract.csv`：20 个 requirement、21 行、14 条 evidence，结果分布保持不变；无 evidence 的 unknown 行导出布尔字段统一为 `false`，未调用外部模型。
 
 ### 2026-07-02
 

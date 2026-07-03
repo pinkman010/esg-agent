@@ -77,8 +77,18 @@ class DisclosureTask(BaseModel):
     requirement_text: str
     keywords: list[str] = Field(default_factory=list)
     candidate_pages: list[int] = Field(default_factory=list)
+    candidate_pdf_pages: list[int] = Field(default_factory=list)
+    candidate_report_pages: list[int | None] = Field(default_factory=list)
     candidate_page_source: str | None = None
     index_page: int | None = None
+    report_index_pdf_page: int | None = None
+    report_index_report_page: int | None = None
+
+    @model_validator(mode="after")
+    def default_candidate_pdf_pages(self) -> "DisclosureTask":
+        if not self.candidate_pdf_pages and self.candidate_pages:
+            self.candidate_pdf_pages = list(self.candidate_pages)
+        return self
 
 
 class EvidenceItem(BaseModel):
@@ -87,13 +97,29 @@ class EvidenceItem(BaseModel):
     report_id: str
     source_text: str
     source_page: int = Field(ge=1)
+    source_pdf_page: int | None = Field(default=None, ge=1)
+    source_report_page: int | None = Field(default=None, ge=1)
     source_file_hash: str
     source_method: EvidenceSourceMethod
     bbox: dict[str, float] | None = None
     confidence: float = Field(default=1.0, ge=0.0, le=1.0)
     is_kpi_evidence: bool = False
     quality_flags: list[PageQualityFlag] = Field(default_factory=list)
+    needs_ocr_or_vlm: bool = False
+    requires_ocr: bool = False
+    requires_vlm: bool = False
+    ocr_or_vlm_reason: str | None = None
+    evidence_preview: str | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def default_source_pdf_page(self) -> "EvidenceItem":
+        if self.source_pdf_page is None:
+            self.source_pdf_page = self.source_page
+        if self.evidence_preview is None:
+            preview = " ".join(self.source_text.split())
+            self.evidence_preview = preview[:200] + "..." if len(preview) > 200 else preview
+        return self
 
 
 class DisclosureAssessment(BaseModel):

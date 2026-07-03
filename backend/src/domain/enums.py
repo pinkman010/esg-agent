@@ -34,8 +34,10 @@ class EvidenceSourceMethod(StrEnum):
 
 class PageQualityFlag(StrEnum):
     DIGITAL_TEXT = "digital_text"
+    SHORT_TEXT = "short_text"
     SCANNED = "scanned"
     LOW_TEXT_DENSITY = "low_text_density"
     COMPLEX_TABLE = "complex_table"
+    IMAGE_BODY_NOT_EXTRACTED = "image_body_not_extracted"
     OCR_FAILED = "ocr_failed"
     NEEDS_MANUAL_REVIEW = "needs_manual_review"

@@ -137,3 +137,128 @@ def test_gri_adapter_limits_converted_checklist_requirements(tmp_path):
     requirements = GRIAdapter(path, max_requirements=2).load_requirements()
 
     assert [requirement.requirement_id for requirement in requirements] == ["GRI 2-1-a", "GRI 2-1-b"]
+
+
+def test_gri_adapter_adds_chinese_keywords_for_gri_2_2(tmp_path):
+    path = tmp_path / "gri-checklist.json"
+    path.write_text(
+        json.dumps(
+            {
+                "metadata": {"manifest_version": "test"},
+                "requirements": [
+                    {
+                        "requirement_id": "current_gap:GRI2:2-2:a",
+                        "canonical_disclosure_id": "2-2",
+                        "requirement_text": "list all entities included in its sustainability reporting;",
+                        "requirement_type": "requirement",
+                        "is_mandatory": True,
+                        "scoring_role": "hard_score",
+                        "standard_year": "2021",
+                        "assessment_mode": "current_gap",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    requirements = GRIAdapter(path).load_requirements()
+
+    assert "报告边界" in requirements[0].keywords
+    assert "实际运营场所" in requirements[0].keywords
+    assert "纳入报告" in requirements[0].keywords
+
+
+def test_gri_adapter_adds_chinese_keywords_for_gri_2_1_entity_attributes(tmp_path):
+    path = tmp_path / "gri-checklist.json"
+    path.write_text(
+        json.dumps(
+            {
+                "metadata": {"manifest_version": "test"},
+                "requirements": [
+                    {
+                        "requirement_id": "current_gap:GRI2:2-1:a",
+                        "canonical_disclosure_id": "2-1",
+                        "requirement_text": "report its legal name;",
+                        "requirement_type": "requirement",
+                        "is_mandatory": True,
+                        "scoring_role": "hard_score",
+                        "standard_year": "2021",
+                        "assessment_mode": "current_gap",
+                    },
+                    {
+                        "requirement_id": "current_gap:GRI2:2-1:c",
+                        "canonical_disclosure_id": "2-1",
+                        "requirement_text": "report the location of its headquarters;",
+                        "requirement_type": "requirement",
+                        "is_mandatory": True,
+                        "scoring_role": "hard_score",
+                        "standard_year": "2021",
+                        "assessment_mode": "current_gap",
+                    },
+                    {
+                        "requirement_id": "current_gap:GRI2:2-1:d",
+                        "canonical_disclosure_id": "2-1",
+                        "requirement_text": "report its countries of operation;",
+                        "requirement_type": "requirement",
+                        "is_mandatory": True,
+                        "scoring_role": "hard_score",
+                        "standard_year": "2021",
+                        "assessment_mode": "current_gap",
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    requirements = GRIAdapter(path).load_requirements()
+    keywords_by_id = {requirement.requirement_id: requirement.keywords for requirement in requirements}
+
+    assert "有限公司" in keywords_by_id["GRI 2-1-a"]
+    assert "Co., Ltd." in keywords_by_id["GRI 2-1-a"]
+    assert "总部" in keywords_by_id["GRI 2-1-c"]
+    assert "上海总部" in keywords_by_id["GRI 2-1-c"]
+    assert "全球市场" in keywords_by_id["GRI 2-1-d"]
+    assert "运营国家" in keywords_by_id["GRI 2-1-d"]
+
+
+def test_gri_adapter_adds_chinese_keywords_for_gri_2_3_2_4_2_5(tmp_path):
+    path = tmp_path / "gri-checklist.json"
+    path.write_text(
+        json.dumps(
+            {
+                "metadata": {"manifest_version": "test"},
+                "requirements": [
+                    {
+                        "requirement_id": f"current_gap:GRI2:{disclosure}:{suffix}",
+                        "canonical_disclosure_id": disclosure,
+                        "requirement_text": requirement_text,
+                        "requirement_type": "requirement",
+                        "is_mandatory": True,
+                        "scoring_role": "hard_score",
+                        "standard_year": "2021",
+                        "assessment_mode": "current_gap",
+                    }
+                    for disclosure, suffix, requirement_text in [
+                        ("2-3", "a", "report the reporting period and frequency;"),
+                        ("2-3", "d", "report the contact point for questions;"),
+                        ("2-4", "a", "report restatements of information;"),
+                        ("2-5", "a", "describe external assurance policy and practice;"),
+                        ("2-5", "b", "report external assurance details;"),
+                    ]
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    requirements = GRIAdapter(path).load_requirements()
+    keywords_by_id = {requirement.requirement_id: requirement.keywords for requirement in requirements}
+
+    assert "报告期" in keywords_by_id["GRI 2-3-a"]
+    assert "报告频率" in keywords_by_id["GRI 2-3-a"]
+    assert "联系邮箱" in keywords_by_id["GRI 2-3-d"]
+    assert "无信息重述" in keywords_by_id["GRI 2-4-a"]
+    assert "鉴证报告" in keywords_by_id["GRI 2-5-a"]
+    assert "独立有限鉴证" in keywords_by_id["GRI 2-5-b"]

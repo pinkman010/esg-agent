@@ -8,6 +8,25 @@ from pydantic import ValidationError
 from src.domain.models import DisclosureRequirement, DisclosureTask
 
 
+_CHINESE_KEYWORDS_BY_REQUIREMENT = {
+    "GRI 2-1-a": ["法定名称", "公司名称", "有限公司", "Co., Ltd.", "远景能源有限公司", "Envision Energy Co., Ltd."],
+    "GRI 2-1-b": ["所有权性质", "法律形式", "ownership", "legal form"],
+    "GRI 2-1-c": ["总部", "上海总部", "总部大楼", "所在地", "地址"],
+    "GRI 2-1-d": ["运营国家", "运营地区", "国家", "地区", "全球市场", "海外订单", "全球项目", "亚太"],
+    "GRI 2-2-a": ["报告边界", "实际运营场所", "统计口径", "合并范围", "纳入报告"],
+    "GRI 2-2-c": ["报告边界", "实际运营场所", "多实体", "合并方法", "合并口径"],
+    "GRI 2-2-c-ii": ["合并口径", "并购", "收购", "实体处置"],
+    "GRI 2-3-a": ["报告期", "报告周期", "报告频率"],
+    "GRI 2-3-d": ["联系方式", "联系邮箱", "获取及回应本报告", "f_esg_office"],
+    "GRI 2-4-a": ["信息重述", "无信息重述"],
+    "GRI 2-4-a-i": ["信息重述", "无信息重述", "重述原因"],
+    "GRI 2-4-a-ii": ["信息重述", "无信息重述", "重述影响"],
+    "GRI 2-5-a": ["鉴证报告", "独立有限鉴证", "有限保证", "外部鉴证"],
+    "GRI 2-5-b": ["鉴证报告", "独立有限鉴证", "有限保证", "外部鉴证声明"],
+    "GRI 2-5-b-i": ["鉴证报告", "独立有限鉴证", "有限保证", "外部鉴证声明"],
+}
+
+
 class GRIAdapter:
     standard_id = "GRI"
 
@@ -50,14 +69,18 @@ class GRIAdapter:
         for item in raw_items:
             if not self._is_current_gap_requirement(item):
                 continue
+            requirement_id = self._requirement_id_from_checklist_item(item)
             requirements.append(
                 DisclosureRequirement(
                     standard_id=self._standard_id_from_checklist_item(item),
                     standard_version=str(item.get("standard_year") or self.standard_version),
                     disclosure_id=self._disclosure_id_from_checklist_item(item),
-                    requirement_id=self._requirement_id_from_checklist_item(item),
+                    requirement_id=requirement_id,
                     requirement_text=str(item.get("requirement_text") or "").strip(),
-                    keywords=self._keywords_from_text(str(item.get("requirement_text") or "")),
+                    keywords=self._keywords_from_text(
+                        str(item.get("requirement_text") or ""),
+                        requirement_id=requirement_id,
+                    ),
                 )
             )
             if self.max_requirements is not None and len(requirements) >= self.max_requirements:
@@ -98,7 +121,7 @@ class GRIAdapter:
             return f"GRI {canonical_disclosure_id}"
         return raw_id
 
-    def _keywords_from_text(self, text: str) -> list[str]:
+    def _keywords_from_text(self, text: str, requirement_id: str | None = None) -> list[str]:
         stopwords = {
             "a",
             "all",
@@ -136,4 +159,7 @@ class GRIAdapter:
             keywords.append(keyword)
             if len(keywords) >= 8:
                 break
+        for keyword in _CHINESE_KEYWORDS_BY_REQUIREMENT.get(requirement_id or "", []):
+            if keyword not in keywords:
+                keywords.append(keyword)
         return keywords

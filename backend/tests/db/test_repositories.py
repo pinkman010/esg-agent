@@ -4,7 +4,7 @@ from sqlalchemy.orm import sessionmaker
 from src.db.base import Base
 from src.db.models import DisclosureTaskRecord, DocumentChunkRecord, DocumentPageRecord, RecommendationRecord
 from src.db.repositories import Repository
-from src.domain.enums import AssessmentVerdict, EvidenceSourceMethod, ReviewStatus, RunStatus
+from src.domain.enums import AssessmentVerdict, EvidenceSourceMethod, PageQualityFlag, ReviewStatus, RunStatus
 from src.domain.models import (
     AnalysisRun,
     DisclosureAssessment,
@@ -96,8 +96,15 @@ def test_repository_persists_report_run_assessment_evidence_and_review():
                     report_id="report-1",
                     source_text="Total energy consumption is disclosed.",
                     source_page=12,
+                    source_pdf_page=12,
+                    source_report_page=11,
                     source_file_hash="hash-1",
                     source_method=EvidenceSourceMethod.PDFPLUMBER,
+                    quality_flags=[PageQualityFlag.SHORT_TEXT, PageQualityFlag.IMAGE_BODY_NOT_EXTRACTED],
+                    needs_ocr_or_vlm=True,
+                    requires_ocr=True,
+                    requires_vlm=False,
+                    ocr_or_vlm_reason="assurance_page_text_too_short",
                 )
             ],
             model_called=False,
@@ -109,6 +116,16 @@ def test_repository_persists_report_run_assessment_evidence_and_review():
         assessments = repo.list_assessments_by_run("run-1")
         assert len(assessments) == 1
         assert assessments[0].requirement_id == "GRI 302-1-a"
+        saved_evidence = assessments[0].evidence[0]
+        assert saved_evidence.source_page == 12
+        assert saved_evidence.source_pdf_page == 12
+        assert saved_evidence.source_report_page == 11
+        assert saved_evidence.requires_ocr is True
+        assert saved_evidence.requires_vlm is False
+        assert saved_evidence.needs_ocr_or_vlm is True
+        assert saved_evidence.ocr_or_vlm_reason == "assurance_page_text_too_short"
+        assert saved_evidence.evidence_preview == "Total energy consumption is disclosed."
+        assert saved_evidence.quality_flags == [PageQualityFlag.SHORT_TEXT, PageQualityFlag.IMAGE_BODY_NOT_EXTRACTED]
 
         decision = repo.save_review_decision(
             ReviewDecision(

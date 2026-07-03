@@ -7,6 +7,11 @@ from src.db.repositories import Repository
 def assessments_rows(repository: Repository, run_id: str) -> list[dict]:
     rows = []
     for assessment in repository.list_assessments_by_run(run_id):
+        first_evidence = assessment.evidence[0] if assessment.evidence else None
+        source_pdf_page = first_evidence.source_pdf_page if first_evidence else None
+        source_report_page = first_evidence.source_report_page if first_evidence else None
+        candidate_pdf_pages = first_evidence.metadata.get("candidate_pdf_pages", []) if first_evidence else []
+        candidate_report_pages = first_evidence.metadata.get("candidate_report_pages", []) if first_evidence else []
         rows.append(
             {
                 "assessment_id": assessment.assessment_id,
@@ -21,9 +26,28 @@ def assessments_rows(repository: Repository, run_id: str) -> list[dict]:
                 "model_called": assessment.model_called,
                 "review_status": assessment.review_status.value,
                 "evidence_count": len(assessment.evidence),
+                "source_page": first_evidence.source_page if first_evidence else None,
+                "source_pdf_page": source_pdf_page,
+                "source_report_page": source_report_page,
+                "page_label": format_page_label(source_pdf_page, source_report_page),
+                "candidate_pdf_pages": candidate_pdf_pages,
+                "candidate_report_pages": candidate_report_pages,
+                "needs_ocr_or_vlm": first_evidence.needs_ocr_or_vlm if first_evidence else False,
+                "requires_ocr": first_evidence.requires_ocr if first_evidence else False,
+                "requires_vlm": first_evidence.requires_vlm if first_evidence else False,
+                "ocr_or_vlm_reason": first_evidence.ocr_or_vlm_reason if first_evidence else None,
+                "evidence_preview": first_evidence.evidence_preview if first_evidence else None,
             }
         )
     return rows
+
+
+def format_page_label(source_pdf_page: int | None, source_report_page: int | None) -> str:
+    if source_pdf_page and source_report_page:
+        return f"PDF 第 {source_pdf_page} 页 / 报告页 {source_report_page}"
+    if source_pdf_page:
+        return f"PDF 第 {source_pdf_page} 页"
+    return ""
 
 
 def review_rows(repository: Repository, run_id: str) -> list[dict]:

@@ -64,6 +64,7 @@ class SingleReportWorkflow:
             for task in tasks:
                 self.repository.save_disclosure_task(task)
                 result = self.disclosure_agent.analyze(task, parsed.chunks, confirm_llm=confirm_llm)
+                self._attach_evidence_page_fields(result.assessment.evidence, task)
                 self.repository.save_assessment(result.assessment)
                 for evidence in result.assessment.evidence:
                     self.repository.save_evidence_item(result.assessment.assessment_id, evidence)
@@ -92,13 +93,72 @@ class SingleReportWorkflow:
             if entry is None:
                 enriched_tasks.append(task)
                 continue
+            candidate_pages = self._supplement_candidate_pages(task, pages, entry.candidate_pages)
+            candidate_report_pages = self._candidate_report_pages(candidate_pages, entry.report_index_pdf_page, entry.report_index_report_page)
+            candidate_page_source = entry.source
+            if candidate_pages != entry.candidate_pages:
+                candidate_page_source = f"{entry.source}+requirement_supplement"
             enriched_tasks.append(
                 task.model_copy(
                     update={
-                        "candidate_pages": entry.candidate_pages,
-                        "candidate_page_source": entry.source,
+                        "candidate_pages": candidate_pages,
+                        "candidate_pdf_pages": candidate_pages,
+                        "candidate_report_pages": candidate_report_pages,
+                        "candidate_page_source": candidate_page_source,
                         "index_page": entry.index_page,
+                        "report_index_pdf_page": entry.report_index_pdf_page,
+                        "report_index_report_page": entry.report_index_report_page,
                     }
                 )
             )
         return enriched_tasks
+
+    def _attach_evidence_page_fields(self, evidence_items, task: DisclosureTask) -> None:
+        if task.report_index_pdf_page is None or task.report_index_report_page is None:
+            return
+
+        offset = task.report_index_pdf_page - task.report_index_report_page
+        for evidence in evidence_items:
+            source_pdf_page = evidence.source_pdf_page or evidence.source_page
+            evidence.source_pdf_page = source_pdf_page
+            evidence.metadata["source_pdf_page"] = source_pdf_page
+            evidence.metadata["candidate_pdf_pages"] = task.candidate_pdf_pages
+            evidence.metadata["candidate_report_pages"] = task.candidate_report_pages
+            source_report_page = source_pdf_page - offset
+            if source_report_page > 0:
+                evidence.source_report_page = source_report_page
+                evidence.metadata["source_report_page"] = source_report_page
+
+    def _candidate_report_pages(
+        self,
+        candidate_pdf_pages: list[int],
+        report_index_pdf_page: int,
+        report_index_report_page: int,
+    ) -> list[int | None]:
+        offset = report_index_pdf_page - report_index_report_page
+        report_pages: list[int | None] = []
+        for pdf_page in candidate_pdf_pages:
+            report_page = pdf_page - offset
+            report_pages.append(report_page if report_page > 0 else None)
+        return report_pages
+
+    def _supplement_candidate_pages(
+        self,
+        task: DisclosureTask,
+        pages: list[PageExtraction],
+        candidate_pages: list[int],
+    ) -> list[int]:
+        supplements: list[int] = []
+        for page in pages:
+            text = page.text
+            text_lower = text.lower()
+            if task.requirement_id == "GRI 2-1-a" and page.page_number <= 3:
+                legal_name_terms = ["有限公司", "co., ltd", "co. ltd", "company limited"]
+                if any(term in text_lower for term in legal_name_terms):
+                    supplements.append(page.page_number)
+            if task.requirement_id == "GRI 2-1-c":
+                has_headquarters = "总部" in text
+                has_location_hint = any(term in text for term in ["上海", "地址", "大楼", "所在地"])
+                if has_headquarters and has_location_hint:
+                    supplements.append(page.page_number)
+        return sorted(set([*candidate_pages, *supplements]))

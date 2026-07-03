@@ -15,7 +15,7 @@ from src.db.models import (
     ReportRecord,
     ReviewDecisionRecord,
 )
-from src.domain.enums import AssessmentVerdict, EvidenceSourceMethod, ReviewStatus, RunStatus
+from src.domain.enums import AssessmentVerdict, EvidenceSourceMethod, PageQualityFlag, ReviewStatus, RunStatus
 from src.domain.models import AnalysisRun, DisclosureAssessment, DisclosureTask, DocumentChunk, EvidenceItem, PageExtraction, Recommendation, Report, ReviewDecision
 
 
@@ -129,12 +129,19 @@ class Repository:
             report_id=evidence.report_id,
             source_text=evidence.source_text,
             source_page=evidence.source_page,
+            source_pdf_page=evidence.source_pdf_page,
+            source_report_page=evidence.source_report_page,
             source_file_hash=evidence.source_file_hash,
             source_method=evidence.source_method.value,
             bbox=evidence.bbox,
             confidence=evidence.confidence,
             is_kpi_evidence=evidence.is_kpi_evidence,
             quality_flags=[flag.value for flag in evidence.quality_flags],
+            needs_ocr_or_vlm=evidence.needs_ocr_or_vlm,
+            requires_ocr=evidence.requires_ocr,
+            requires_vlm=evidence.requires_vlm,
+            ocr_or_vlm_reason=evidence.ocr_or_vlm_reason,
+            evidence_preview=evidence.evidence_preview,
             evidence_metadata=evidence.metadata,
         )
         self.session.add(record)
@@ -375,11 +382,19 @@ class Repository:
             report_id=record.report_id,
             source_text=record.source_text,
             source_page=record.source_page,
+            source_pdf_page=record.source_pdf_page,
+            source_report_page=record.source_report_page,
             source_file_hash=record.source_file_hash,
             source_method=EvidenceSourceMethod(record.source_method),
             bbox=record.bbox,
             confidence=record.confidence,
             is_kpi_evidence=record.is_kpi_evidence,
+            quality_flags=[PageQualityFlag(flag) for flag in record.quality_flags],
+            needs_ocr_or_vlm=record.needs_ocr_or_vlm,
+            requires_ocr=record.requires_ocr,
+            requires_vlm=record.requires_vlm,
+            ocr_or_vlm_reason=record.ocr_or_vlm_reason,
+            evidence_preview=record.evidence_preview,
             metadata=record.evidence_metadata,
         )
 

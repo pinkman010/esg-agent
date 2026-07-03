@@ -10,7 +10,12 @@ class GRIReportIndexEntry:
     disclosure_id: str
     candidate_pages: list[int]
     index_page: int
+    report_index_pdf_page: int
+    report_index_report_page: int
     source: str = "gri_report_index"
+
+    def to_report_page(self, pdf_page: int) -> int:
+        return pdf_page - (self.report_index_pdf_page - self.report_index_report_page)
 
 
 def build_report_index(
@@ -31,16 +36,22 @@ def build_report_index(
         if page is None:
             continue
 
+        row = _find_disclosure_row(disclosure_id, page.text)
         report_pages = _extract_report_pages_for_disclosure(disclosure_id, page.text)
-        if not report_pages:
+        if not report_pages and not (row and _is_no_information_restatement_row(row)):
             continue
 
         offset = index_pdf_page - index_report_page
-        candidate_pages = sorted({report_page + offset for report_page in report_pages if report_page > 0})
+        if row and _is_no_information_restatement_row(row):
+            candidate_pages = [index_pdf_page]
+        else:
+            candidate_pages = sorted({report_page + offset for report_page in report_pages if report_page > 0})
         result[disclosure_id] = GRIReportIndexEntry(
             disclosure_id=disclosure_id,
             candidate_pages=candidate_pages,
             index_page=index_pdf_page,
+            report_index_pdf_page=index_pdf_page,
+            report_index_report_page=index_report_page,
         )
 
     return result
@@ -83,3 +94,7 @@ def _before_next_index_token(text: str) -> str:
 
 def _is_slash_only_row(row: str) -> bool:
     return "/" in row and not re.search(r"(?<!\d)(\d{1,3})(?!\d)", row)
+
+
+def _is_no_information_restatement_row(row: str) -> bool:
+    return "无信息重述" in row
