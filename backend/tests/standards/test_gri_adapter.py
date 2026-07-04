@@ -346,3 +346,57 @@ def test_gri_adapter_adds_chinese_keywords_for_gri_2_10_to_2_20_governance_rules
     assert "季度汇报" in keywords_by_id["GRI 2-13-a-i"]
     assert "从略披露" in keywords_by_id["GRI 2-19-a"]
     assert "因商业保密限制从略披露" in keywords_by_id["GRI 2-20-a"]
+
+
+def test_gri_adapter_adds_chinese_keywords_for_gri_2_20_to_3_1_policy_rules(tmp_path):
+    path = tmp_path / "gri-checklist.json"
+    path.write_text(
+        json.dumps(
+            {
+                "metadata": {"manifest_version": "test"},
+                "requirements": [
+                    {
+                        "requirement_id": f"current_gap:GRI{standard}:{disclosure}:{suffix}",
+                        "canonical_disclosure_id": disclosure,
+                        "requirement_text": requirement_text,
+                        "requirement_type": "requirement",
+                        "is_mandatory": True,
+                        "scoring_role": "hard_score",
+                        "standard_year": "2021",
+                        "assessment_mode": "current_gap",
+                    }
+                    for standard, disclosure, suffix, requirement_text in [
+                        ("2", "2-20", "a:iii", "describe remuneration process;"),
+                        ("2", "2-21", "a", "report annual total compensation ratio;"),
+                        ("2", "2-22", "a", "statement on sustainable development strategy;"),
+                        ("2", "2-23", "a", "policy commitments;"),
+                        ("2", "2-24", "a", "embedding policy commitments;"),
+                        ("2", "2-25", "b", "grievance mechanisms;"),
+                        ("2", "2-26", "a:ii", "raise concerns about business conduct;"),
+                        ("2", "2-27", "a", "non-compliance with laws and regulations;"),
+                        ("2", "2-28", "a", "membership associations;"),
+                        ("2", "2-29", "a", "stakeholder engagement approach;"),
+                        ("2", "2-30", "a", "collective bargaining agreements;"),
+                        ("3", "3-1", "a", "process to determine material topics;"),
+                    ]
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    requirements = GRIAdapter(path).load_requirements()
+    keywords_by_id = {requirement.requirement_id: requirement.keywords for requirement in requirements}
+
+    assert "因商业保密限制从略披露" in keywords_by_id["GRI 2-20-a-iii"]
+    assert "年度总薪酬比率" in keywords_by_id["GRI 2-21-a"]
+    assert "董事长致辞" in keywords_by_id["GRI 2-22-a"]
+    assert "政策承诺" in keywords_by_id["GRI 2-23-a"]
+    assert "供应商行为准则" in keywords_by_id["GRI 2-24-a"]
+    assert "阳光热线" in keywords_by_id["GRI 2-25-b"]
+    assert "举报电话" in keywords_by_id["GRI 2-26-a-ii"]
+    assert "未发生违法违规事件" in keywords_by_id["GRI 2-27-a"]
+    assert "UNGC" in keywords_by_id["GRI 2-28-a"]
+    assert "利益相关方沟通" in keywords_by_id["GRI 2-29-a"]
+    assert "集体谈判协议" in keywords_by_id["GRI 2-30-a"]
+    assert "重要性评估" in keywords_by_id["GRI 3-1-a"]

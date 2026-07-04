@@ -366,3 +366,90 @@ def test_single_report_workflow_supplements_candidate_pages_for_current_50_rules
     assert enriched[1].candidate_report_pages == [31, 32, 62, 64]
     assert enriched[2].candidate_pdf_pages == [13]
     assert enriched[2].candidate_report_pages == [12]
+
+
+def test_single_report_workflow_supplements_candidate_pages_for_current_150_rules(tmp_path):
+    pack_path = tmp_path / "gri_requirement_pack.json"
+    pack_path.write_text(
+        json.dumps(
+            {
+                "requirements": [
+                    {"canonical_disclosure_id": "2-22", "report_index_pdf_page": 72, "report_index_report_page": 71},
+                    {"canonical_disclosure_id": "2-23", "report_index_pdf_page": 72, "report_index_report_page": 71},
+                    {"canonical_disclosure_id": "2-24", "report_index_pdf_page": 72, "report_index_report_page": 71},
+                    {"canonical_disclosure_id": "2-25", "report_index_pdf_page": 72, "report_index_report_page": 71},
+                    {"canonical_disclosure_id": "2-26", "report_index_pdf_page": 72, "report_index_report_page": 71},
+                    {"canonical_disclosure_id": "2-28", "report_index_pdf_page": 72, "report_index_report_page": 71},
+                    {"canonical_disclosure_id": "2-29", "report_index_pdf_page": 72, "report_index_report_page": 71},
+                    {"canonical_disclosure_id": "3-1", "report_index_pdf_page": 72, "report_index_report_page": 71},
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    workflow = SingleReportWorkflow(
+        None,
+        FakeParser(),
+        FakeAdapter(),
+        DisclosureAgent(),
+        requirement_pack_path=pack_path,
+    )
+    pages = [
+        PageExtraction(report_id="report-1", page_number=4, text="董事长致辞 可持续发展 零碳目标。"),
+        PageExtraction(report_id="report-1", page_number=5, text="CSO 致辞 可持续发展 治理结构。"),
+        PageExtraction(report_id="report-1", page_number=9, text="UNGC RE100 SBTi CDP IEA WEF ESG 合作网络。"),
+        PageExtraction(report_id="report-1", page_number=10, text="概述 责任治理 永续发展。"),
+        PageExtraction(report_id="report-1", page_number=11, text="ESG战略与目标 政策承诺。"),
+        PageExtraction(report_id="report-1", page_number=13, text="ESG治理架构 ESG委员会。"),
+        PageExtraction(report_id="report-1", page_number=14, text="利益相关方沟通 关注议题 沟通渠道。"),
+        PageExtraction(report_id="report-1", page_number=15, text="重要性评估 重要性矩阵 利益相关方调研。"),
+        PageExtraction(report_id="report-1", page_number=16, text="环境章节封面。"),
+        PageExtraction(report_id="report-1", page_number=31, text="人章节封面。"),
+        PageExtraction(report_id="report-1", page_number=32, text="劳工与人权 人权侵害投诉机制 ILO 世界人权宣言。"),
+        PageExtraction(report_id="report-1", page_number=33, text="挑战者代表 建言献策。"),
+        PageExtraction(report_id="report-1", page_number=45, text="产品章节封面。"),
+        PageExtraction(report_id="report-1", page_number=46, text="客户质量 产品安全。"),
+        PageExtraction(report_id="report-1", page_number=53, text="供应商尽调 整改闭环。"),
+        PageExtraction(report_id="report-1", page_number=54, text="供应商行为准则 供应商培训与赋能。"),
+        PageExtraction(report_id="report-1", page_number=56, text="治理章节封面。"),
+        PageExtraction(report_id="report-1", page_number=57, text="合规风险排查 政策制度。"),
+        PageExtraction(report_id="report-1", page_number=59, text="阳光热线 举报电话 举报邮箱 调查处理 举报人保护。"),
+        PageExtraction(
+            report_id="report-1",
+            page_number=72,
+            text=(
+                "2-22 关于可持续发展战略的声明 董事长致辞 3 ESG合作网络拓展 8 CSO致辞 4\n"
+                "2-23 政策承诺 概述：责任治理 永续发展 9 环境：远瞩绿能 智护地球 15 人：以人为本 知行合一 30\n"
+                "2-24 融合政策承诺 概述：责任治理 永续发展 9 环境：远瞩绿能 智护地球 15\n"
+                "2-25 补救负面影响的程序 质量为基，客户至上 45\n"
+                "2-26 寻求建议和提出关切的机制 概述：责任治理 永续发展 9 环境 15 人 30 产品 44 治理 55 202\n"
+                "2-28 协会的成员资格 关于远景能源 5\n"
+                "2-29 利益相关方参与的方法 概述：责任治理 永续发展 9\n"
+                "3-1 确定重大议题的过程 重要性评估 14 治理 55"
+            ),
+        ),
+    ]
+    from src.domain.models import DisclosureTask
+
+    tasks = [
+        DisclosureTask(task_id="task-2-22-a", run_id="run-1", report_id="report-1", standard_id="GRI 2", standard_version="2021", disclosure_id="GRI 2-22", requirement_id="GRI 2-22-a", requirement_text="statement on sustainable development strategy;", keywords=["可持续发展"]),
+        DisclosureTask(task_id="task-2-23-a", run_id="run-1", report_id="report-1", standard_id="GRI 2", standard_version="2021", disclosure_id="GRI 2-23", requirement_id="GRI 2-23-a", requirement_text="policy commitments;", keywords=["政策承诺"]),
+        DisclosureTask(task_id="task-2-24-a", run_id="run-1", report_id="report-1", standard_id="GRI 2", standard_version="2021", disclosure_id="GRI 2-24", requirement_id="GRI 2-24-a", requirement_text="embed policy commitments;", keywords=["政策制度"]),
+        DisclosureTask(task_id="task-2-25-a", run_id="run-1", report_id="report-1", standard_id="GRI 2", standard_version="2021", disclosure_id="GRI 2-25", requirement_id="GRI 2-25-a", requirement_text="remediate negative impacts;", keywords=["整改"]),
+        DisclosureTask(task_id="task-2-26-a", run_id="run-1", report_id="report-1", standard_id="GRI 2", standard_version="2021", disclosure_id="GRI 2-26", requirement_id="GRI 2-26-a", requirement_text="mechanisms for advice and concerns;", keywords=["阳光热线"]),
+        DisclosureTask(task_id="task-2-28-a", run_id="run-1", report_id="report-1", standard_id="GRI 2", standard_version="2021", disclosure_id="GRI 2-28", requirement_id="GRI 2-28-a", requirement_text="membership associations;", keywords=["UNGC"]),
+        DisclosureTask(task_id="task-2-29-a", run_id="run-1", report_id="report-1", standard_id="GRI 2", standard_version="2021", disclosure_id="GRI 2-29", requirement_id="GRI 2-29-a", requirement_text="stakeholder engagement;", keywords=["利益相关方"]),
+        DisclosureTask(task_id="task-3-1-a", run_id="run-1", report_id="report-1", standard_id="GRI 3", standard_version="2021", disclosure_id="GRI 3-1", requirement_id="GRI 3-1-a", requirement_text="process to determine material topics;", keywords=["重要性评估"]),
+    ]
+
+    enriched = workflow._attach_report_index_candidates(pages, tasks)
+
+    assert enriched[0].candidate_pdf_pages == [4, 5]
+    assert enriched[1].candidate_pdf_pages == [9, 11, 32, 54, 57, 59]
+    assert enriched[2].candidate_pdf_pages == [11, 13, 32, 53, 54, 57, 59]
+    assert enriched[3].candidate_pdf_pages == [32, 53, 59]
+    assert enriched[4].candidate_pdf_pages == [33, 59]
+    assert 203 not in enriched[4].candidate_pdf_pages
+    assert enriched[5].candidate_pdf_pages == [9]
+    assert enriched[6].candidate_pdf_pages == [14, 15]
+    assert enriched[7].candidate_pdf_pages == [14, 15]

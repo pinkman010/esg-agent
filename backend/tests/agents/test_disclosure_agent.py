@@ -1038,3 +1038,180 @@ def test_disclosure_agent_clears_global_fallback_for_omitted_remuneration_proces
     assert result.assessment.verdict is AssessmentVerdict.UNKNOWN
     assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
     assert result.assessment.evidence == []
+
+
+def test_disclosure_agent_propagates_new_omission_notes_for_current_150():
+    cases = [
+        ("GRI 2-20-a-iii", "GRI 2-20", "2-20 确定薪酬的程序 因商业保密限制从略披露 /", 71),
+        ("GRI 2-20-b", "GRI 2-20", "2-20 确定薪酬的程序 因商业保密限制从略披露 /", 71),
+        ("GRI 2-21-a", "GRI 2-21", "2-21 年度总薪酬比率 因商业保密限制从略披露 /", 71),
+        ("GRI 2-21-b", "GRI 2-21", "2-21 年度总薪酬比率 因商业保密限制从略披露 /", 71),
+        ("GRI 2-21-c", "GRI 2-21", "2-21 年度总薪酬比率 因商业保密限制从略披露 /", 71),
+        ("GRI 2-30-a", "GRI 2-30", "2-30 集体谈判协议 因商业保密限制从略披露 /", 72),
+        ("GRI 2-30-b", "GRI 2-30", "2-30 集体谈判协议 因商业保密限制从略披露 /", 72),
+    ]
+    for requirement_id, disclosure_id, text, source_page in cases:
+        task = DisclosureTask(
+            task_id=f"task-{requirement_id}",
+            run_id="run-1",
+            report_id="report-1",
+            standard_id=disclosure_id.rsplit("-", 1)[0],
+            standard_version="2021",
+            disclosure_id=disclosure_id,
+            requirement_id=requirement_id,
+            requirement_text="omitted disclosure due to confidentiality.",
+            keywords=["从略披露", "因商业保密限制从略披露"],
+            candidate_pages=[source_page],
+            candidate_page_source="gri_report_index_omission_note",
+            index_page=source_page,
+        )
+        chunk = DocumentChunk(
+            chunk_id=f"chunk-{requirement_id}",
+            report_id="report-1",
+            text=text,
+            source_page=source_page,
+            source_method=EvidenceSourceMethod.PDFPLUMBER,
+            source_file_hash="hash-1",
+        )
+
+        result = DisclosureAgent().analyze(task, [chunk], confirm_llm=False)
+
+        assert result.assessment.verdict is AssessmentVerdict.UNKNOWN
+        assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+        assert result.assessment.evidence[0].metadata["evidence_type"] == "omission_note"
+        assert result.assessment.evidence[0].metadata["omission_reason"] == "confidentiality"
+
+
+def test_disclosure_agent_marks_current_150_policy_items_as_partial():
+    cases = [
+        ("GRI 2-22-a", "GRI 2-22", [(4, "董事长致辞 可持续发展 零碳目标"), (5, "CSO 致辞 可持续发展")], [4, 5]),
+        ("GRI 2-23-a", "GRI 2-23", [(9, "UNGC 世界人权宣言"), (11, "政策承诺"), (32, "劳工与人权 ILO"), (54, "供应商行为准则"), (57, "合规制度"), (59, "举报机制")], [9, 11, 32, 54, 57, 59]),
+        ("GRI 2-23-a-i", "GRI 2-23", [(9, "UNGC 十项原则"), (32, "ILO 世界人权宣言")], [9, 32]),
+        ("GRI 2-23-a-ii", "GRI 2-23", [(53, "供应商尽调"), (58, "第三方反腐败尽调")], [53, 58]),
+        ("GRI 2-23-a-iv", "GRI 2-23", [(32, "劳工与人权保护政策"), (54, "供应商行为准则 员工人权")], [32, 54]),
+        ("GRI 2-23-b", "GRI 2-23", [(9, "UNGC"), (32, "世界人权宣言"), (54, "供应商员工人权")], [9, 32, 54]),
+        ("GRI 2-23-e", "GRI 2-23", [(32, "员工政策 运营环节"), (54, "供应商行为准则 供应商网络")], [32, 54]),
+        ("GRI 2-23-f", "GRI 2-23", [(32, "人权培训"), (54, "供应商培训与赋能"), (59, "合规文化培训")], [32, 54, 59]),
+        ("GRI 2-24-a", "GRI 2-24", [(11, "ESG战略 政策承诺"), (13, "ESG治理架构"), (32, "员工人权政策"), (53, "供应商风险管理"), (54, "供应商行为准则"), (57, "合规制度"), (59, "培训")], [11, 13, 32, 53, 54, 57, 59]),
+        ("GRI 2-25-a", "GRI 2-25", [(32, "人权侵害投诉机制"), (53, "供应商整改退出闭环"), (59, "举报调查处理机制")], [32, 53, 59]),
+        ("GRI 2-25-b", "GRI 2-25", [(32, "投诉机制"), (59, "阳光热线 举报电话 举报邮箱 地址")], [32, 59]),
+        ("GRI 2-25-c", "GRI 2-25", [(53, "供应商整改闭环"), (57, "合规风险排查"), (59, "举报调查处理")], [53, 57, 59]),
+        ("GRI 2-25-e", "GRI 2-25", [(56, "投诉处理率"), (58, "舞弊案件调查完结率"), (59, "整改闭环率")], [56, 58, 59]),
+        ("GRI 2-28-a", "GRI 2-28", [(9, "UNGC RE100 SBTi CDP IEA WEF")], [9]),
+        ("GRI 2-29-a", "GRI 2-29", [(14, "利益相关方沟通 关注议题 沟通渠道"), (15, "重要性评估")], [14, 15]),
+        ("GRI 3-1-a", "GRI 3-1", [(14, "利益相关方沟通"), (15, "重要性评估 重要性矩阵 问卷 部门访谈")], [14, 15]),
+    ]
+    for requirement_id, disclosure_id, page_texts, expected_pages in cases:
+        task = DisclosureTask(
+            task_id=f"task-{requirement_id}",
+            run_id="run-1",
+            report_id="report-1",
+            standard_id=disclosure_id.rsplit("-", 1)[0],
+            standard_version="2021",
+            disclosure_id=disclosure_id,
+            requirement_id=requirement_id,
+            requirement_text="policy or stakeholder disclosure.",
+            keywords=["政策承诺", "人权", "供应商", "阳光热线", "UNGC", "利益相关方", "重要性评估"],
+            candidate_pages=[page for page, _ in page_texts],
+            candidate_page_source="gri_report_index+requirement_supplement",
+            index_page=72,
+        )
+        chunks = [
+            DocumentChunk(
+                chunk_id=f"chunk-{requirement_id}-{page}",
+                report_id="report-1",
+                text=text,
+                source_page=page,
+                source_method=EvidenceSourceMethod.PDFPLUMBER,
+                source_file_hash="hash-1",
+            )
+            for page, text in page_texts
+        ]
+
+        result = DisclosureAgent().analyze(task, chunks, confirm_llm=False)
+
+        assert result.assessment.verdict is AssessmentVerdict.PARTIALLY_DISCLOSED
+        assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+        assert [item.source_page for item in result.assessment.evidence] == expected_pages
+
+
+def test_disclosure_agent_keeps_current_150_unknown_items_without_evidence():
+    cases = [
+        ("GRI 2-23-a-iii", "GRI 2-23", "预防原则"),
+        ("GRI 2-23-c", "GRI 2-23", "政策链接"),
+        ("GRI 2-23-d", "GRI 2-23", "审批层级"),
+        ("GRI 2-25-d", "GRI 2-25", "使用者参与机制设计"),
+        ("GRI 2-26-a-i", "GRI 2-26", "寻求建议"),
+        ("GRI 2-27-d", "GRI 2-27", "重大违法违规界定"),
+    ]
+    for requirement_id, disclosure_id, text in cases:
+        task = DisclosureTask(
+            task_id=f"task-{requirement_id}",
+            run_id="run-1",
+            report_id="report-1",
+            standard_id=disclosure_id.rsplit("-", 1)[0],
+            standard_version="2021",
+            disclosure_id=disclosure_id,
+            requirement_id=requirement_id,
+            requirement_text="missing current 150 detail.",
+            keywords=[text],
+            candidate_pages=[9, 32, 53, 59, 72],
+            candidate_page_source="gri_report_index+requirement_supplement",
+            index_page=72,
+        )
+        chunk = DocumentChunk(
+            chunk_id=f"chunk-{requirement_id}",
+            report_id="report-1",
+            text=text,
+            source_page=59,
+            source_method=EvidenceSourceMethod.PDFPLUMBER,
+            source_file_hash="hash-1",
+        )
+
+        result = DisclosureAgent().analyze(task, [chunk], confirm_llm=False)
+
+        assert result.assessment.verdict is AssessmentVerdict.UNKNOWN
+        assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+        assert result.assessment.evidence == []
+
+
+def test_disclosure_agent_handles_2_26_and_2_27_specific_rules():
+    cases = [
+        ("GRI 2-26-a", "GRI 2-26", [(33, "挑战者代表 建言献策"), (59, "阳光热线 举报电话 举报邮箱")], AssessmentVerdict.PARTIALLY_DISCLOSED, ReviewStatus.NEEDS_MANUAL_REVIEW, [33, 59], "substantive"),
+        ("GRI 2-26-a-ii", "GRI 2-26", [(59, "阳光热线 举报电话 举报邮箱 鼓励报告疑似违规 腐败 不当行为 举报人保护")], AssessmentVerdict.DISCLOSED, ReviewStatus.NOT_REQUIRED, [59], "substantive"),
+        ("GRI 2-27-a", "GRI 2-27", [(72, "2-27 遵守法律法规 报告期内未发生违法违规事件 /")], AssessmentVerdict.PARTIALLY_DISCLOSED, ReviewStatus.NEEDS_MANUAL_REVIEW, [72], "index_statement"),
+        ("GRI 2-27-a-i", "GRI 2-27", [(72, "2-27 遵守法律法规 报告期内未发生违法违规事件 /")], AssessmentVerdict.PARTIALLY_DISCLOSED, ReviewStatus.NEEDS_MANUAL_REVIEW, [72], "index_statement"),
+    ]
+    for requirement_id, disclosure_id, page_texts, verdict, review_status, expected_pages, evidence_type in cases:
+        task = DisclosureTask(
+            task_id=f"task-{requirement_id}",
+            run_id="run-1",
+            report_id="report-1",
+            standard_id=disclosure_id.rsplit("-", 1)[0],
+            standard_version="2021",
+            disclosure_id=disclosure_id,
+            requirement_id=requirement_id,
+            requirement_text="specific current 150 rule.",
+            keywords=["阳光热线", "举报", "未发生违法违规事件"],
+            candidate_pages=[page for page, _ in page_texts],
+            candidate_page_source="gri_report_index+requirement_supplement",
+            index_page=72,
+        )
+        chunks = [
+            DocumentChunk(
+                chunk_id=f"chunk-{requirement_id}-{page}",
+                report_id="report-1",
+                text=text,
+                source_page=page,
+                source_method=EvidenceSourceMethod.PDFPLUMBER,
+                source_file_hash="hash-1",
+            )
+            for page, text in page_texts
+        ]
+
+        result = DisclosureAgent().analyze(task, chunks, confirm_llm=False)
+
+        assert result.assessment.verdict is verdict
+        assert result.assessment.review_status is review_status
+        assert [item.source_page for item in result.assessment.evidence] == expected_pages
+        assert result.assessment.evidence[0].metadata.get("evidence_type", "substantive") == evidence_type

@@ -3,6 +3,7 @@ import re
 
 from src.domain.enums import AssessmentVerdict, PageQualityFlag, ReviewStatus
 from src.domain.models import DisclosureAssessment, DisclosureTask, DocumentChunk, EvidenceItem, Recommendation
+from src.tools.evidence import chunk_to_evidence
 from src.tools.guardrails import build_guarded_assessment
 from src.tools.ids import database_safe_id
 from src.tools.retrieval import retrieve_evidence
@@ -21,7 +22,8 @@ class DisclosureAgent:
         chunks: list[DocumentChunk],
         confirm_llm: bool,
     ) -> DisclosureAgentResult:
-        evidence = self._filter_invalid_evidence(task, retrieve_evidence(task, chunks, limit=10))
+        evidence = self._supplement_requirement_specific_evidence(task, chunks, retrieve_evidence(task, chunks, limit=10))
+        evidence = self._filter_invalid_evidence(task, evidence)
         verdict, rationale, missing_items = self._classify_rule_based(task, evidence)
         assessment = build_guarded_assessment(
             task,
@@ -35,6 +37,38 @@ class DisclosureAgent:
             assessment.review_status = ReviewStatus.NOT_REQUIRED
         recommendations = self._build_recommendations(task, assessment)
         return DisclosureAgentResult(assessment=assessment, recommendations=recommendations)
+
+    def _supplement_requirement_specific_evidence(
+        self,
+        task: DisclosureTask,
+        chunks: list[DocumentChunk],
+        evidence: list[EvidenceItem],
+    ) -> list[EvidenceItem]:
+        allowed_pages = self._requirement_specific_allowed_pages().get(task.requirement_id)
+        if not allowed_pages:
+            return evidence
+        candidate_pages = set(task.candidate_pages or [])
+        if not candidate_pages:
+            return evidence
+
+        existing_pages = {item.source_page for item in evidence}
+        retrieval_metadata = {
+            "retrieval_strategy": "index_page_bounded",
+            "candidate_pages": task.candidate_pages,
+            "candidate_pdf_pages": task.candidate_pdf_pages,
+            "candidate_report_pages": task.candidate_report_pages,
+            "candidate_page_source": task.candidate_page_source,
+            "index_page": task.index_page,
+        }
+        supplemented = list(evidence)
+        for chunk in chunks:
+            if chunk.source_page in existing_pages:
+                continue
+            if chunk.source_page not in allowed_pages or chunk.source_page not in candidate_pages:
+                continue
+            supplemented.append(chunk_to_evidence(task, chunk, retrieval_metadata=retrieval_metadata))
+            existing_pages.add(chunk.source_page)
+        return sorted(supplemented, key=lambda item: item.source_page)
 
     def _filter_invalid_evidence(self, task: DisclosureTask, evidence: list[EvidenceItem]) -> list[EvidenceItem]:
         evidence = [item for item in evidence if item.metadata.get("retrieval_strategy") != "global_fallback"]
@@ -53,6 +87,7 @@ class DisclosureAgent:
         evidence = self._filter_requirement_specific_pages(task, evidence)
         self._mark_requirement_specific_quality_flags(task, evidence)
         self._mark_omission_note_evidence(task, evidence)
+        self._mark_index_statement_evidence(task, evidence)
         if task.requirement_id == "GRI 2-2-c-ii":
             return [item for item in evidence if item.metadata.get("retrieval_strategy") != "global_fallback"]
         if task.requirement_id == "GRI 2-2-c-iii":
@@ -64,18 +99,68 @@ class DisclosureAgent:
         task: DisclosureTask,
         evidence: list[EvidenceItem],
     ) -> list[EvidenceItem]:
-        allowed_pages_by_requirement = {
-            "GRI 2-6-b": {4, 6, 52, 53, 54},
-            "GRI 2-6-b-i": {4, 6},
-            "GRI 2-6-b-ii": {52, 53, 54},
-            "GRI 2-6-c": {4, 9, 52, 54},
+        allowed_pages_by_requirement = self._requirement_specific_allowed_pages()
+        requirements_without_valid_evidence = {
+            "GRI 2-23-a-iii",
+            "GRI 2-23-c",
+            "GRI 2-23-d",
+            "GRI 2-25-d",
+            "GRI 2-26-a-i",
+            "GRI 2-27-d",
         }
         if task.requirement_id.startswith("GRI 2-9-c") or task.disclosure_id == "GRI 2-11":
+            return []
+        if task.requirement_id in requirements_without_valid_evidence:
             return []
         allowed_pages = allowed_pages_by_requirement.get(task.requirement_id)
         if allowed_pages is None:
             return evidence
         return [item for item in evidence if item.source_page in allowed_pages]
+
+    def _requirement_specific_allowed_pages(self) -> dict[str, set[int]]:
+        return {
+            "GRI 2-6-b": {4, 6, 52, 53, 54},
+            "GRI 2-6-b-i": {4, 6},
+            "GRI 2-6-b-ii": {52, 53, 54},
+            "GRI 2-6-c": {4, 9, 52, 54},
+            "GRI 2-22-a": {4, 5},
+            "GRI 2-23-a": {9, 11, 32, 54, 57, 59},
+            "GRI 2-23-a-i": {9, 32},
+            "GRI 2-23-a-ii": {53, 58},
+            "GRI 2-23-a-iv": {32, 54},
+            "GRI 2-23-b": {9, 32, 54},
+            "GRI 2-23-b-i": {9, 32, 54},
+            "GRI 2-23-b-ii": {9, 32, 54},
+            "GRI 2-23-e": {32, 54},
+            "GRI 2-23-f": {32, 54, 59},
+            "GRI 2-24-a": {11, 13, 32, 53, 54, 57, 59},
+            "GRI 2-24-a-i": {11, 13, 32, 53, 54, 57, 59},
+            "GRI 2-24-a-ii": {11, 13, 32, 53, 54, 57, 59},
+            "GRI 2-24-a-iii": {11, 13, 32, 53, 54, 57, 59},
+            "GRI 2-24-a-iv": {11, 13, 32, 53, 54, 57, 59},
+            "GRI 2-25-a": {32, 53, 59},
+            "GRI 2-25-b": {32, 59},
+            "GRI 2-25-c": {53, 57, 59},
+            "GRI 2-25-e": {56, 58, 59},
+            "GRI 2-26-a": {33, 59},
+            "GRI 2-26-a-ii": {59},
+            "GRI 2-27-a": {72},
+            "GRI 2-27-a-i": {72},
+            "GRI 2-27-a-ii": {72},
+            "GRI 2-27-b": {72},
+            "GRI 2-27-b-i": {72},
+            "GRI 2-27-b-ii": {72},
+            "GRI 2-27-c": {72},
+            "GRI 2-28-a": {9},
+            "GRI 2-29-a": {14, 15},
+            "GRI 2-29-a-i": {14, 15},
+            "GRI 2-29-a-ii": {14, 15},
+            "GRI 2-29-a-iii": {14, 15},
+            "GRI 3-1-a": {14, 15},
+            "GRI 3-1-a-i": {14, 15},
+            "GRI 3-1-a-ii": {14, 15},
+            "GRI 3-1-b": {14, 15},
+        }
 
     def _mark_requirement_specific_quality_flags(self, task: DisclosureTask, evidence: list[EvidenceItem]) -> None:
         if task.disclosure_id != "GRI 2-7":
@@ -97,6 +182,16 @@ class DisclosureAgent:
                     item.metadata["omission_reason"] = "confidentiality"
                 elif "因不适用而从略披露" in target_row:
                     item.metadata["omission_reason"] = "not_applicable"
+
+    def _mark_index_statement_evidence(self, task: DisclosureTask, evidence: list[EvidenceItem]) -> None:
+        if task.disclosure_id != "GRI 2-27":
+            return
+        for item in evidence:
+            target_row = self._target_disclosure_row(task.disclosure_id, item.source_text)
+            if target_row is None or "未发生违法违规事件" not in target_row:
+                continue
+            item.evidence_preview = target_row
+            item.metadata["evidence_type"] = "index_statement"
 
     def _target_disclosure_row(self, disclosure_id: str, text: str) -> str | None:
         raw_disclosure_id = disclosure_id.removeprefix("GRI ").strip()
@@ -156,6 +251,69 @@ class DisclosureAgent:
                 AssessmentVerdict.UNKNOWN,
                 "The report index contains an omission note, but no substantive disclosure evidence was found.",
                 ["实质披露内容", "从略披露原因对应的人工复核"],
+            )
+
+        if task.requirement_id == "GRI 2-26-a-ii":
+            return (
+                AssessmentVerdict.DISCLOSED,
+                "Bounded evidence discloses channels for raising concerns about business conduct.",
+                [],
+            )
+
+        index_statement_items = {
+            "GRI 2-27-a",
+            "GRI 2-27-a-i",
+            "GRI 2-27-a-ii",
+            "GRI 2-27-b",
+            "GRI 2-27-b-i",
+            "GRI 2-27-b-ii",
+            "GRI 2-27-c",
+        }
+        if task.requirement_id in index_statement_items and any(
+            item.metadata.get("evidence_type") == "index_statement" for item in evidence
+        ):
+            return (
+                AssessmentVerdict.PARTIALLY_DISCLOSED,
+                "The GRI index states that no violations occurred during the reporting period, but it does not provide full substantive detail for this sub-requirement.",
+                ["实质性违法违规事件口径", "罚款或处罚明细的完整说明"],
+            )
+
+        current_150_partial_items = {
+            "GRI 2-22-a",
+            "GRI 2-23-a",
+            "GRI 2-23-a-i",
+            "GRI 2-23-a-ii",
+            "GRI 2-23-a-iv",
+            "GRI 2-23-b",
+            "GRI 2-23-b-i",
+            "GRI 2-23-b-ii",
+            "GRI 2-23-e",
+            "GRI 2-23-f",
+            "GRI 2-24-a",
+            "GRI 2-24-a-i",
+            "GRI 2-24-a-ii",
+            "GRI 2-24-a-iii",
+            "GRI 2-24-a-iv",
+            "GRI 2-25-a",
+            "GRI 2-25-b",
+            "GRI 2-25-c",
+            "GRI 2-25-e",
+            "GRI 2-26-a",
+            "GRI 2-28-a",
+            "GRI 2-29-a",
+            "GRI 2-29-a-i",
+            "GRI 2-29-a-ii",
+            "GRI 2-29-a-iii",
+            "GRI 3-1-a",
+            "GRI 3-1-a-i",
+            "GRI 3-1-a-ii",
+            "GRI 3-1-b",
+        }
+        if task.requirement_id in current_150_partial_items:
+            return (
+                AssessmentVerdict.PARTIALLY_DISCLOSED,
+                "Bounded evidence provides directionally relevant disclosure, but it does not fully satisfy this GRI requirement.",
+                ["完整披露口径", "人工复核充分性"],
             )
 
         if task.requirement_id == "GRI 2-3-a":

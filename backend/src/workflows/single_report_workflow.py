@@ -94,6 +94,8 @@ class SingleReportWorkflow:
                 enriched_tasks.append(task)
                 continue
             candidate_pages = self._supplement_candidate_pages(task, pages, entry.candidate_pages)
+            page_count = max((page.page_number for page in pages), default=0)
+            candidate_pages = [page for page in candidate_pages if 1 <= page <= page_count]
             candidate_report_pages = self._candidate_report_pages(candidate_pages, entry.report_index_pdf_page, entry.report_index_report_page)
             candidate_page_source = entry.source
             if candidate_pages != entry.candidate_pages:
@@ -148,6 +150,11 @@ class SingleReportWorkflow:
         pages: list[PageExtraction],
         candidate_pages: list[int],
     ) -> list[int]:
+        page_numbers = {page.page_number for page in pages}
+        override_pages = self._candidate_page_overrides(task)
+        if override_pages is not None:
+            return [page for page in override_pages if page in page_numbers]
+
         supplements: list[int] = []
         for page in pages:
             text = page.text
@@ -181,3 +188,51 @@ class SingleReportWorkflow:
                 if any(term in text for term in ["ESG治理架构", "ESG 治理架构", "ESG委员会", "ESG办公室"]):
                     supplements.append(page.page_number)
         return sorted(set([*candidate_pages, *supplements]))
+
+    def _candidate_page_overrides(self, task: DisclosureTask) -> list[int] | None:
+        pages_by_requirement = {
+            "GRI 2-22-a": [4, 5],
+            "GRI 2-23-a": [9, 11, 32, 54, 57, 59],
+            "GRI 2-23-a-i": [9, 32],
+            "GRI 2-23-a-ii": [53, 58],
+            "GRI 2-23-a-iii": [],
+            "GRI 2-23-a-iv": [32, 54],
+            "GRI 2-23-b": [9, 32, 54],
+            "GRI 2-23-b-i": [9, 32, 54],
+            "GRI 2-23-b-ii": [9, 32, 54],
+            "GRI 2-23-c": [],
+            "GRI 2-23-d": [],
+            "GRI 2-23-e": [32, 54],
+            "GRI 2-23-f": [32, 54, 59],
+            "GRI 2-25-a": [32, 53, 59],
+            "GRI 2-25-b": [32, 59],
+            "GRI 2-25-c": [53, 57, 59],
+            "GRI 2-25-e": [56, 58, 59],
+            "GRI 2-26-a": [33, 59],
+            "GRI 2-26-a-i": [],
+            "GRI 2-26-a-ii": [59],
+            "GRI 2-27-a": [72],
+            "GRI 2-27-a-i": [72],
+            "GRI 2-27-a-ii": [72],
+            "GRI 2-27-b": [72],
+            "GRI 2-27-b-i": [72],
+            "GRI 2-27-b-ii": [72],
+            "GRI 2-27-c": [72],
+            "GRI 2-27-d": [],
+            "GRI 2-28-a": [9],
+            "GRI 2-29-a": [14, 15],
+            "GRI 2-29-a-i": [14, 15],
+            "GRI 2-29-a-ii": [14, 15],
+            "GRI 2-29-a-iii": [14, 15],
+            "GRI 3-1-a": [14, 15],
+            "GRI 3-1-a-i": [14, 15],
+            "GRI 3-1-a-ii": [14, 15],
+            "GRI 3-1-b": [14, 15],
+        }
+        pages_by_disclosure = {
+            "GRI 2-23": [9, 11, 32, 54, 57, 59],
+            "GRI 2-24": [11, 13, 32, 53, 54, 57, 59],
+        }
+        if task.requirement_id in pages_by_requirement:
+            return pages_by_requirement[task.requirement_id]
+        return pages_by_disclosure.get(task.disclosure_id)
