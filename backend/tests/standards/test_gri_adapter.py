@@ -446,3 +446,85 @@ def test_gri_adapter_adds_chinese_keywords_for_topic_specific_200_rules(tmp_path
     assert "当地社区高管比例" in keywords_by_id["GRI 202-2-a"]
     assert "携手社区" in keywords_by_id["GRI 203-1-a"]
     assert "间接经济影响" in keywords_by_id["GRI 203-2-b"]
+
+
+def test_gri_adapter_adds_chinese_keywords_for_topic_specific_250_rules(tmp_path):
+    path = tmp_path / "gri-checklist.json"
+    path.write_text(
+        json.dumps(
+            {
+                "metadata": {"manifest_version": "test"},
+                "requirements": [
+                    {
+                        "requirement_id": f"current_gap:GRI{standard}:{disclosure}:{suffix}",
+                        "canonical_disclosure_id": disclosure,
+                        "requirement_text": requirement_text,
+                        "requirement_type": "requirement",
+                        "is_mandatory": True,
+                        "scoring_role": "hard_score",
+                        "standard_year": "2021",
+                        "assessment_mode": "current_gap",
+                    }
+                    for standard, disclosure, suffix, requirement_text in [
+                        ("204", "204-1", "a", "proportion of spending on local suppliers;"),
+                        ("205", "205-1", "a", "operations assessed for risks related to corruption;"),
+                        ("205", "205-2", "c", "anti-corruption policies and procedures communicated to business partners;"),
+                        ("205", "205-3", "b", "employees dismissed or disciplined for corruption;"),
+                        ("206", "206-1", "a", "legal actions for anti-competitive behavior;"),
+                    ]
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    requirements = GRIAdapter(path).load_requirements()
+    keywords_by_id = {requirement.requirement_id: requirement.keywords for requirement in requirements}
+
+    assert "因商业保密限制从略披露" in keywords_by_id["GRI 204-1-a"]
+    assert "风险评估" in keywords_by_id["GRI 205-1-a"]
+    assert "供应商阳光协议" in keywords_by_id["GRI 205-2-c"]
+    assert "员工因腐败被开除或受到处分的事件数量" in keywords_by_id["GRI 205-3-b"]
+    assert "反竞争行为事件数量" in keywords_by_id["GRI 206-1-a"]
+
+
+def test_gri_adapter_adds_chinese_keywords_for_tax_and_energy_250_rules(tmp_path):
+    path = tmp_path / "gri-checklist.json"
+    path.write_text(
+        json.dumps(
+            {
+                "metadata": {"manifest_version": "test"},
+                "requirements": [
+                    {
+                        "requirement_id": f"current_gap:GRI{standard}:{disclosure}:{suffix}",
+                        "canonical_disclosure_id": disclosure,
+                        "requirement_text": requirement_text,
+                        "requirement_type": "requirement",
+                        "is_mandatory": True,
+                        "scoring_role": "hard_score",
+                        "standard_year": "2021",
+                        "assessment_mode": "current_gap",
+                    }
+                    for standard, disclosure, suffix, requirement_text in [
+                        ("207", "207-1", "a", "approach to tax;"),
+                        ("207", "207-1", "a:iii", "approach to regulatory compliance;"),
+                        ("207", "207-2", "a", "tax governance control and risk management;"),
+                        ("207", "207-4", "b:x", "country-by-country reporting;"),
+                        ("302", "302-1", "a", "non-renewable fuel consumption inside the organization;"),
+                        ("302", "302-1", "c", "electricity heating cooling and steam consumption;"),
+                    ]
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    requirements = GRIAdapter(path).load_requirements()
+    keywords_by_id = {requirement.requirement_id: requirement.keywords for requirement in requirements}
+
+    assert "税务治理" in keywords_by_id["GRI 207-1-a"]
+    assert "税收协定" in keywords_by_id["GRI 207-1-a-iii"]
+    assert "财务合规与安全部门" in keywords_by_id["GRI 207-2-a"]
+    assert "因商业保密限制从略披露" in keywords_by_id["GRI 207-4-b-x"]
+    assert "不可再生能源消耗总量" in keywords_by_id["GRI 302-1-a"]
+    assert "电力消耗总量" in keywords_by_id["GRI 302-1-c"]

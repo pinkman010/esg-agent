@@ -1429,3 +1429,312 @@ def test_disclosure_agent_handles_203_indirect_economic_impact_rules():
         assert result.assessment.verdict is AssessmentVerdict.PARTIALLY_DISCLOSED
         assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
         assert [item.source_page for item in result.assessment.evidence] == expected_pages
+
+
+def test_disclosure_agent_propagates_204_1_omission_note_for_current_250():
+    for requirement_id in ["GRI 204-1-a", "GRI 204-1-b", "GRI 204-1-c"]:
+        task = DisclosureTask(
+            task_id=f"task-{requirement_id}",
+            run_id="run-1",
+            report_id="report-1",
+            standard_id="GRI 204",
+            standard_version="2016",
+            disclosure_id="GRI 204-1",
+            requirement_id=requirement_id,
+            requirement_text="proportion of spending on local suppliers.",
+            keywords=["从略披露", "因商业保密限制从略披露"],
+            candidate_pages=[73],
+            candidate_page_source="gri_report_index_omission_note",
+            index_page=73,
+        )
+        chunk = DocumentChunk(
+            chunk_id=f"chunk-{requirement_id}",
+            report_id="report-1",
+            text="204-1 向当地供应商采购的支出比例 因商业保密限制从略披露 /",
+            source_page=73,
+            source_method=EvidenceSourceMethod.PDFPLUMBER,
+            source_file_hash="hash-1",
+        )
+
+        result = DisclosureAgent().analyze(task, [chunk], confirm_llm=False)
+
+        assert result.assessment.verdict is AssessmentVerdict.UNKNOWN
+        assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+        assert result.assessment.evidence[0].metadata["evidence_type"] == "omission_note"
+        assert result.assessment.evidence[0].metadata["omission_reason"] == "confidentiality"
+
+
+def test_disclosure_agent_handles_205_anti_corruption_partial_and_disclosed_rules():
+    cases = [
+        ("GRI 205-1-a", "GRI 205-1", [(58, "贪污贿赂风险评估 内部和外部商业道德审计 识别高风险环节"), (68, "完成商业道德问题和腐败相关内部审计或风险评估的经营地点占比")], AssessmentVerdict.PARTIALLY_DISCLOSED, ReviewStatus.NEEDS_MANUAL_REVIEW, [58, 68]),
+        ("GRI 205-1-b", "GRI 205-1", [(58, "关键业务流程分析 识别高风险环节 员工行为规范 廉洁风险")], AssessmentVerdict.PARTIALLY_DISCLOSED, ReviewStatus.NEEDS_MANUAL_REVIEW, [58]),
+        ("GRI 205-2-b", "GRI 205-2", [(59, "全体员工年度合规申报 合规培训 利益冲突申报 纪律合规文化月"), (68, "反腐败和贿赂培训次数 累计小时数")], AssessmentVerdict.PARTIALLY_DISCLOSED, ReviewStatus.NEEDS_MANUAL_REVIEW, [59, 68]),
+        ("GRI 205-2-c", "GRI 205-2", [(54, "目标供应商100%签署可持续采购章程 供应商行为准则"), (58, "所有供应商均已签署供应商阳光协议 第三方合作伙伴反腐败尽职调查")], AssessmentVerdict.PARTIALLY_DISCLOSED, ReviewStatus.NEEDS_MANUAL_REVIEW, [54, 58]),
+        ("GRI 205-2-e", "GRI 205-2", [(59, "员工合规培训 纪律合规文化月"), (68, "反腐败和贿赂培训次数 累计小时数")], AssessmentVerdict.PARTIALLY_DISCLOSED, ReviewStatus.NEEDS_MANUAL_REVIEW, [59, 68]),
+        ("GRI 205-3-a", "GRI 205-3", [(58, "舞弊案件调查完结率 商业道德管理"), (68, "贪污腐败事件数量")], AssessmentVerdict.PARTIALLY_DISCLOSED, ReviewStatus.NEEDS_MANUAL_REVIEW, [58, 68]),
+        ("GRI 205-3-b", "GRI 205-3", [(68, "员工因腐败被开除或受到处分的事件数量")], AssessmentVerdict.DISCLOSED, ReviewStatus.NOT_REQUIRED, [68]),
+        ("GRI 206-1-a", "GRI 206-1", [(68, "反竞争行为事件数量")], AssessmentVerdict.PARTIALLY_DISCLOSED, ReviewStatus.NEEDS_MANUAL_REVIEW, [68]),
+    ]
+    for requirement_id, disclosure_id, page_texts, verdict, review_status, expected_pages in cases:
+        task = DisclosureTask(
+            task_id=f"task-{requirement_id}",
+            run_id="run-1",
+            report_id="report-1",
+            standard_id=disclosure_id.rsplit("-", 1)[0],
+            standard_version="2016",
+            disclosure_id=disclosure_id,
+            requirement_id=requirement_id,
+            requirement_text="anti-corruption or anti-competitive topic-specific disclosure.",
+            keywords=["反腐败", "贪污腐败", "商业道德", "风险评估", "合规培训", "供应商阳光协议", "反竞争行为"],
+            candidate_pages=[page for page, _ in page_texts],
+            candidate_page_source="gri_report_index+requirement_supplement",
+            index_page=73,
+        )
+        chunks = [
+            DocumentChunk(
+                chunk_id=f"chunk-{requirement_id}-{page}",
+                report_id="report-1",
+                text=text,
+                source_page=page,
+                source_method=EvidenceSourceMethod.PDFPLUMBER,
+                source_file_hash="hash-1",
+            )
+            for page, text in page_texts
+        ]
+
+        result = DisclosureAgent().analyze(task, chunks, confirm_llm=False)
+
+        assert result.assessment.verdict is verdict
+        assert result.assessment.review_status is review_status
+        assert [item.source_page for item in result.assessment.evidence] == expected_pages
+
+
+def test_disclosure_agent_keeps_205_206_unreported_subitems_unknown():
+    cases = [
+        ("GRI 205-2-a", "GRI 205-2", "治理机构成员 反腐败政策传达"),
+        ("GRI 205-2-d", "GRI 205-2", "治理机构成员 反腐败培训"),
+        ("GRI 205-3-c", "GRI 205-3", "供应商退出 合同终止"),
+        ("GRI 205-3-d", "GRI 205-3", "公开法律案件 腐败"),
+        ("GRI 206-1-b", "GRI 206-1", "法律行动结果 判决"),
+    ]
+    for requirement_id, disclosure_id, text in cases:
+        task = DisclosureTask(
+            task_id=f"task-{requirement_id}",
+            run_id="run-1",
+            report_id="report-1",
+            standard_id=disclosure_id.rsplit("-", 1)[0],
+            standard_version="2016",
+            disclosure_id=disclosure_id,
+            requirement_id=requirement_id,
+            requirement_text="unreported anti-corruption or anti-competitive subitem.",
+            keywords=[text],
+            candidate_pages=[54, 58, 59, 68],
+            candidate_page_source="gri_report_index+requirement_supplement",
+            index_page=73,
+        )
+        chunk = DocumentChunk(
+            chunk_id=f"chunk-{requirement_id}",
+            report_id="report-1",
+            text=text,
+            source_page=68,
+            source_method=EvidenceSourceMethod.PDFPLUMBER,
+            source_file_hash="hash-1",
+        )
+
+        result = DisclosureAgent().analyze(task, [chunk], confirm_llm=False)
+
+        assert result.assessment.verdict is AssessmentVerdict.UNKNOWN
+        assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+        assert result.assessment.evidence == []
+
+
+def test_disclosure_agent_propagates_207_4_omission_note_for_current_250():
+    cases = [
+        "GRI 207-4-a",
+        "GRI 207-4-b",
+        "GRI 207-4-b-i",
+        "GRI 207-4-b-ii",
+        "GRI 207-4-b-iii",
+        "GRI 207-4-b-iv",
+        "GRI 207-4-b-v",
+        "GRI 207-4-b-vi",
+        "GRI 207-4-b-vii",
+        "GRI 207-4-b-viii",
+        "GRI 207-4-b-ix",
+        "GRI 207-4-b-x",
+        "GRI 207-4-c",
+    ]
+    for requirement_id in cases:
+        task = DisclosureTask(
+            task_id=f"task-{requirement_id}",
+            run_id="run-1",
+            report_id="report-1",
+            standard_id="GRI 207",
+            standard_version="2019",
+            disclosure_id="GRI 207-4",
+            requirement_id=requirement_id,
+            requirement_text="country-by-country reporting omitted due to confidentiality.",
+            keywords=["从略披露", "因商业保密限制从略披露"],
+            candidate_pages=[73],
+            candidate_page_source="gri_report_index_omission_note",
+            index_page=73,
+        )
+        chunk = DocumentChunk(
+            chunk_id=f"chunk-{requirement_id}",
+            report_id="report-1",
+            text="207-4 国别报告 因商业保密限制从略披露 /",
+            source_page=73,
+            source_method=EvidenceSourceMethod.PDFPLUMBER,
+            source_file_hash="hash-1",
+        )
+
+        result = DisclosureAgent().analyze(task, [chunk], confirm_llm=False)
+
+        assert result.assessment.verdict is AssessmentVerdict.UNKNOWN
+        assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+        assert result.assessment.evidence[0].metadata["evidence_type"] == "omission_note"
+        assert result.assessment.evidence[0].metadata["omission_reason"] == "confidentiality"
+
+
+def test_disclosure_agent_handles_207_tax_governance_partial_rules():
+    cases = [
+        "GRI 207-1-a",
+        "GRI 207-1-a-iii",
+        "GRI 207-2-a",
+        "GRI 207-2-a-i",
+        "GRI 207-2-a-ii",
+        "GRI 207-2-a-iii",
+        "GRI 207-2-a-iv",
+        "GRI 207-3-a",
+    ]
+    for requirement_id in cases:
+        disclosure_id = "GRI 207-3" if requirement_id.startswith("GRI 207-3") else ("GRI 207-2" if requirement_id.startswith("GRI 207-2") else "GRI 207-1")
+        task = DisclosureTask(
+            task_id=f"task-{requirement_id}",
+            run_id="run-1",
+            report_id="report-1",
+            standard_id="GRI 207",
+            standard_version="2019",
+            disclosure_id=disclosure_id,
+            requirement_id=requirement_id,
+            requirement_text="tax approach governance control risk management or stakeholder concerns.",
+            keywords=["税务治理", "财务合规", "税务管理标准", "税法要求", "利益相关方"],
+            candidate_pages=[57],
+            candidate_page_source="gri_report_index+requirement_supplement",
+            index_page=73,
+        )
+        chunk = DocumentChunk(
+            chunk_id=f"chunk-{requirement_id}-57",
+            report_id="report-1",
+            text="严格按照国内外财务法律法规及税收协定开展经营，设立财务合规与安全部门负责税务治理和财务风险管理，制定规范文件和税务管理标准，持续追踪运营所在地税法要求与风险演变，深入掌握利益相关方对税务管理的期待。",
+            source_page=57,
+            source_method=EvidenceSourceMethod.PDFPLUMBER,
+            source_file_hash="hash-1",
+        )
+
+        result = DisclosureAgent().analyze(task, [chunk], confirm_llm=False)
+
+        assert result.assessment.verdict is AssessmentVerdict.PARTIALLY_DISCLOSED
+        assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+        assert [item.source_page for item in result.assessment.evidence] == [57]
+
+
+def test_disclosure_agent_keeps_207_3_subitems_unknown_without_full_stakeholder_tax_process():
+    for requirement_id in ["GRI 207-3-a-i", "GRI 207-3-a-ii", "GRI 207-3-a-iii"]:
+        task = DisclosureTask(
+            task_id=f"task-{requirement_id}",
+            run_id="run-1",
+            report_id="report-1",
+            standard_id="GRI 207",
+            standard_version="2019",
+            disclosure_id="GRI 207-3",
+            requirement_id=requirement_id,
+            requirement_text="tax authority engagement, public policy advocacy, or stakeholder tax concern process.",
+            keywords=["税务机关沟通", "公共政策倡导", "外部利益相关方意见"],
+            candidate_pages=[57],
+            candidate_page_source="gri_report_index+requirement_supplement",
+            index_page=73,
+        )
+        chunk = DocumentChunk(
+            chunk_id=f"chunk-{requirement_id}-57",
+            report_id="report-1",
+            text="深入掌握利益相关方对税务管理的期待。",
+            source_page=57,
+            source_method=EvidenceSourceMethod.PDFPLUMBER,
+            source_file_hash="hash-1",
+        )
+
+        result = DisclosureAgent().analyze(task, [chunk], confirm_llm=False)
+
+        assert result.assessment.verdict is AssessmentVerdict.UNKNOWN
+        assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+        assert result.assessment.evidence == []
+
+
+def test_disclosure_agent_handles_302_1_energy_kpi_partial_rules():
+    cases = [
+        ("GRI 302-1-a", "不可再生能源燃料消耗量 汽油 柴油 天然气 电力 热力 液化石油气 不可再生能源消耗总量(kWh)"),
+        ("GRI 302-1-c", "电力消耗总量(kWh) 办公用电总量(kWh) 绿色电力使用总量(kWh)"),
+    ]
+    for requirement_id, text in cases:
+        task = DisclosureTask(
+            task_id=f"task-{requirement_id}",
+            run_id="run-1",
+            report_id="report-1",
+            standard_id="GRI 302",
+            standard_version="2016",
+            disclosure_id="GRI 302-1",
+            requirement_id=requirement_id,
+            requirement_text="energy consumption within the organization.",
+            keywords=["不可再生能源", "电力消耗", "能源消耗"],
+            candidate_pages=[63],
+            candidate_page_source="gri_report_index+requirement_supplement",
+            index_page=73,
+        )
+        chunk = DocumentChunk(
+            chunk_id=f"chunk-{requirement_id}-63",
+            report_id="report-1",
+            text=text,
+            source_page=63,
+            source_method=EvidenceSourceMethod.PDFPLUMBER,
+            source_file_hash="hash-1",
+        )
+
+        result = DisclosureAgent().analyze(task, [chunk], confirm_llm=False)
+
+        assert result.assessment.verdict is AssessmentVerdict.PARTIALLY_DISCLOSED
+        assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+        assert [item.source_page for item in result.assessment.evidence] == [63]
+        assert PageQualityFlag.COMPLEX_TABLE in result.assessment.evidence[0].quality_flags
+
+
+def test_disclosure_agent_keeps_unreported_302_1_energy_subitems_unknown():
+    for requirement_id in ["GRI 302-1-b", "GRI 302-1-d"]:
+        task = DisclosureTask(
+            task_id=f"task-{requirement_id}",
+            run_id="run-1",
+            report_id="report-1",
+            standard_id="GRI 302",
+            standard_version="2016",
+            disclosure_id="GRI 302-1",
+            requirement_id=requirement_id,
+            requirement_text="renewable fuel or sold energy consumption.",
+            keywords=["可再生燃料消耗", "售出的电力"],
+            candidate_pages=[63],
+            candidate_page_source="gri_report_index+requirement_supplement",
+            index_page=73,
+        )
+        chunk = DocumentChunk(
+            chunk_id=f"chunk-{requirement_id}-63",
+            report_id="report-1",
+            text="绿色电力使用总量(kWh) 电力消耗总量(kWh)",
+            source_page=63,
+            source_method=EvidenceSourceMethod.PDFPLUMBER,
+            source_file_hash="hash-1",
+        )
+
+        result = DisclosureAgent().analyze(task, [chunk], confirm_llm=False)
+
+        assert result.assessment.verdict is AssessmentVerdict.UNKNOWN
+        assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+        assert result.assessment.evidence == []

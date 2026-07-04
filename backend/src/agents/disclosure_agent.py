@@ -120,6 +120,16 @@ class DisclosureAgent:
             "GRI 202-1-b",
             "GRI 202-1-c",
             "GRI 202-1-d",
+            "GRI 205-2-a",
+            "GRI 205-2-d",
+            "GRI 205-3-c",
+            "GRI 205-3-d",
+            "GRI 206-1-b",
+            "GRI 207-3-a-i",
+            "GRI 207-3-a-ii",
+            "GRI 207-3-a-iii",
+            "GRI 302-1-b",
+            "GRI 302-1-d",
         }
         if task.requirement_id.startswith("GRI 2-9-c") or task.disclosure_id == "GRI 2-11":
             return []
@@ -127,6 +137,8 @@ class DisclosureAgent:
             return []
         allowed_pages = allowed_pages_by_requirement.get(task.requirement_id)
         if allowed_pages is None:
+            return evidence
+        if not task.candidate_pages:
             return evidence
         return [item for item in evidence if item.source_page in allowed_pages]
 
@@ -183,13 +195,38 @@ class DisclosureAgent:
             "GRI 203-1-c": {42, 43, 44},
             "GRI 203-2-a": {4, 12, 42, 43, 44},
             "GRI 203-2-b": {12, 42, 43, 44, 69},
+            "GRI 205-1-a": {58, 68},
+            "GRI 205-1-b": {58},
+            "GRI 205-2-b": {59, 68},
+            "GRI 205-2-c": {54, 58},
+            "GRI 205-2-e": {59, 68},
+            "GRI 205-3-a": {58, 68},
+            "GRI 205-3-b": {68},
+            "GRI 206-1-a": {68},
+            "GRI 207-1-a": {57},
+            "GRI 207-1-a-iii": {57},
+            "GRI 207-2-a": {57},
+            "GRI 207-2-a-i": {57},
+            "GRI 207-2-a-ii": {57},
+            "GRI 207-2-a-iii": {57},
+            "GRI 207-2-a-iv": {57},
+            "GRI 207-3-a": {57},
+            "GRI 302-1-a": {63},
+            "GRI 302-1-c": {63},
         }
 
     def _mark_requirement_specific_quality_flags(self, task: DisclosureTask, evidence: list[EvidenceItem]) -> None:
-        if task.disclosure_id != "GRI 2-7":
-            return
         for item in evidence:
-            if item.source_page == 65 and PageQualityFlag.COMPLEX_TABLE not in item.quality_flags:
+            is_complex_table_page = (
+                (task.disclosure_id == "GRI 2-7" and item.source_page == 65)
+                or (
+                    task.disclosure_id in {"GRI 205-1", "GRI 205-2", "GRI 205-3", "GRI 206-1"}
+                    and task.requirement_id != "GRI 205-3-b"
+                    and item.source_page == 68
+                )
+                or (task.disclosure_id == "GRI 302-1" and item.source_page == 63)
+            )
+            if is_complex_table_page and PageQualityFlag.COMPLEX_TABLE not in item.quality_flags:
                 item.quality_flags.append(PageQualityFlag.COMPLEX_TABLE)
 
     def _mark_omission_note_evidence(self, task: DisclosureTask, evidence: list[EvidenceItem]) -> None:
@@ -374,6 +411,59 @@ class DisclosureAgent:
                 AssessmentVerdict.PARTIALLY_DISCLOSED,
                 "Bounded evidence provides community, infrastructure, service, or indirect-economic-impact examples, but it does not fully disclose scope, beneficiaries, impact assessment, or service nature.",
                 ["投资范围和规模", "受益人群", "影响评估", "服务性质"],
+            )
+
+        if task.requirement_id == "GRI 205-3-b":
+            return (
+                AssessmentVerdict.DISCLOSED,
+                "Bounded KPI evidence directly discloses incidents in which employees were dismissed or disciplined for corruption.",
+                [],
+            )
+
+        anti_corruption_partial_items = {
+            "GRI 205-1-a",
+            "GRI 205-1-b",
+            "GRI 205-2-b",
+            "GRI 205-2-c",
+            "GRI 205-2-e",
+            "GRI 205-3-a",
+        }
+        if task.requirement_id in anti_corruption_partial_items:
+            return (
+                AssessmentVerdict.PARTIALLY_DISCLOSED,
+                "Bounded evidence describes anti-corruption risk assessment, communication, training, or KPI directionally, but it does not provide all GRI-required totals, percentages, categories, regions, or incident nature.",
+                ["总数和百分比", "类别或地区拆分", "事件性质或完整口径"],
+            )
+
+        if task.requirement_id == "GRI 206-1-a":
+            return (
+                AssessmentVerdict.PARTIALLY_DISCLOSED,
+                "Bounded KPI evidence discloses anti-competitive behavior incident count, but it does not clearly establish pending or completed legal actions under anti-competitive, anti-trust, or monopoly practices.",
+                ["反竞争相关法律诉讼口径", "待决或已完成法律行动"],
+            )
+
+        tax_partial_items = {
+            "GRI 207-1-a",
+            "GRI 207-1-a-iii",
+            "GRI 207-2-a",
+            "GRI 207-2-a-i",
+            "GRI 207-2-a-ii",
+            "GRI 207-2-a-iii",
+            "GRI 207-2-a-iv",
+            "GRI 207-3-a",
+        }
+        if task.requirement_id in tax_partial_items:
+            return (
+                AssessmentVerdict.PARTIALLY_DISCLOSED,
+                "Bounded evidence describes tax governance, financial compliance, tax risk management, or tax-related stakeholder expectations, but it does not fully disclose the complete GRI tax governance or stakeholder engagement process.",
+                ["完整税务战略或治理框架", "正式责任主体和评估机制", "税务相关利益相关方参与流程"],
+            )
+
+        if task.requirement_id in {"GRI 302-1-a", "GRI 302-1-c"}:
+            return (
+                AssessmentVerdict.PARTIALLY_DISCLOSED,
+                "Bounded KPI evidence discloses energy consumption figures, but it does not fully establish all GRI 302-1 unit, fuel-type, heating, cooling, steam, and methodology requirements.",
+                ["完整能源类型和单位口径", "热力、制冷、蒸汽要素", "编制方法人工复核"],
             )
 
         if task.requirement_id == "GRI 2-3-a":

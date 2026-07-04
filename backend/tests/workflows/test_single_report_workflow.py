@@ -520,3 +520,127 @@ def test_single_report_workflow_supplements_candidate_pages_for_topic_specific_2
     assert enriched[2].candidate_pdf_pages == []
     assert enriched[3].candidate_pdf_pages == [4, 12, 42, 43, 44]
     assert enriched[4].candidate_pdf_pages == [12, 42, 43, 44, 69]
+
+
+def test_single_report_workflow_supplements_candidate_pages_for_topic_specific_250_rules(tmp_path):
+    pack_path = tmp_path / "gri_requirement_pack.json"
+    pack_path.write_text(
+        json.dumps(
+            {
+                "requirements": [
+                    {"canonical_disclosure_id": "204-1", "report_index_pdf_page": 73, "report_index_report_page": 72},
+                    {"canonical_disclosure_id": "205-1", "report_index_pdf_page": 73, "report_index_report_page": 72},
+                    {"canonical_disclosure_id": "205-2", "report_index_pdf_page": 73, "report_index_report_page": 72},
+                    {"canonical_disclosure_id": "205-3", "report_index_pdf_page": 73, "report_index_report_page": 72},
+                    {"canonical_disclosure_id": "206-1", "report_index_pdf_page": 73, "report_index_report_page": 72},
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    workflow = SingleReportWorkflow(
+        None,
+        FakeParser(),
+        FakeAdapter(),
+        DisclosureAgent(),
+        requirement_pack_path=pack_path,
+    )
+    pages = [
+        PageExtraction(report_id="report-1", page_number=54, text="供应商阳光协议 可持续采购章程 供应商行为准则。"),
+        PageExtraction(report_id="report-1", page_number=56, text="治理章节封面 源正风清 行稳致远。"),
+        PageExtraction(report_id="report-1", page_number=57, text="合规制度 商业道德。"),
+        PageExtraction(report_id="report-1", page_number=58, text="贪污贿赂风险评估 内部审计 外部商业道德审计 第三方反腐败尽调。"),
+        PageExtraction(report_id="report-1", page_number=59, text="阳光热线 举报机制 合规培训 利益冲突申报。"),
+        PageExtraction(report_id="report-1", page_number=68, text="贪污腐败事件数量 员工因腐败被开除或受到处分的事件数量 反竞争行为事件数量。"),
+        PageExtraction(
+            report_id="report-1",
+            page_number=73,
+            text=(
+                "204-1 向当地供应商采购的支出比例 因商业保密限制从略披露\n"
+                "205-1 已进行腐败风险评估的运营点 治理：源正风清 行稳致远 55\n"
+                "205-2 反腐败政策和程序的传达及培训 治理：源正风清 行稳致远 55\n"
+                "205-3 经确认的腐败事件和采取的行动 治理：源正风清 行稳致远 55\n"
+                "206-1 针对反竞争行为、反托拉斯和反垄断实践的法律诉讼 治理：源正风清 行稳致远 55"
+            ),
+        ),
+    ]
+    from src.domain.models import DisclosureTask
+
+    tasks = [
+        DisclosureTask(task_id="task-204-1-a", run_id="run-1", report_id="report-1", standard_id="GRI 204", standard_version="2016", disclosure_id="GRI 204-1", requirement_id="GRI 204-1-a", requirement_text="local supplier spending.", keywords=["从略披露"]),
+        DisclosureTask(task_id="task-205-1-a", run_id="run-1", report_id="report-1", standard_id="GRI 205", standard_version="2016", disclosure_id="GRI 205-1", requirement_id="GRI 205-1-a", requirement_text="operations assessed for corruption risks.", keywords=["风险评估"]),
+        DisclosureTask(task_id="task-205-2-b", run_id="run-1", report_id="report-1", standard_id="GRI 205", standard_version="2016", disclosure_id="GRI 205-2", requirement_id="GRI 205-2-b", requirement_text="employees trained on anti-corruption.", keywords=["合规培训"]),
+        DisclosureTask(task_id="task-205-2-c", run_id="run-1", report_id="report-1", standard_id="GRI 205", standard_version="2016", disclosure_id="GRI 205-2", requirement_id="GRI 205-2-c", requirement_text="business partners communicated anti-corruption procedures.", keywords=["供应商阳光协议"]),
+        DisclosureTask(task_id="task-205-3-b", run_id="run-1", report_id="report-1", standard_id="GRI 205", standard_version="2016", disclosure_id="GRI 205-3", requirement_id="GRI 205-3-b", requirement_text="employees disciplined for corruption.", keywords=["员工因腐败"]),
+        DisclosureTask(task_id="task-206-1-a", run_id="run-1", report_id="report-1", standard_id="GRI 206", standard_version="2016", disclosure_id="GRI 206-1", requirement_id="GRI 206-1-a", requirement_text="anti-competitive legal actions.", keywords=["反竞争行为"]),
+    ]
+
+    enriched = workflow._attach_report_index_candidates(pages, tasks)
+
+    assert enriched[0].candidate_pdf_pages == [73]
+    assert enriched[1].candidate_pdf_pages == [58, 68]
+    assert enriched[2].candidate_pdf_pages == [59, 68]
+    assert enriched[3].candidate_pdf_pages == [54, 58]
+    assert enriched[4].candidate_pdf_pages == [68]
+    assert enriched[5].candidate_pdf_pages == [68]
+
+
+def test_single_report_workflow_supplements_candidate_pages_for_tax_and_energy_250_rules(tmp_path):
+    pack_path = tmp_path / "gri_requirement_pack.json"
+    pack_path.write_text(
+        json.dumps(
+            {
+                "requirements": [
+                    {"canonical_disclosure_id": "207-1", "report_index_pdf_page": 73, "report_index_report_page": 72},
+                    {"canonical_disclosure_id": "207-2", "report_index_pdf_page": 73, "report_index_report_page": 72},
+                    {"canonical_disclosure_id": "207-3", "report_index_pdf_page": 73, "report_index_report_page": 72},
+                    {"canonical_disclosure_id": "207-4", "report_index_pdf_page": 73, "report_index_report_page": 72},
+                    {"canonical_disclosure_id": "302-1", "report_index_pdf_page": 73, "report_index_report_page": 72},
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    workflow = SingleReportWorkflow(
+        None,
+        FakeParser(),
+        FakeAdapter(),
+        DisclosureAgent(),
+        requirement_pack_path=pack_path,
+    )
+    pages = [
+        PageExtraction(report_id="report-1", page_number=57, text="财务合规与安全部门 税务治理 财务风险管理 税务管理标准 税法要求 税收协定 利益相关方对税务管理的期待。"),
+        PageExtraction(report_id="report-1", page_number=63, text="不可再生能源燃料消耗量 不可再生能源消耗总量(kWh) 电力消耗总量(kWh) 办公用电总量(kWh) 绿色电力使用总量(kWh)。"),
+        PageExtraction(
+            report_id="report-1",
+            page_number=73,
+            text=(
+                "207-1 税务方针 治理：源正风清 行稳致远 56\n"
+                "207-2 税务治理、控制和风险管理 治理：源正风清 行稳致远 56\n"
+                "207-3 与税务相关的利益相关方参与及关切管理 治理：源正风清 行稳致远 56\n"
+                "207-4 国别报告 因商业保密限制从略披露\n"
+                "302-1 组织内部的能源消耗 附录一：关键绩效数据表 62"
+            ),
+        ),
+    ]
+    from src.domain.models import DisclosureTask
+
+    tasks = [
+        DisclosureTask(task_id="task-207-1-a", run_id="run-1", report_id="report-1", standard_id="GRI 207", standard_version="2019", disclosure_id="GRI 207-1", requirement_id="GRI 207-1-a", requirement_text="approach to tax.", keywords=["税务治理"]),
+        DisclosureTask(task_id="task-207-1-a-iii", run_id="run-1", report_id="report-1", standard_id="GRI 207", standard_version="2019", disclosure_id="GRI 207-1", requirement_id="GRI 207-1-a-iii", requirement_text="regulatory compliance.", keywords=["税收协定"]),
+        DisclosureTask(task_id="task-207-2-a", run_id="run-1", report_id="report-1", standard_id="GRI 207", standard_version="2019", disclosure_id="GRI 207-2", requirement_id="GRI 207-2-a", requirement_text="tax governance and control.", keywords=["财务合规"]),
+        DisclosureTask(task_id="task-207-3-a", run_id="run-1", report_id="report-1", standard_id="GRI 207", standard_version="2019", disclosure_id="GRI 207-3", requirement_id="GRI 207-3-a", requirement_text="stakeholder concerns related to tax.", keywords=["利益相关方"]),
+        DisclosureTask(task_id="task-207-4-b-x", run_id="run-1", report_id="report-1", standard_id="GRI 207", standard_version="2019", disclosure_id="GRI 207-4", requirement_id="GRI 207-4-b-x", requirement_text="country-by-country reporting.", keywords=["从略披露"]),
+        DisclosureTask(task_id="task-302-1-a", run_id="run-1", report_id="report-1", standard_id="GRI 302", standard_version="2016", disclosure_id="GRI 302-1", requirement_id="GRI 302-1-a", requirement_text="non-renewable fuel consumption.", keywords=["不可再生能源"]),
+        DisclosureTask(task_id="task-302-1-c", run_id="run-1", report_id="report-1", standard_id="GRI 302", standard_version="2016", disclosure_id="GRI 302-1", requirement_id="GRI 302-1-c", requirement_text="electricity consumption.", keywords=["电力消耗"]),
+    ]
+
+    enriched = workflow._attach_report_index_candidates(pages, tasks)
+
+    assert enriched[0].candidate_pdf_pages == [57]
+    assert enriched[1].candidate_pdf_pages == [57]
+    assert enriched[2].candidate_pdf_pages == [57]
+    assert enriched[3].candidate_pdf_pages == [57]
+    assert enriched[4].candidate_pdf_pages == [73]
+    assert enriched[5].candidate_pdf_pages == [63]
+    assert enriched[6].candidate_pdf_pages == [63]
