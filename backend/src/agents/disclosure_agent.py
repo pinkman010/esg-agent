@@ -3,7 +3,8 @@ import re
 
 from src.domain.enums import AssessmentVerdict, PageQualityFlag, ReviewStatus
 from src.domain.models import DisclosureAssessment, DisclosureTask, DocumentChunk, EvidenceItem, Recommendation
-from src.tools.evidence import chunk_to_evidence
+from src.standards.evidence_contracts import get_requirement_contract
+from src.tools.evidence import build_kpi_evidence_preview, chunk_to_evidence
 from src.tools.guardrails import build_guarded_assessment
 from src.tools.ids import database_safe_id
 from src.tools.retrieval import retrieve_evidence
@@ -35,12 +36,20 @@ class DisclosureAgent:
         )
         disclosed_not_required_overrides = {
             "GRI 2-7-c-ii",
+            "GRI 205-3-b",
             "GRI 302-1-e",
             "GRI 305-1-a",
             "GRI 305-2-a",
             "GRI 305-2-b",
         }
-        if task.requirement_id in disclosed_not_required_overrides and assessment.verdict is AssessmentVerdict.DISCLOSED:
+        contract = get_requirement_contract(task.requirement_id)
+        if (
+            contract is not None
+            and contract.review_status is ReviewStatus.NOT_REQUIRED
+            and assessment.verdict is AssessmentVerdict.DISCLOSED
+        ):
+            assessment.review_status = ReviewStatus.NOT_REQUIRED
+        elif task.requirement_id in disclosed_not_required_overrides and assessment.verdict is AssessmentVerdict.DISCLOSED:
             assessment.review_status = ReviewStatus.NOT_REQUIRED
         recommendations = self._build_recommendations(task, assessment)
         return DisclosureAgentResult(assessment=assessment, recommendations=recommendations)
@@ -51,7 +60,10 @@ class DisclosureAgent:
         chunks: list[DocumentChunk],
         evidence: list[EvidenceItem],
     ) -> list[EvidenceItem]:
-        allowed_pages = self._requirement_specific_allowed_pages().get(task.requirement_id)
+        contract = get_requirement_contract(task.requirement_id)
+        allowed_pages = set(contract.allowed_pages) if contract is not None and contract.allowed_pages else None
+        if not allowed_pages:
+            allowed_pages = self._requirement_specific_allowed_pages().get(task.requirement_id)
         if not allowed_pages:
             return evidence
         candidate_pages = set(task.candidate_pages or [])
@@ -106,6 +118,15 @@ class DisclosureAgent:
         task: DisclosureTask,
         evidence: list[EvidenceItem],
     ) -> list[EvidenceItem]:
+        contract = get_requirement_contract(task.requirement_id)
+        if contract is not None:
+            if contract.verdict is AssessmentVerdict.UNKNOWN and not contract.allowed_pages:
+                return []
+            filtered = [item for item in evidence if item.source_page not in contract.forbidden_pages]
+            if contract.allowed_pages and task.candidate_pages:
+                return [item for item in filtered if item.source_page in contract.allowed_pages]
+            evidence = filtered
+
         allowed_pages_by_requirement = self._requirement_specific_allowed_pages()
         requirements_without_valid_evidence = {
             "GRI 2-23-a-iii",
@@ -286,12 +307,15 @@ class DisclosureAgent:
         }
 
     def _mark_requirement_specific_quality_flags(self, task: DisclosureTask, evidence: list[EvidenceItem]) -> None:
+        contract = get_requirement_contract(task.requirement_id)
         for item in evidence:
+            is_contract_kpi_table_page = contract is not None and item.source_page in contract.kpi_table_pages
             is_complex_table_page = (
+                is_contract_kpi_table_page
+                or
                 (task.disclosure_id == "GRI 2-7" and item.source_page == 65)
                 or (
                     task.disclosure_id in {"GRI 205-1", "GRI 205-2", "GRI 205-3", "GRI 206-1"}
-                    and task.requirement_id != "GRI 205-3-b"
                     and item.source_page == 68
                 )
                 or (task.disclosure_id.startswith("GRI 302") and item.source_page == 63)
@@ -300,20 +324,33 @@ class DisclosureAgent:
             )
             if is_complex_table_page and PageQualityFlag.COMPLEX_TABLE not in item.quality_flags:
                 item.quality_flags.append(PageQualityFlag.COMPLEX_TABLE)
+            if is_complex_table_page:
+                item.evidence_preview = build_kpi_evidence_preview(item.source_text, task.keywords)
 
     def _mark_omission_note_evidence(self, task: DisclosureTask, evidence: list[EvidenceItem]) -> None:
-        omission_terms = ("从略披露", "因商业保密限制从略披露", "因不适用而从略披露")
+        omission_terms = (
+            "从略披露",
+            "因商业保密限制从略披露",
+            "因不适用而从略披露",
+            "不适用从略披露",
+            "confidentiality constraints",
+            "not applicable",
+        )
         for item in evidence:
             target_row = self._target_disclosure_row(task.disclosure_id, item.source_text)
-            if target_row is None or not any(term in target_row for term in omission_terms):
+            target_row_lower = target_row.lower() if target_row is not None else ""
+            if target_row is None or not any(term in target_row or term in target_row_lower for term in omission_terms):
                 continue
             item.evidence_preview = target_row
-            if any(term in target_row for term in omission_terms):
-                item.metadata["evidence_type"] = "omission_note"
-                if "因商业保密限制从略披露" in target_row:
-                    item.metadata["omission_reason"] = "confidentiality"
-                elif "因不适用而从略披露" in target_row:
-                    item.metadata["omission_reason"] = "not_applicable"
+            item.metadata["evidence_type"] = "omission_note"
+            if "因商业保密限制从略披露" in target_row or "confidentiality constraints" in target_row_lower:
+                item.metadata["omission_reason"] = "confidentiality"
+            elif (
+                "因不适用而从略披露" in target_row
+                or "不适用从略披露" in target_row
+                or "not applicable" in target_row_lower
+            ):
+                item.metadata["omission_reason"] = "not_applicable"
 
     def _mark_index_statement_evidence(self, task: DisclosureTask, evidence: list[EvidenceItem]) -> None:
         if task.disclosure_id != "GRI 2-27":
@@ -383,6 +420,14 @@ class DisclosureAgent:
                 AssessmentVerdict.UNKNOWN,
                 "The report index contains an omission note, but no substantive disclosure evidence was found.",
                 ["实质披露内容", "从略披露原因对应的人工复核"],
+            )
+
+        contract = get_requirement_contract(task.requirement_id)
+        if contract is not None and contract.verdict is not None:
+            return (
+                contract.verdict,
+                contract.rationale,
+                list(contract.missing_items),
             )
 
         if task.requirement_id == "GRI 2-26-a-ii":

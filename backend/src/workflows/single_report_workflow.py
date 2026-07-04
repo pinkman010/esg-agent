@@ -6,6 +6,7 @@ from src.agents.disclosure_agent import DisclosureAgent
 from src.db.repositories import Repository
 from src.domain.enums import RunStatus
 from src.domain.models import AnalysisRun, DisclosureTask, PageExtraction
+from src.standards.evidence_contracts import get_requirement_contract
 from src.standards.gri_report_index import build_report_index
 
 
@@ -190,6 +191,9 @@ class SingleReportWorkflow:
         return sorted(set([*candidate_pages, *supplements]))
 
     def _candidate_page_overrides(self, task: DisclosureTask) -> list[int] | None:
+        contract = get_requirement_contract(task.requirement_id)
+        if contract is not None and contract.candidate_pages is not None:
+            return list(contract.candidate_pages)
         pages_by_requirement = {
             "GRI 2-22-a": [4, 5],
             "GRI 2-23-a": [9, 11, 32, 54, 57, 59],

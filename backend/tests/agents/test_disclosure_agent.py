@@ -1464,6 +1464,45 @@ def test_disclosure_agent_propagates_204_1_omission_note_for_current_250():
         assert result.assessment.evidence[0].metadata["omission_reason"] == "confidentiality"
 
 
+def test_disclosure_agent_marks_english_and_short_omission_terms():
+    cases = [
+        ("GRI 304-4-a", "304-4 Species affected not applicable", "not_applicable"),
+        ("GRI 201-1-a", "201-1 Direct economic value generated confidentiality constraints", "confidentiality"),
+        ("GRI 304-4-a", "304-4 受运营影响的栖息地中已被列入 不适用从略披露", "not_applicable"),
+    ]
+    for requirement_id, text, reason in cases:
+        disclosure_id = "GRI " + requirement_id.removeprefix("GRI ").rsplit("-", 1)[0]
+        task = DisclosureTask(
+            task_id=f"task-{requirement_id}",
+            run_id="run-1",
+            report_id="report-1",
+            standard_id=disclosure_id.split("-")[0],
+            standard_version="2021",
+            disclosure_id=disclosure_id,
+            requirement_id=requirement_id,
+            requirement_text="omitted disclosure.",
+            keywords=["从略披露", "not applicable", "confidentiality"],
+            candidate_pages=[74],
+            candidate_page_source="gri_report_index_omission_note",
+            index_page=74,
+        )
+        chunk = DocumentChunk(
+            chunk_id=f"chunk-{requirement_id}",
+            report_id="report-1",
+            text=text,
+            source_page=74,
+            source_method=EvidenceSourceMethod.PDFPLUMBER,
+            source_file_hash="hash-1",
+        )
+
+        result = DisclosureAgent().analyze(task, [chunk], confirm_llm=False)
+
+        assert result.assessment.verdict is AssessmentVerdict.UNKNOWN
+        assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+        assert result.assessment.evidence[0].metadata["evidence_type"] == "omission_note"
+        assert result.assessment.evidence[0].metadata["omission_reason"] == reason
+
+
 def test_disclosure_agent_handles_205_anti_corruption_partial_and_disclosed_rules():
     cases = [
         ("GRI 205-1-a", "GRI 205-1", [(58, "贪污贿赂风险评估 内部和外部商业道德审计 识别高风险环节"), (68, "完成商业道德问题和腐败相关内部审计或风险评估的经营地点占比")], AssessmentVerdict.PARTIALLY_DISCLOSED, ReviewStatus.NEEDS_MANUAL_REVIEW, [58, 68]),
@@ -1507,6 +1546,36 @@ def test_disclosure_agent_handles_205_anti_corruption_partial_and_disclosed_rule
         assert result.assessment.verdict is verdict
         assert result.assessment.review_status is review_status
         assert [item.source_page for item in result.assessment.evidence] == expected_pages
+
+
+def test_disclosure_agent_marks_all_governance_kpi_page_68_as_complex_table():
+    task = DisclosureTask(
+        task_id="task-GRI 205-3-b",
+        run_id="run-1",
+        report_id="report-1",
+        standard_id="GRI 205",
+        standard_version="2016",
+        disclosure_id="GRI 205-3",
+        requirement_id="GRI 205-3-b",
+        requirement_text="Total number of confirmed incidents in which employees were dismissed or disciplined for corruption.",
+        keywords=["员工因腐败被开除或受到处分的事件数量"],
+        candidate_pages=[68],
+        candidate_page_source="gri_report_index+requirement_supplement",
+        index_page=73,
+    )
+    chunk = DocumentChunk(
+        chunk_id="chunk-GRI 205-3-b-68",
+        report_id="report-1",
+        text="员工因腐败被开除或受到处分的事件数量",
+        source_page=68,
+        source_method=EvidenceSourceMethod.PDFPLUMBER,
+        source_file_hash="hash-1",
+    )
+
+    result = DisclosureAgent().analyze(task, [chunk], confirm_llm=False)
+
+    assert result.assessment.verdict is AssessmentVerdict.DISCLOSED
+    assert PageQualityFlag.COMPLEX_TABLE in result.assessment.evidence[0].quality_flags
 
 
 def test_disclosure_agent_keeps_205_206_unreported_subitems_unknown():
@@ -2036,7 +2105,7 @@ def test_disclosure_agent_replaces_invalid_305_2_page_3_with_scope_2_kpi_pages()
             DocumentChunk(
                 chunk_id=f"chunk-{requirement_id}-63",
                 report_id="report-1",
-                text=scope_text,
+                text=f"总耗水量(t) 277,323.60 177,280.10 69,292.00 {scope_text} 化学需氧量(kg) 11,973.00",
                 source_page=63,
                 source_method=EvidenceSourceMethod.PDFPLUMBER,
                 source_file_hash="hash-1",
@@ -2050,6 +2119,8 @@ def test_disclosure_agent_replaces_invalid_305_2_page_3_with_scope_2_kpi_pages()
         assert [item.source_page for item in result.assessment.evidence] == [20, 63]
         assert all(item.source_page != 3 for item in result.assessment.evidence)
         assert PageQualityFlag.COMPLEX_TABLE in result.assessment.evidence[-1].quality_flags
+        assert "范围二" in result.assessment.evidence[-1].evidence_preview
+        assert "总耗水量" not in result.assessment.evidence[-1].evidence_preview
 
 
 def test_disclosure_agent_keeps_unreported_305_1_and_305_2_subitems_unknown():
@@ -2093,3 +2164,287 @@ def test_disclosure_agent_keeps_unreported_305_1_and_305_2_subitems_unknown():
         assert result.assessment.verdict is AssessmentVerdict.UNKNOWN
         assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
         assert result.assessment.evidence == []
+
+
+def test_disclosure_agent_uses_ghg_methodology_page_for_305_2_g():
+    task = DisclosureTask(
+        task_id="task-GRI 305-2-g",
+        run_id="run-1",
+        report_id="report-1",
+        standard_id="GRI 305",
+        standard_version="2016",
+        disclosure_id="GRI 305-2",
+        requirement_id="GRI 305-2-g",
+        requirement_text="Standards, methodologies, assumptions, and/or calculation tools used.",
+        keywords=["Standards", "温室气体核算方法", "排放因子"],
+        candidate_pages=[3, 64],
+        candidate_page_source="gri_report_index+requirement_supplement",
+        index_page=74,
+    )
+    chunks = [
+        DocumentChunk(
+            chunk_id="chunk-GRI 305-2-g-3",
+            report_id="report-1",
+            text="GRI Standards ESG报告编制依据。",
+            source_page=3,
+            source_method=EvidenceSourceMethod.PDFPLUMBER,
+            source_file_hash="hash-1",
+        ),
+        DocumentChunk(
+            chunk_id="chunk-GRI 305-2-g-64",
+            report_id="report-1",
+            text="温室气体核算方法 排放因子来源 范围二 购买的电力和热力基于消费及相应排放因子进行计算。",
+            source_page=64,
+            source_method=EvidenceSourceMethod.PDFPLUMBER,
+            source_file_hash="hash-1",
+        ),
+    ]
+
+    result = DisclosureAgent().analyze(task, chunks, confirm_llm=False)
+
+    assert result.assessment.verdict is AssessmentVerdict.PARTIALLY_DISCLOSED
+    assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+    assert [item.source_page for item in result.assessment.evidence] == [64]
+
+
+def test_disclosure_agent_uses_emission_factor_sources_for_305_2_e():
+    task = DisclosureTask(
+        task_id="task-GRI 305-2-e",
+        run_id="run-1",
+        report_id="report-1",
+        standard_id="GRI 305",
+        standard_version="2016",
+        disclosure_id="GRI 305-2",
+        requirement_id="GRI 305-2-e",
+        requirement_text="Source of the emission factors and the global warming potential rates used.",
+        keywords=["排放因子来源", "GWP", "范围二"],
+        candidate_pages=[64],
+        candidate_page_source="gri_report_index+requirement_supplement",
+        index_page=74,
+    )
+    chunk = DocumentChunk(
+        chunk_id="chunk-GRI 305-2-e-64",
+        report_id="report-1",
+        text="温室气体核算方法 排放因子来源 范围二 生态环境部 发改委 BEIS IEA AIB Green-e。",
+        source_page=64,
+        source_method=EvidenceSourceMethod.PDFPLUMBER,
+        source_file_hash="hash-1",
+    )
+
+    result = DisclosureAgent().analyze(task, [chunk], confirm_llm=False)
+
+    assert result.assessment.verdict is AssessmentVerdict.PARTIALLY_DISCLOSED
+    assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+    assert [item.source_page for item in result.assessment.evidence] == [64]
+
+
+def test_disclosure_agent_handles_scope_3_total_and_methodology_rules():
+    cases = [
+        (
+            "GRI 305-3-a",
+            "other indirect Scope 3 GHG emissions.",
+            [(20, "范围三排放总量 4,944,060.00 tCO2e"), (63, "范围三 - 排放总量(tCO2e) 4,944,060.00")],
+            AssessmentVerdict.DISCLOSED,
+            ReviewStatus.NOT_REQUIRED,
+            [20, 63],
+        ),
+        (
+            "GRI 305-3-f",
+            "Source of emission factors and GWP rates used.",
+            [(64, "范围三 排放因子来源 Sphera Ecoinvent BEIS 生态环境部通知")],
+            AssessmentVerdict.PARTIALLY_DISCLOSED,
+            ReviewStatus.NEEDS_MANUAL_REVIEW,
+            [64],
+        ),
+    ]
+    for requirement_id, requirement_text, page_texts, verdict, review_status, expected_pages in cases:
+        task = DisclosureTask(
+            task_id=f"task-{requirement_id}",
+            run_id="run-1",
+            report_id="report-1",
+            standard_id="GRI 305",
+            standard_version="2016",
+            disclosure_id="GRI 305-3",
+            requirement_id=requirement_id,
+            requirement_text=requirement_text,
+            keywords=["范围三", "排放总量", "排放因子来源"],
+            candidate_pages=[page for page, _ in page_texts],
+            candidate_page_source="gri_report_index+requirement_supplement",
+            index_page=74,
+        )
+        chunks = [
+            DocumentChunk(
+                chunk_id=f"chunk-{requirement_id}-{page}",
+                report_id="report-1",
+                text=text,
+                source_page=page,
+                source_method=EvidenceSourceMethod.PDFPLUMBER,
+                source_file_hash="hash-1",
+            )
+            for page, text in page_texts
+        ]
+
+        result = DisclosureAgent().analyze(task, chunks, confirm_llm=False)
+
+        assert result.assessment.verdict is verdict
+        assert result.assessment.review_status is review_status
+        assert [item.source_page for item in result.assessment.evidence] == expected_pages
+        if requirement_id == "GRI 305-3-a":
+            assert PageQualityFlag.COMPLEX_TABLE in result.assessment.evidence[-1].quality_flags
+
+
+def test_disclosure_agent_handles_305_5_direct_reduction_kpi():
+    task = DisclosureTask(
+        task_id="task-GRI 305-5-a",
+        run_id="run-1",
+        report_id="report-1",
+        standard_id="GRI 305",
+        standard_version="2016",
+        disclosure_id="GRI 305-5",
+        requirement_id="GRI 305-5-a",
+        requirement_text="GHG emissions reduced as a direct result of reduction initiatives.",
+        keywords=["节能措施促成的碳减排总量", "碳减排"],
+        candidate_pages=[63],
+        candidate_page_source="gri_report_index+requirement_supplement",
+        index_page=74,
+    )
+    chunk = DocumentChunk(
+        chunk_id="chunk-GRI 305-5-a-63",
+        report_id="report-1",
+        text="节能措施促成的碳减排总量(tCO2e) 158.06 246.31 256.17",
+        source_page=63,
+        source_method=EvidenceSourceMethod.PDFPLUMBER,
+        source_file_hash="hash-1",
+    )
+
+    result = DisclosureAgent().analyze(task, [chunk], confirm_llm=False)
+
+    assert result.assessment.verdict is AssessmentVerdict.DISCLOSED
+    assert result.assessment.review_status is ReviewStatus.NOT_REQUIRED
+    assert [item.source_page for item in result.assessment.evidence] == [63]
+    assert PageQualityFlag.COMPLEX_TABLE in result.assessment.evidence[0].quality_flags
+
+
+def test_disclosure_agent_does_not_use_waste_or_water_pollutants_for_305_7_air_emissions():
+    task = DisclosureTask(
+        task_id="task-GRI 305-7-a",
+        run_id="run-1",
+        report_id="report-1",
+        standard_id="GRI 305",
+        standard_version="2016",
+        disclosure_id="GRI 305-7",
+        requirement_id="GRI 305-7-a",
+        requirement_text="Significant air emissions including NOx, SOx, POP, VOC, HAP, PM, and other standard categories.",
+        keywords=["NOx", "SOx", "污染物排放总量", "废弃物"],
+        candidate_pages=[21, 63],
+        candidate_page_source="gri_report_index+requirement_supplement",
+        index_page=74,
+    )
+    chunks = [
+        DocumentChunk(
+            chunk_id="chunk-GRI 305-7-a-21",
+            report_id="report-1",
+            text="废弃物管理 回用 Reuse 化学品桶危废减量。",
+            source_page=21,
+            source_method=EvidenceSourceMethod.PDFPLUMBER,
+            source_file_hash="hash-1",
+        ),
+        DocumentChunk(
+            chunk_id="chunk-GRI 305-7-a-63",
+            report_id="report-1",
+            text="污染物排放总量 化学需氧量 悬浮物 氨氮 总磷 总氮。",
+            source_page=63,
+            source_method=EvidenceSourceMethod.PDFPLUMBER,
+            source_file_hash="hash-1",
+        ),
+    ]
+
+    result = DisclosureAgent().analyze(task, chunks, confirm_llm=False)
+
+    assert result.assessment.verdict is AssessmentVerdict.UNKNOWN
+    assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+    assert result.assessment.evidence == []
+
+
+def test_disclosure_agent_keeps_306_4_reuse_subitems_partial_for_case_evidence():
+    for requirement_id in ["GRI 306-4-b-i", "GRI 306-4-c-i"]:
+        task = DisclosureTask(
+            task_id=f"task-{requirement_id}",
+            run_id="run-1",
+            report_id="report-1",
+            standard_id="GRI 306",
+            standard_version="2020",
+            disclosure_id="GRI 306-4",
+            requirement_id=requirement_id,
+            requirement_text="Preparation for reuse.",
+            keywords=["回用", "Reuse", "废弃物回收总量"],
+            candidate_pages=[21, 64],
+            candidate_page_source="gri_report_index+requirement_supplement",
+            index_page=74,
+        )
+        chunks = [
+            DocumentChunk(
+                chunk_id=f"chunk-{requirement_id}-21",
+                report_id="report-1",
+                text="回用（Reuse）循环使用金属框架和包装箱运输大型部件，回收再用供应商回运的木箱和金属支架。",
+                source_page=21,
+                source_method=EvidenceSourceMethod.PDFPLUMBER,
+                source_file_hash="hash-1",
+                quality_flags=[PageQualityFlag.COMPLEX_TABLE],
+            )
+        ]
+
+        result = DisclosureAgent().analyze(task, chunks, confirm_llm=False)
+
+        assert result.assessment.verdict is AssessmentVerdict.PARTIALLY_DISCLOSED
+        assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+        assert [item.source_page for item in result.assessment.evidence] == [21]
+
+
+def test_disclosure_agent_handles_306_waste_management_and_kpi_partial_rules():
+    cases = [
+        ("GRI 306-1-a", "waste-related impacts.", [(21, "废弃物管理 包装材料周转 化学品清洗废液 化学品桶危废减量"), (22, "废水分类处理 回用")]),
+        ("GRI 306-1-a-i", "inputs activities outputs that lead to waste impacts.", [(21, "包装材料周转 化学品清洗废液 化学品桶危废减量")]),
+        ("GRI 306-1-a-ii", "waste-related impacts in own activities and value chain.", [(21, "供应商回运木箱和金属支架 包装箱运输大型部件")]),
+        ("GRI 306-2-a", "actions to prevent waste generation and manage impacts.", [(21, "5R原则 循环包装 废液减量 衬膜改造")]),
+        ("GRI 306-2-b", "third-party waste management and recovery operations.", [(21, "处置供应商资质审查与监督")]),
+        ("GRI 306-3-a", "total weight of waste generated and breakdown.", [(64, "危险废物总重(t) 4,692.00 非危险废物总重(t) 27,430.00")]),
+        ("GRI 306-4-a", "total weight of waste diverted from disposal.", [(64, "废弃物回收总量(t) 22,977.22 废弃物回收率(%) 72")]),
+        ("GRI 306-4-b", "hazardous waste diverted from disposal.", [(64, "危险废物回收总量(t) 374.00 危险废物回收率(%) 8")]),
+        ("GRI 306-4-c", "non-hazardous waste diverted from disposal.", [(64, "非危险废物回收总量(t) 22,603.22 非危险废物回收率(%) 82")]),
+    ]
+    for requirement_id, requirement_text, page_texts in cases:
+        disclosure_id = "GRI 306-1" if requirement_id.startswith("GRI 306-1") else ("GRI 306-2" if requirement_id.startswith("GRI 306-2") else ("GRI 306-3" if requirement_id.startswith("GRI 306-3") else "GRI 306-4"))
+        task = DisclosureTask(
+            task_id=f"task-{requirement_id}",
+            run_id="run-1",
+            report_id="report-1",
+            standard_id="GRI 306",
+            standard_version="2020",
+            disclosure_id=disclosure_id,
+            requirement_id=requirement_id,
+            requirement_text=requirement_text,
+            keywords=["废弃物", "回收总量", "5R", "供应商资质"],
+            candidate_pages=[page for page, _ in page_texts],
+            candidate_page_source="gri_report_index+requirement_supplement",
+            index_page=74,
+        )
+        chunks = [
+            DocumentChunk(
+                chunk_id=f"chunk-{requirement_id}-{page}",
+                report_id="report-1",
+                text=text,
+                source_page=page,
+                source_method=EvidenceSourceMethod.PDFPLUMBER,
+                source_file_hash="hash-1",
+            )
+            for page, text in page_texts
+        ]
+
+        result = DisclosureAgent().analyze(task, chunks, confirm_llm=False)
+
+        assert result.assessment.verdict is AssessmentVerdict.PARTIALLY_DISCLOSED
+        assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+        assert [item.source_page for item in result.assessment.evidence] == [page for page, _ in page_texts]
+        if any(page == 64 for page, _ in page_texts):
+            assert PageQualityFlag.COMPLEX_TABLE in result.assessment.evidence[-1].quality_flags

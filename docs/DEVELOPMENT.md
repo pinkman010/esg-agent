@@ -123,6 +123,21 @@ pnpm dev
 - 前端 Vitest。
 - 前端 build。
 
+review CSV 生成后必须执行硬门禁自查：
+
+```powershell
+cd backend
+@'
+from src.tools.review_csv_audit import audit_review_csv
+result = audit_review_csv("../tmp/review/current_350_review_after_rules.csv", report_total_pages=78)
+print("ok=", result.ok)
+print("errors=", result.errors)
+print("warnings=", result.warnings)
+'@ | uv run --no-sync python -
+```
+
+自查覆盖 `global_fallback`、页码越界、`page_label` 乱码、`omission_note` 升格、KPI 表缺少 `complex_table`、鉴证页缺少 OCR/VLM 风险标记、GRI 305 误挂 PDF 第 3 页等硬规则。
+
 ## 7. OpenAPI 类型生成
 
 前端 API 类型通过 FastAPI OpenAPI 自动生成。
@@ -146,6 +161,9 @@ pnpm generate:api
 
 ### 2026-07-04
 
+- 增加 `review_csv_audit` 工具，将人工复核硬规则固化为可重复运行的 review CSV gate；新增首批 leaf-level evidence contract，先覆盖 GRI 305 的候选页、禁用页、verdict 和 review status；PDF 第 63、65、68 页 KPI evidence 统一使用行级 preview helper，并修复 `GRI 205-3-b` PDF 第 68 页缺少 `complex_table` 的质量标记问题。
+- 扩展 `omission_note` 识别：支持“因商业保密限制从略披露”“因不适用而从略披露”“不适用从略披露”“confidentiality constraints”“not applicable”。从略说明只作为缺口解释保留，固定进入 `unknown + needs_manual_review`。
+- 当前 `review_csv_audit.py`、`evidence_contracts.py`、`DisclosureAgent` 中的部分页码规则、`SingleReportWorkflow._candidate_page_overrides()` 和 `GRIAdapter` 的部分关键词服务于远景能源样本的 661 条核查。核查完成后，应将通用 GRI 充分性规则、报告实例页码 profile、报告实例关键词扩展拆分，避免样本页码和公司特定表达长期留在产品运行链路。
 - 根据 `current_150_review.csv` 人工复核结论，增加 `GRI 2-20-a-iii`、`GRI 2-20-b`、`GRI 2-21`、`GRI 2-30` 的 `omission_note` 继承规则；GRI 索引中的“因商业保密限制从略披露”只作为缺口解释保留，不提升 `disclosed`。
 - 增加 `GRI 2-22`、`GRI 2-23`、`GRI 2-24`、`GRI 2-25`、`GRI 2-26`、`GRI 2-27`、`GRI 2-28`、`GRI 2-29`、`GRI 3-1` 的中文关键词、候选页收窄和子项级充分性规则；章节封面页不能单独作为 evidence，候选页超过报告页数时过滤。
 - 生成 `tmp/review/current_150_review_after_rules.csv`：150 个 requirement、227 行、169 条 evidence；按 requirement 聚合后为 11 条 `disclosed`、58 条 `partially_disclosed`、81 条 `unknown`，11 条 `not_required`、139 条 `needs_manual_review`；169 条 evidence 均为 `index_page_bounded`，0 条 `global_fallback`；其中 23 条为 `omission_note`、7 条为 `index_statement`，未调用外部模型。

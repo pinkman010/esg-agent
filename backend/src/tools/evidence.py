@@ -48,6 +48,43 @@ def build_evidence_preview(text: str, keywords: list[str], window_before: int = 
     return max(candidates, key=lambda candidate: _preview_score(candidate, keywords))
 
 
+def build_kpi_evidence_preview(
+    text: str,
+    metric_terms: list[str],
+    window_before: int = 20,
+    window_after: int = 120,
+) -> str:
+    normalized = " ".join(text.split())
+    if not normalized:
+        return ""
+
+    lower = normalized.lower()
+    candidates: list[str] = []
+    for term in metric_terms:
+        term_lower = term.strip().lower()
+        if not term_lower:
+            continue
+        start = 0
+        while True:
+            index = lower.find(term_lower, start)
+            if index < 0:
+                break
+            window_start = max(0, index - window_before)
+            window_end = min(len(normalized), index + len(term) + window_after)
+            preview = normalized[window_start:window_end].strip()
+            if window_start > 0:
+                preview = f"...{preview}"
+            if window_end < len(normalized):
+                preview = f"{preview}..."
+            candidates.append(preview)
+            start = index + max(1, len(term_lower))
+
+    if not candidates:
+        return build_evidence_preview(normalized, metric_terms)
+
+    return max(candidates, key=lambda candidate: (sum(char.isdigit() for char in candidate), len(candidate)))
+
+
 def _nearest_disclosure_anchor_start(text: str, match_index: int) -> int | None:
     prefix = text[:match_index]
     matches = list(re.finditer(r"(?:^|\s)(\d{1,3}-\d{1,3}(?:-[a-z]+(?:-[ivx]+)?)?)\s", prefix))
