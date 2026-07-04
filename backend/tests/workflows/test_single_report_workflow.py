@@ -710,3 +710,56 @@ def test_single_report_workflow_supplements_candidate_pages_for_energy_and_water
     assert enriched[4].candidate_pdf_pages == [22]
     assert enriched[5].candidate_pdf_pages == [25, 63]
     assert enriched[6].candidate_pdf_pages == [22, 63]
+
+
+def test_single_report_workflow_supplements_candidate_pages_for_ghg_350_rules(tmp_path):
+    pack_path = tmp_path / "gri_requirement_pack.json"
+    pack_path.write_text(
+        json.dumps(
+            {
+                "requirements": [
+                    {"canonical_disclosure_id": "305-1", "report_index_pdf_page": 74, "report_index_report_page": 73},
+                    {"canonical_disclosure_id": "305-2", "report_index_pdf_page": 74, "report_index_report_page": 73},
+                    {"canonical_disclosure_id": "304-4", "report_index_pdf_page": 74, "report_index_report_page": 73},
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    workflow = SingleReportWorkflow(
+        None,
+        FakeParser(),
+        FakeAdapter(),
+        DisclosureAgent(),
+        requirement_pack_path=pack_path,
+    )
+    pages = [
+        PageExtraction(report_id="report-1", page_number=3, text="TCFD 气候相关财务信息披露工作组。"),
+        PageExtraction(report_id="report-1", page_number=20, text="范围一排放量 范围二（基于位置）57,897.05 tCO2e 范围二（基于市场）绿色电力。"),
+        PageExtraction(report_id="report-1", page_number=63, text="范围一温室气体排放量 范围二（基于位置） 范围二（基于市场） 温室气体 KPI。"),
+        PageExtraction(report_id="report-1", page_number=64, text="温室气体核算方法 排放因子 全球变暖潜势 GWP。"),
+        PageExtraction(report_id="report-1", page_number=74, text="304-4 受运营影响的栖息地中已被列入 远景能源因不适用而从略披露 /\n305-1 直接温室气体排放 附录一：关键绩效数据表 62\n305-2 能源间接温室气体排放 附录一：关键绩效数据表 62"),
+    ]
+    from src.domain.models import DisclosureTask
+
+    tasks = [
+        DisclosureTask(task_id="task-305-1-a", run_id="run-1", report_id="report-1", standard_id="GRI 305", standard_version="2016", disclosure_id="GRI 305-1", requirement_id="GRI 305-1-a", requirement_text="scope 1 emissions.", keywords=["范围一"]),
+        DisclosureTask(task_id="task-305-1-e", run_id="run-1", report_id="report-1", standard_id="GRI 305", standard_version="2016", disclosure_id="GRI 305-1", requirement_id="GRI 305-1-e", requirement_text="emission factors.", keywords=["排放因子"]),
+        DisclosureTask(task_id="task-305-1-g", run_id="run-1", report_id="report-1", standard_id="GRI 305", standard_version="2016", disclosure_id="GRI 305-1", requirement_id="GRI 305-1-g", requirement_text="standards and methodologies.", keywords=["核算方法"]),
+        DisclosureTask(task_id="task-305-1-d", run_id="run-1", report_id="report-1", standard_id="GRI 305", standard_version="2016", disclosure_id="GRI 305-1", requirement_id="GRI 305-1-d", requirement_text="base year.", keywords=["基准年"]),
+        DisclosureTask(task_id="task-305-2-a", run_id="run-1", report_id="report-1", standard_id="GRI 305", standard_version="2016", disclosure_id="GRI 305-2", requirement_id="GRI 305-2-a", requirement_text="location-based scope 2.", keywords=["范围二（基于位置）"]),
+        DisclosureTask(task_id="task-305-2-b", run_id="run-1", report_id="report-1", standard_id="GRI 305", standard_version="2016", disclosure_id="GRI 305-2", requirement_id="GRI 305-2-b", requirement_text="market-based scope 2.", keywords=["范围二（基于市场）"]),
+        DisclosureTask(task_id="task-305-2-c", run_id="run-1", report_id="report-1", standard_id="GRI 305", standard_version="2016", disclosure_id="GRI 305-2", requirement_id="GRI 305-2-c", requirement_text="gases included.", keywords=["温室气体种类"]),
+        DisclosureTask(task_id="task-304-4-a", run_id="run-1", report_id="report-1", standard_id="GRI 304", standard_version="2016", disclosure_id="GRI 304-4", requirement_id="GRI 304-4-a", requirement_text="IUCN species.", keywords=["从略披露"]),
+    ]
+
+    enriched = workflow._attach_report_index_candidates(pages, tasks)
+
+    assert enriched[0].candidate_pdf_pages == [20, 63]
+    assert enriched[1].candidate_pdf_pages == [64]
+    assert enriched[2].candidate_pdf_pages == [64]
+    assert enriched[3].candidate_pdf_pages == []
+    assert enriched[4].candidate_pdf_pages == [20, 63]
+    assert enriched[5].candidate_pdf_pages == [20, 63]
+    assert enriched[6].candidate_pdf_pages == []
+    assert enriched[7].candidate_pdf_pages == [74]

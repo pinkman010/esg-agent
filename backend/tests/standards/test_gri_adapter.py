@@ -554,6 +554,11 @@ def test_gri_adapter_adds_chinese_keywords_for_energy_and_water_300_rules(tmp_pa
                         ("303", "303-2", "a", "minimum standards set for quality of effluent discharge;"),
                         ("303", "303-3", "a:i", "surface water withdrawal;"),
                         ("303", "303-4", "b:ii", "other water discharge;"),
+                        ("305", "305-1", "a", "gross direct Scope 1 GHG emissions in metric tons of CO2 equivalent;"),
+                        ("305", "305-1", "e", "source of emission factors and global warming potential rates used;"),
+                        ("305", "305-2", "a", "gross location-based energy indirect Scope 2 GHG emissions;"),
+                        ("305", "305-2", "b", "gross market-based energy indirect Scope 2 GHG emissions;"),
+                        ("305", "305-2", "c", "gases included in the calculation;"),
                     ]
                 ],
             }
@@ -570,3 +575,8 @@ def test_gri_adapter_adds_chinese_keywords_for_energy_and_water_300_rules(tmp_pa
     assert "废水分类收集" in keywords_by_id["GRI 303-2-a"]
     assert "地表水总量" in keywords_by_id["GRI 303-3-a-i"]
     assert "其他水排水量" in keywords_by_id["GRI 303-4-b-ii"]
+    assert "范围一" in keywords_by_id["GRI 305-1-a"]
+    assert "排放因子" in keywords_by_id["GRI 305-1-e"]
+    assert "范围二（基于位置）" in keywords_by_id["GRI 305-2-a"]
+    assert "范围二（基于市场）" in keywords_by_id["GRI 305-2-b"]
+    assert "温室气体种类" in keywords_by_id["GRI 305-2-c"]

@@ -33,7 +33,14 @@ class DisclosureAgent:
             rationale=rationale,
             missing_items=missing_items,
         )
-        if task.requirement_id in {"GRI 2-7-c-ii", "GRI 302-1-e"} and assessment.verdict is AssessmentVerdict.DISCLOSED:
+        disclosed_not_required_overrides = {
+            "GRI 2-7-c-ii",
+            "GRI 302-1-e",
+            "GRI 305-1-a",
+            "GRI 305-2-a",
+            "GRI 305-2-b",
+        }
+        if task.requirement_id in disclosed_not_required_overrides and assessment.verdict is AssessmentVerdict.DISCLOSED:
             assessment.review_status = ReviewStatus.NOT_REQUIRED
         recommendations = self._build_recommendations(task, assessment)
         return DisclosureAgentResult(assessment=assessment, recommendations=recommendations)
@@ -159,6 +166,14 @@ class DisclosureAgent:
             "GRI 303-4-a-ii",
             "GRI 303-4-a-iii",
             "GRI 303-4-a-iv",
+            "GRI 305-1-d",
+            "GRI 305-1-d-i",
+            "GRI 305-1-d-ii",
+            "GRI 305-1-d-iii",
+            "GRI 305-1-f",
+            "GRI 305-2-c",
+            "GRI 305-2-d",
+            "GRI 305-2-d-i",
         }
         if task.requirement_id.startswith("GRI 2-9-c") or task.disclosure_id == "GRI 2-11":
             return []
@@ -263,6 +278,11 @@ class DisclosureAgent:
             "GRI 303-4-b": {63},
             "GRI 303-4-b-i": {63},
             "GRI 303-4-b-ii": {63},
+            "GRI 305-1-a": {20, 63},
+            "GRI 305-1-e": {64},
+            "GRI 305-1-g": {64},
+            "GRI 305-2-a": {20, 63},
+            "GRI 305-2-b": {20, 63},
         }
 
     def _mark_requirement_specific_quality_flags(self, task: DisclosureTask, evidence: list[EvidenceItem]) -> None:
@@ -276,6 +296,7 @@ class DisclosureAgent:
                 )
                 or (task.disclosure_id.startswith("GRI 302") and item.source_page == 63)
                 or (task.disclosure_id.startswith("GRI 303") and item.source_page == 63)
+                or (task.disclosure_id.startswith("GRI 305") and item.source_page == 63)
             )
             if is_complex_table_page and PageQualityFlag.COMPLEX_TABLE not in item.quality_flags:
                 item.quality_flags.append(PageQualityFlag.COMPLEX_TABLE)
@@ -556,6 +577,25 @@ class DisclosureAgent:
                 AssessmentVerdict.PARTIALLY_DISCLOSED,
                 "Bounded evidence provides water management, withdrawal, or discharge figures directionally, but it does not fully disclose all GRI-required source, destination, stress-area, standard, method, and compilation details.",
                 ["完整水源或排放目的地拆分", "高水风险区域拆分", "内部标准或方法说明", "数据编制方法"],
+            )
+
+        ghg_disclosed_items = {
+            "GRI 305-1-a",
+            "GRI 305-2-a",
+            "GRI 305-2-b",
+        }
+        if task.requirement_id in ghg_disclosed_items:
+            return (
+                AssessmentVerdict.DISCLOSED,
+                "Bounded evidence directly discloses the relevant Scope 1 or Scope 2 GHG emissions figure.",
+                [],
+            )
+
+        if task.requirement_id in {"GRI 305-1-e", "GRI 305-1-g"}:
+            return (
+                AssessmentVerdict.PARTIALLY_DISCLOSED,
+                "Bounded evidence describes GHG calculation methods, emission factors, or standards, but it does not fully disclose all GRI-required gases, factor sources, GWP rates, and methodology details.",
+                ["温室气体种类", "排放因子来源", "全球变暖潜势来源", "完整核算标准或方法"],
             )
 
         if task.requirement_id == "GRI 2-3-a":

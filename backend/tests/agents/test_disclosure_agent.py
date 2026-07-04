@@ -1952,3 +1952,144 @@ def test_disclosure_agent_keeps_unreported_303_water_subitems_unknown():
         assert result.assessment.verdict is AssessmentVerdict.UNKNOWN
         assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
         assert result.assessment.evidence == []
+
+
+def test_disclosure_agent_handles_305_1_scope_1_and_method_rules():
+    cases = [
+        ("GRI 305-1-a", [(20, "范围一温室气体排放量 10,000 tCO2e"), (63, "范围一温室气体排放量 KPI")], AssessmentVerdict.DISCLOSED, ReviewStatus.NOT_REQUIRED),
+        ("GRI 305-1-e", [(64, "温室气体核算方法 排放因子 全球变暖潜势 GWP")], AssessmentVerdict.PARTIALLY_DISCLOSED, ReviewStatus.NEEDS_MANUAL_REVIEW),
+        ("GRI 305-1-g", [(64, "温室气体核算方法 GHG Protocol ISO 14064")], AssessmentVerdict.PARTIALLY_DISCLOSED, ReviewStatus.NEEDS_MANUAL_REVIEW),
+    ]
+    for requirement_id, page_texts, verdict, review_status in cases:
+        task = DisclosureTask(
+            task_id=f"task-{requirement_id}",
+            run_id="run-1",
+            report_id="report-1",
+            standard_id="GRI 305",
+            standard_version="2016",
+            disclosure_id="GRI 305-1",
+            requirement_id=requirement_id,
+            requirement_text="direct GHG emissions or calculation methodology.",
+            keywords=["范围一", "温室气体", "排放因子", "核算方法"],
+            candidate_pages=[page for page, _ in page_texts],
+            candidate_page_source="gri_report_index+requirement_supplement",
+            index_page=74,
+        )
+        chunks = [
+            DocumentChunk(
+                chunk_id=f"chunk-{requirement_id}-{page}",
+                report_id="report-1",
+                text=text,
+                source_page=page,
+                source_method=EvidenceSourceMethod.PDFPLUMBER,
+                source_file_hash="hash-1",
+            )
+            for page, text in page_texts
+        ]
+
+        result = DisclosureAgent().analyze(task, chunks, confirm_llm=False)
+
+        assert result.assessment.verdict is verdict
+        assert result.assessment.review_status is review_status
+        assert [item.source_page for item in result.assessment.evidence] == [page for page, _ in page_texts]
+        if 63 in [page for page, _ in page_texts]:
+            assert PageQualityFlag.COMPLEX_TABLE in result.assessment.evidence[-1].quality_flags
+
+
+def test_disclosure_agent_replaces_invalid_305_2_page_3_with_scope_2_kpi_pages():
+    cases = [
+        ("GRI 305-2-a", "范围二（基于位置）57,897.05 tCO2e"),
+        ("GRI 305-2-b", "范围二（基于市场）绿色电力抵扣后排放量"),
+    ]
+    for requirement_id, scope_text in cases:
+        task = DisclosureTask(
+            task_id=f"task-{requirement_id}",
+            run_id="run-1",
+            report_id="report-1",
+            standard_id="GRI 305",
+            standard_version="2016",
+            disclosure_id="GRI 305-2",
+            requirement_id=requirement_id,
+            requirement_text="energy indirect Scope 2 GHG emissions.",
+            keywords=["TCFD", "范围二", "温室气体"],
+            candidate_pages=[20, 63],
+            candidate_page_source="gri_report_index+requirement_supplement",
+            index_page=74,
+        )
+        chunks = [
+            DocumentChunk(
+                chunk_id=f"chunk-{requirement_id}-3",
+                report_id="report-1",
+                text="TCFD 气候相关财务信息披露工作组 RE100 联系邮箱。",
+                source_page=3,
+                source_method=EvidenceSourceMethod.PDFPLUMBER,
+                source_file_hash="hash-1",
+            ),
+            DocumentChunk(
+                chunk_id=f"chunk-{requirement_id}-20",
+                report_id="report-1",
+                text=scope_text,
+                source_page=20,
+                source_method=EvidenceSourceMethod.PDFPLUMBER,
+                source_file_hash="hash-1",
+            ),
+            DocumentChunk(
+                chunk_id=f"chunk-{requirement_id}-63",
+                report_id="report-1",
+                text=scope_text,
+                source_page=63,
+                source_method=EvidenceSourceMethod.PDFPLUMBER,
+                source_file_hash="hash-1",
+            ),
+        ]
+
+        result = DisclosureAgent().analyze(task, chunks, confirm_llm=False)
+
+        assert result.assessment.verdict is AssessmentVerdict.DISCLOSED
+        assert result.assessment.review_status is ReviewStatus.NOT_REQUIRED
+        assert [item.source_page for item in result.assessment.evidence] == [20, 63]
+        assert all(item.source_page != 3 for item in result.assessment.evidence)
+        assert PageQualityFlag.COMPLEX_TABLE in result.assessment.evidence[-1].quality_flags
+
+
+def test_disclosure_agent_keeps_unreported_305_1_and_305_2_subitems_unknown():
+    cases = [
+        ("GRI 305-1-d", "GRI 305-1"),
+        ("GRI 305-1-d-i", "GRI 305-1"),
+        ("GRI 305-1-d-ii", "GRI 305-1"),
+        ("GRI 305-1-d-iii", "GRI 305-1"),
+        ("GRI 305-1-f", "GRI 305-1"),
+        ("GRI 305-2-c", "GRI 305-2"),
+        ("GRI 305-2-d", "GRI 305-2"),
+    ]
+    for requirement_id, disclosure_id in cases:
+        task = DisclosureTask(
+            task_id=f"task-{requirement_id}",
+            run_id="run-1",
+            report_id="report-1",
+            standard_id="GRI 305",
+            standard_version="2016",
+            disclosure_id=disclosure_id,
+            requirement_id=requirement_id,
+            requirement_text="unreported GHG subitem.",
+            keywords=["温室气体", "范围一", "范围二", "排放因子"],
+            candidate_pages=[20, 63, 64],
+            candidate_page_source="gri_report_index+requirement_supplement",
+            index_page=74,
+        )
+        chunks = [
+            DocumentChunk(
+                chunk_id=f"chunk-{requirement_id}-63",
+                report_id="report-1",
+                text="范围一 范围二 温室气体 KPI 排放因子 核算方法。",
+                source_page=63,
+                source_method=EvidenceSourceMethod.PDFPLUMBER,
+                source_file_hash="hash-1",
+            )
+        ]
+
+        result = DisclosureAgent().analyze(task, chunks, confirm_llm=False)
+
+        assert result.assessment.verdict is AssessmentVerdict.UNKNOWN
+        assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+        assert result.assessment.evidence == []
