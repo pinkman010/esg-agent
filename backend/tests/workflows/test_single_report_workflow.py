@@ -453,3 +453,70 @@ def test_single_report_workflow_supplements_candidate_pages_for_current_150_rule
     assert enriched[5].candidate_pdf_pages == [9]
     assert enriched[6].candidate_pdf_pages == [14, 15]
     assert enriched[7].candidate_pdf_pages == [14, 15]
+
+
+def test_single_report_workflow_supplements_candidate_pages_for_topic_specific_200_rules(tmp_path):
+    pack_path = tmp_path / "gri_requirement_pack.json"
+    pack_path.write_text(
+        json.dumps(
+            {
+                "requirements": [
+                    {"canonical_disclosure_id": "201-2", "report_index_pdf_page": 72, "report_index_report_page": 71},
+                    {"canonical_disclosure_id": "201-3", "report_index_pdf_page": 72, "report_index_report_page": 71},
+                    {"canonical_disclosure_id": "202-1", "report_index_pdf_page": 72, "report_index_report_page": 71},
+                    {"canonical_disclosure_id": "203-1", "report_index_pdf_page": 72, "report_index_report_page": 71},
+                    {"canonical_disclosure_id": "203-2", "report_index_pdf_page": 72, "report_index_report_page": 71},
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    workflow = SingleReportWorkflow(
+        None,
+        FakeParser(),
+        FakeAdapter(),
+        DisclosureAgent(),
+        requirement_pack_path=pack_path,
+    )
+    pages = [
+        PageExtraction(report_id="report-1", page_number=4, text="董事长致辞 绿色能源项目 产业升级。"),
+        PageExtraction(report_id="report-1", page_number=12, text="UN SDGs 千乡万村驭风行动。"),
+        PageExtraction(report_id="report-1", page_number=17, text="气候风险 实体风险 转型风险 财务影响。"),
+        PageExtraction(report_id="report-1", page_number=18, text="气候机遇 市场风险 法律风险 绿色投融资。"),
+        PageExtraction(report_id="report-1", page_number=19, text="气候风险管理流程 应对措施。"),
+        PageExtraction(report_id="report-1", page_number=31, text="人章节封面 景行公益 厚植人文。"),
+        PageExtraction(report_id="report-1", page_number=32, text="关怀员工 幸福职场 员工权益 DEI。"),
+        PageExtraction(report_id="report-1", page_number=34, text="薪酬福利 社会保障 医疗保险 公积金。"),
+        PageExtraction(report_id="report-1", page_number=42, text="携手社区 贡献社会 乡村振兴工程。"),
+        PageExtraction(report_id="report-1", page_number=43, text="沙特风电装备合资公司 印度森林保护 老挝项目捐赠。"),
+        PageExtraction(report_id="report-1", page_number=44, text="清华可持续基金 西藏地震援助。"),
+        PageExtraction(report_id="report-1", page_number=69, text="UN SDGs 乡村振兴 一带一路。"),
+        PageExtraction(
+            report_id="report-1",
+            page_number=72,
+            text=(
+                "201-2 气候变化带来的财务影响以及其他风险和机遇 气候先锋，创新能源 16\n"
+                "201-3 固定福利计划义务和其他退休计划 关怀员工，幸福职场 31\n"
+                "202-1 按性别的标准起薪水平工资与当地最低工资之比 概述：责任治理 永续发展 10\n"
+                "203-1 基础设施投资和支持性服务 人：景行公益 厚植人文 30\n"
+                "203-2 重大间接经济影响 人：景行公益 厚植人文 30"
+            ),
+        ),
+    ]
+    from src.domain.models import DisclosureTask
+
+    tasks = [
+        DisclosureTask(task_id="task-201-2-a", run_id="run-1", report_id="report-1", standard_id="GRI 201", standard_version="2016", disclosure_id="GRI 201-2", requirement_id="GRI 201-2-a", requirement_text="climate financial implications.", keywords=["气候风险"]),
+        DisclosureTask(task_id="task-201-3-d", run_id="run-1", report_id="report-1", standard_id="GRI 201", standard_version="2016", disclosure_id="GRI 201-3", requirement_id="GRI 201-3-d", requirement_text="contribution percentages.", keywords=["福利"]),
+        DisclosureTask(task_id="task-202-1-a", run_id="run-1", report_id="report-1", standard_id="GRI 202", standard_version="2016", disclosure_id="GRI 202-1", requirement_id="GRI 202-1-a", requirement_text="entry wage compared to minimum wage.", keywords=["维生工资"]),
+        DisclosureTask(task_id="task-203-1-a", run_id="run-1", report_id="report-1", standard_id="GRI 203", standard_version="2016", disclosure_id="GRI 203-1", requirement_id="GRI 203-1-a", requirement_text="infrastructure investments.", keywords=["社区"]),
+        DisclosureTask(task_id="task-203-2-b", run_id="run-1", report_id="report-1", standard_id="GRI 203", standard_version="2016", disclosure_id="GRI 203-2", requirement_id="GRI 203-2-b", requirement_text="significant indirect economic impacts.", keywords=["SDGs"]),
+    ]
+
+    enriched = workflow._attach_report_index_candidates(pages, tasks)
+
+    assert enriched[0].candidate_pdf_pages == [17, 18, 19]
+    assert enriched[1].candidate_pdf_pages == []
+    assert enriched[2].candidate_pdf_pages == []
+    assert enriched[3].candidate_pdf_pages == [4, 12, 42, 43, 44]
+    assert enriched[4].candidate_pdf_pages == [12, 42, 43, 44, 69]

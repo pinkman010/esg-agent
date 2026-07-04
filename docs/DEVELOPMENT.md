@@ -149,6 +149,8 @@ pnpm generate:api
 - 根据 `current_150_review.csv` 人工复核结论，增加 `GRI 2-20-a-iii`、`GRI 2-20-b`、`GRI 2-21`、`GRI 2-30` 的 `omission_note` 继承规则；GRI 索引中的“因商业保密限制从略披露”只作为缺口解释保留，不提升 `disclosed`。
 - 增加 `GRI 2-22`、`GRI 2-23`、`GRI 2-24`、`GRI 2-25`、`GRI 2-26`、`GRI 2-27`、`GRI 2-28`、`GRI 2-29`、`GRI 3-1` 的中文关键词、候选页收窄和子项级充分性规则；章节封面页不能单独作为 evidence，候选页超过报告页数时过滤。
 - 生成 `tmp/review/current_150_review_after_rules.csv`：150 个 requirement、227 行、169 条 evidence；按 requirement 聚合后为 11 条 `disclosed`、58 条 `partially_disclosed`、81 条 `unknown`，11 条 `not_required`、139 条 `needs_manual_review`；169 条 evidence 均为 `index_page_bounded`，0 条 `global_fallback`；其中 23 条为 `omission_note`、7 条为 `index_statement`，未调用外部模型。
+- 根据 `current_200_review.csv` 人工复核结论，增加 `GRI 201`、`GRI 202`、`GRI 203` topic-specific 规则：`201-1`、`201-4`、`202-2` 继承 `omission_note`；`201-3` 严格要求退休计划/养老金/缴费比例等强证据，普通员工福利和薪酬福利不能支撑；`201-2` 使用 PDF 第 17-19 页气候风险与机遇内容，子项按 disclosed/partial/unknown 区分；`203` 从章节封面扩展到 PDF 第 42-44 页社区项目正文，并保留 partial + 人工复核。
+- 生成 `tmp/review/current_200_review_after_rules.csv`：200 个 requirement、299 行、221 条 evidence；按 requirement 聚合后为 14 条 `disclosed`、65 条 `partially_disclosed`、121 条 `unknown`，14 条 `not_required`、186 条 `needs_manual_review`；221 条 evidence 均为 `index_page_bounded`，0 条 `global_fallback`；其中 43 条为 `omission_note`、7 条为 `index_statement`，未调用外部模型。
 
 ### 2026-07-03
 

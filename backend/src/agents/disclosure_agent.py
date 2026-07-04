@@ -107,6 +107,19 @@ class DisclosureAgent:
             "GRI 2-25-d",
             "GRI 2-26-a-i",
             "GRI 2-27-d",
+            "GRI 201-2-a-v",
+            "GRI 201-3-a",
+            "GRI 201-3-b",
+            "GRI 201-3-b-i",
+            "GRI 201-3-b-ii",
+            "GRI 201-3-b-iii",
+            "GRI 201-3-c",
+            "GRI 201-3-d",
+            "GRI 201-3-e",
+            "GRI 202-1-a",
+            "GRI 202-1-b",
+            "GRI 202-1-c",
+            "GRI 202-1-d",
         }
         if task.requirement_id.startswith("GRI 2-9-c") or task.disclosure_id == "GRI 2-11":
             return []
@@ -160,6 +173,16 @@ class DisclosureAgent:
             "GRI 3-1-a-i": {14, 15},
             "GRI 3-1-a-ii": {14, 15},
             "GRI 3-1-b": {14, 15},
+            "GRI 201-2-a": {17, 18, 19},
+            "GRI 201-2-a-i": {17, 18},
+            "GRI 201-2-a-ii": {17, 18},
+            "GRI 201-2-a-iii": {17, 18},
+            "GRI 201-2-a-iv": {17, 18, 19},
+            "GRI 203-1-a": {42, 43, 44},
+            "GRI 203-1-b": {4, 42, 43, 44},
+            "GRI 203-1-c": {42, 43, 44},
+            "GRI 203-2-a": {4, 12, 42, 43, 44},
+            "GRI 203-2-b": {12, 42, 43, 44, 69},
         }
 
     def _mark_requirement_specific_quality_flags(self, task: DisclosureTask, evidence: list[EvidenceItem]) -> None:
@@ -314,6 +337,43 @@ class DisclosureAgent:
                 AssessmentVerdict.PARTIALLY_DISCLOSED,
                 "Bounded evidence provides directionally relevant disclosure, but it does not fully satisfy this GRI requirement.",
                 ["完整披露口径", "人工复核充分性"],
+            )
+
+        climate_disclosed_items = {
+            "GRI 201-2-a-i",
+            "GRI 201-2-a-ii",
+            "GRI 201-2-a-iv",
+        }
+        if task.requirement_id in climate_disclosed_items:
+            return (
+                AssessmentVerdict.DISCLOSED,
+                "Bounded evidence discloses the relevant climate-related risks, opportunities, impacts, or management approach for this sub-requirement.",
+                [],
+            )
+
+        climate_partial_items = {
+            "GRI 201-2-a",
+            "GRI 201-2-a-iii",
+        }
+        if task.requirement_id in climate_partial_items:
+            return (
+                AssessmentVerdict.PARTIALLY_DISCLOSED,
+                "Bounded evidence describes climate-related risks, opportunities, and qualitative financial implications, but it does not fully quantify financial impacts or assumptions.",
+                ["量化财务影响", "估算假设或方法"],
+            )
+
+        indirect_economic_impact_items = {
+            "GRI 203-1-a",
+            "GRI 203-1-b",
+            "GRI 203-1-c",
+            "GRI 203-2-a",
+            "GRI 203-2-b",
+        }
+        if task.requirement_id in indirect_economic_impact_items:
+            return (
+                AssessmentVerdict.PARTIALLY_DISCLOSED,
+                "Bounded evidence provides community, infrastructure, service, or indirect-economic-impact examples, but it does not fully disclose scope, beneficiaries, impact assessment, or service nature.",
+                ["投资范围和规模", "受益人群", "影响评估", "服务性质"],
             )
 
         if task.requirement_id == "GRI 2-3-a":

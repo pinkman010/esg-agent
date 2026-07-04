@@ -1215,3 +1215,217 @@ def test_disclosure_agent_handles_2_26_and_2_27_specific_rules():
         assert result.assessment.review_status is review_status
         assert [item.source_page for item in result.assessment.evidence] == expected_pages
         assert result.assessment.evidence[0].metadata.get("evidence_type", "substantive") == evidence_type
+
+
+def test_disclosure_agent_propagates_topic_specific_omission_notes_for_current_200():
+    cases = [
+        ("GRI 201-1-a", "GRI 201-1", "201-1 直接产生和分配的经济价值 因商业保密限制从略披露 /"),
+        ("GRI 201-1-a-i", "GRI 201-1", "201-1 直接产生和分配的经济价值 因商业保密限制从略披露 /"),
+        ("GRI 201-1-a-ii", "GRI 201-1", "201-1 直接产生和分配的经济价值 因商业保密限制从略披露 /"),
+        ("GRI 201-1-a-iii", "GRI 201-1", "201-1 直接产生和分配的经济价值 因商业保密限制从略披露 /"),
+        ("GRI 201-1-b", "GRI 201-1", "201-1 直接产生和分配的经济价值 因商业保密限制从略披露 /"),
+        ("GRI 201-4-a", "GRI 201-4", "201-4 政府给予的财政补贴 因商业保密限制从略披露 /"),
+        ("GRI 201-4-a-viii", "GRI 201-4", "201-4 政府给予的财政补贴 因商业保密限制从略披露 /"),
+        ("GRI 201-4-c", "GRI 201-4", "201-4 政府给予的财政补贴 因商业保密限制从略披露 /"),
+        ("GRI 202-2-a", "GRI 202-2", "202-2 从当地社区雇用高管的比例 因商业保密限制从略披露 /"),
+        ("GRI 202-2-d", "GRI 202-2", "202-2 从当地社区雇用高管的比例 因商业保密限制从略披露 /"),
+    ]
+    for requirement_id, disclosure_id, text in cases:
+        task = DisclosureTask(
+            task_id=f"task-{requirement_id}",
+            run_id="run-1",
+            report_id="report-1",
+            standard_id=disclosure_id.rsplit("-", 1)[0],
+            standard_version="2016",
+            disclosure_id=disclosure_id,
+            requirement_id=requirement_id,
+            requirement_text="topic-specific omitted disclosure due to confidentiality.",
+            keywords=["从略披露", "因商业保密限制从略披露"],
+            candidate_pages=[72],
+            candidate_page_source="gri_report_index_omission_note",
+            index_page=72,
+        )
+        chunk = DocumentChunk(
+            chunk_id=f"chunk-{requirement_id}",
+            report_id="report-1",
+            text=text,
+            source_page=72,
+            source_method=EvidenceSourceMethod.PDFPLUMBER,
+            source_file_hash="hash-1",
+        )
+
+        result = DisclosureAgent().analyze(task, [chunk], confirm_llm=False)
+
+        assert result.assessment.verdict is AssessmentVerdict.UNKNOWN
+        assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+        assert result.assessment.evidence[0].metadata["evidence_type"] == "omission_note"
+        assert result.assessment.evidence[0].metadata["omission_reason"] == "confidentiality"
+
+
+def test_disclosure_agent_rejects_201_3_employee_welfare_as_retirement_plan_evidence():
+    task = DisclosureTask(
+        task_id="task-201-3-d",
+        run_id="run-1",
+        report_id="report-1",
+        standard_id="GRI 201",
+        standard_version="2016",
+        disclosure_id="GRI 201-3",
+        requirement_id="GRI 201-3-d",
+        requirement_text="employee and employer contribution percentages.",
+        keywords=["员工", "福利", "缴费"],
+        candidate_pages=[32, 34],
+        candidate_page_source="gri_report_index+requirement_supplement",
+        index_page=72,
+    )
+    chunks = [
+        DocumentChunk(
+            chunk_id="chunk-201-3-32",
+            report_id="report-1",
+            text="关怀员工 幸福职场 员工权益 人权 DEI 最佳雇主。",
+            source_page=32,
+            source_method=EvidenceSourceMethod.PDFPLUMBER,
+            source_file_hash="hash-1",
+        ),
+        DocumentChunk(
+            chunk_id="chunk-201-3-34",
+            report_id="report-1",
+            text="薪酬福利 社会保障 医疗保险 补充住房公积金 补充商业医疗。",
+            source_page=34,
+            source_method=EvidenceSourceMethod.PDFPLUMBER,
+            source_file_hash="hash-1",
+        ),
+    ]
+
+    result = DisclosureAgent().analyze(task, chunks, confirm_llm=False)
+
+    assert result.assessment.verdict is AssessmentVerdict.UNKNOWN
+    assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+    assert result.assessment.evidence == []
+
+
+def test_disclosure_agent_handles_201_2_climate_financial_implication_rules():
+    cases = [
+        ("GRI 201-2-a", AssessmentVerdict.PARTIALLY_DISCLOSED, ReviewStatus.NEEDS_MANUAL_REVIEW, [17, 18, 19]),
+        ("GRI 201-2-a-i", AssessmentVerdict.DISCLOSED, ReviewStatus.NOT_REQUIRED, [17, 18]),
+        ("GRI 201-2-a-ii", AssessmentVerdict.DISCLOSED, ReviewStatus.NOT_REQUIRED, [17, 18]),
+        ("GRI 201-2-a-iii", AssessmentVerdict.PARTIALLY_DISCLOSED, ReviewStatus.NEEDS_MANUAL_REVIEW, [17, 18]),
+        ("GRI 201-2-a-iv", AssessmentVerdict.DISCLOSED, ReviewStatus.NOT_REQUIRED, [17, 18, 19]),
+    ]
+    page_texts = {
+        17: "气候风险 急性实体风险 慢性实体风险 科技风险 法律风险 市场风险 声誉风险 维修成本上升 订单损失。",
+        18: "气候机遇 市场 产品与服务 能源来源 资源效率 韧性 绿色投融资 低成本资金 新能源政策激励。",
+        19: "气候风险管理流程 识别 分析 管理 按月 季度 半年审查 应对措施。",
+    }
+    for requirement_id, verdict, review_status, expected_pages in cases:
+        task = DisclosureTask(
+            task_id=f"task-{requirement_id}",
+            run_id="run-1",
+            report_id="report-1",
+            standard_id="GRI 201",
+            standard_version="2016",
+            disclosure_id="GRI 201-2",
+            requirement_id=requirement_id,
+            requirement_text="climate-related risks and opportunities financial implications.",
+            keywords=["气候风险", "气候机遇", "财务影响", "应对措施", "风险管理流程"],
+            candidate_pages=[17, 18, 19],
+            candidate_page_source="gri_report_index+requirement_supplement",
+            index_page=72,
+        )
+        chunks = [
+            DocumentChunk(
+                chunk_id=f"chunk-{requirement_id}-{page}",
+                report_id="report-1",
+                text=page_texts[page],
+                source_page=page,
+                source_method=EvidenceSourceMethod.PDFPLUMBER,
+                source_file_hash="hash-1",
+            )
+            for page in [17, 18, 19]
+        ]
+
+        result = DisclosureAgent().analyze(task, chunks, confirm_llm=False)
+
+        assert result.assessment.verdict is verdict
+        assert result.assessment.review_status is review_status
+        assert [item.source_page for item in result.assessment.evidence] == expected_pages
+
+
+def test_disclosure_agent_keeps_201_2_action_cost_unknown_without_cost_evidence():
+    task = DisclosureTask(
+        task_id="task-201-2-a-v",
+        run_id="run-1",
+        report_id="report-1",
+        standard_id="GRI 201",
+        standard_version="2016",
+        disclosure_id="GRI 201-2",
+        requirement_id="GRI 201-2-a-v",
+        requirement_text="costs of actions taken to manage climate-related risks and opportunities.",
+        keywords=["应对措施", "绿色债券", "成本"],
+        candidate_pages=[17, 18, 19],
+        candidate_page_source="gri_report_index+requirement_supplement",
+        index_page=72,
+    )
+    chunk = DocumentChunk(
+        chunk_id="chunk-201-2-a-v",
+        report_id="report-1",
+        text="应对措施 绿色债券 SLL 节能改造 低碳技术。",
+        source_page=19,
+        source_method=EvidenceSourceMethod.PDFPLUMBER,
+        source_file_hash="hash-1",
+    )
+
+    result = DisclosureAgent().analyze(task, [chunk], confirm_llm=False)
+
+    assert result.assessment.verdict is AssessmentVerdict.UNKNOWN
+    assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+    assert result.assessment.evidence == []
+
+
+def test_disclosure_agent_handles_203_indirect_economic_impact_rules():
+    cases = [
+        ("GRI 203-1-a", "GRI 203-1", [42, 43, 44]),
+        ("GRI 203-1-b", "GRI 203-1", [4, 42, 43, 44]),
+        ("GRI 203-1-c", "GRI 203-1", [42, 43, 44]),
+        ("GRI 203-2-a", "GRI 203-2", [4, 12, 42, 43, 44]),
+        ("GRI 203-2-b", "GRI 203-2", [12, 42, 43, 44, 69]),
+    ]
+    page_texts = {
+        4: "董事长致辞 绿色能源项目 产业升级 当地经济。",
+        12: "UN SDGs 千乡万村驭风行动 乡村振兴 一带一路。",
+        42: "携手社区 贡献社会 乡村振兴工程。",
+        43: "沙特风电装备合资公司 国际可持续对话 印度森林保护 老挝项目捐赠。",
+        44: "清华可持续基金 西藏地震援助 社区公益。",
+        69: "UN SDGs 乡村振兴 一带一路 G20 可持续发展论坛。",
+    }
+    for requirement_id, disclosure_id, expected_pages in cases:
+        task = DisclosureTask(
+            task_id=f"task-{requirement_id}",
+            run_id="run-1",
+            report_id="report-1",
+            standard_id="GRI 203",
+            standard_version="2016",
+            disclosure_id=disclosure_id,
+            requirement_id=requirement_id,
+            requirement_text="infrastructure investments, supported services, and indirect economic impacts.",
+            keywords=["携手社区", "乡村振兴", "SDGs", "间接经济影响"],
+            candidate_pages=expected_pages,
+            candidate_page_source="gri_report_index+requirement_supplement",
+            index_page=72,
+        )
+        chunks = [
+            DocumentChunk(
+                chunk_id=f"chunk-{requirement_id}-{page}",
+                report_id="report-1",
+                text=page_texts[page],
+                source_page=page,
+                source_method=EvidenceSourceMethod.PDFPLUMBER,
+                source_file_hash="hash-1",
+            )
+            for page in expected_pages
+        ]
+
+        result = DisclosureAgent().analyze(task, chunks, confirm_llm=False)
+
+        assert result.assessment.verdict is AssessmentVerdict.PARTIALLY_DISCLOSED
+        assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+        assert [item.source_page for item in result.assessment.evidence] == expected_pages

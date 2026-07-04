@@ -400,3 +400,49 @@ def test_gri_adapter_adds_chinese_keywords_for_gri_2_20_to_3_1_policy_rules(tmp_
     assert "利益相关方沟通" in keywords_by_id["GRI 2-29-a"]
     assert "集体谈判协议" in keywords_by_id["GRI 2-30-a"]
     assert "重要性评估" in keywords_by_id["GRI 3-1-a"]
+
+
+def test_gri_adapter_adds_chinese_keywords_for_topic_specific_200_rules(tmp_path):
+    path = tmp_path / "gri-checklist.json"
+    path.write_text(
+        json.dumps(
+            {
+                "metadata": {"manifest_version": "test"},
+                "requirements": [
+                    {
+                        "requirement_id": f"current_gap:GRI{standard}:{disclosure}:{suffix}",
+                        "canonical_disclosure_id": disclosure,
+                        "requirement_text": requirement_text,
+                        "requirement_type": "requirement",
+                        "is_mandatory": True,
+                        "scoring_role": "hard_score",
+                        "standard_year": "2021",
+                        "assessment_mode": "current_gap",
+                    }
+                    for standard, disclosure, suffix, requirement_text in [
+                        ("201", "201-1", "a", "direct economic value generated and distributed;"),
+                        ("201", "201-2", "a:i", "risks and opportunities posed by climate change;"),
+                        ("201", "201-3", "d", "employee and employer contribution percentages;"),
+                        ("201", "201-4", "a", "financial assistance received from government;"),
+                        ("202", "202-1", "a", "standard entry level wage by gender compared to local minimum wage;"),
+                        ("202", "202-2", "a", "senior management hired from local community;"),
+                        ("203", "203-1", "a", "infrastructure investments and services supported;"),
+                        ("203", "203-2", "b", "significant indirect economic impacts;"),
+                    ]
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    requirements = GRIAdapter(path).load_requirements()
+    keywords_by_id = {requirement.requirement_id: requirement.keywords for requirement in requirements}
+
+    assert "因商业保密限制从略披露" in keywords_by_id["GRI 201-1-a"]
+    assert "气候风险" in keywords_by_id["GRI 201-2-a-i"]
+    assert "退休计划" in keywords_by_id["GRI 201-3-d"]
+    assert "政府给予的财政补贴" in keywords_by_id["GRI 201-4-a"]
+    assert "最低工资" in keywords_by_id["GRI 202-1-a"]
+    assert "当地社区高管比例" in keywords_by_id["GRI 202-2-a"]
+    assert "携手社区" in keywords_by_id["GRI 203-1-a"]
+    assert "间接经济影响" in keywords_by_id["GRI 203-2-b"]
