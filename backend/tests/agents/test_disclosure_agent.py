@@ -1738,3 +1738,217 @@ def test_disclosure_agent_keeps_unreported_302_1_energy_subitems_unknown():
         assert result.assessment.verdict is AssessmentVerdict.UNKNOWN
         assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
         assert result.assessment.evidence == []
+
+
+def test_disclosure_agent_handles_302_1_total_energy_disclosed_rule():
+    task = DisclosureTask(
+        task_id="task-302-1-e",
+        run_id="run-1",
+        report_id="report-1",
+        standard_id="GRI 302",
+        standard_version="2016",
+        disclosure_id="GRI 302-1",
+        requirement_id="GRI 302-1-e",
+        requirement_text="total energy consumption inside the organization.",
+        keywords=["能源使用总量", "总能耗"],
+        candidate_pages=[63],
+        candidate_page_source="gri_report_index+requirement_supplement",
+        index_page=73,
+    )
+    chunk = DocumentChunk(
+        chunk_id="chunk-302-1-e-63",
+        report_id="report-1",
+        text="能源使用总量 177,478,406.50 kWh",
+        source_page=63,
+        source_method=EvidenceSourceMethod.PDFPLUMBER,
+        source_file_hash="hash-1",
+    )
+
+    result = DisclosureAgent().analyze(task, [chunk], confirm_llm=False)
+
+    assert result.assessment.verdict is AssessmentVerdict.DISCLOSED
+    assert result.assessment.review_status is ReviewStatus.NOT_REQUIRED
+    assert [item.source_page for item in result.assessment.evidence] == [63]
+    assert PageQualityFlag.COMPLEX_TABLE in result.assessment.evidence[0].quality_flags
+
+
+def test_disclosure_agent_handles_302_4_energy_reduction_partial_rules():
+    cases = [
+        ("GRI 302-4-a", [23, 63]),
+        ("GRI 302-4-b", [23, 63]),
+    ]
+    page_texts = {
+        23: "节能改造 年节约用电约 9,360 kWh。",
+        63: "节能措施促成节电量 292,106 kWh。",
+    }
+    for requirement_id, expected_pages in cases:
+        task = DisclosureTask(
+            task_id=f"task-{requirement_id}",
+            run_id="run-1",
+            report_id="report-1",
+            standard_id="GRI 302",
+            standard_version="2016",
+            disclosure_id="GRI 302-4",
+            requirement_id=requirement_id,
+            requirement_text="reductions in energy consumption.",
+            keywords=["节能改造", "节电量", "减少能源消耗"],
+            candidate_pages=expected_pages,
+            candidate_page_source="gri_report_index+requirement_supplement",
+            index_page=73,
+        )
+        chunks = [
+            DocumentChunk(
+                chunk_id=f"chunk-{requirement_id}-{page}",
+                report_id="report-1",
+                text=page_texts[page],
+                source_page=page,
+                source_method=EvidenceSourceMethod.PDFPLUMBER,
+                source_file_hash="hash-1",
+            )
+            for page in expected_pages
+        ]
+
+        result = DisclosureAgent().analyze(task, chunks, confirm_llm=False)
+
+        assert result.assessment.verdict is AssessmentVerdict.PARTIALLY_DISCLOSED
+        assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+        assert [item.source_page for item in result.assessment.evidence] == expected_pages
+
+
+def test_disclosure_agent_keeps_unreported_302_4_and_302_5_unknown():
+    cases = ["GRI 302-4-c", "GRI 302-4-d", "GRI 302-5-a", "GRI 302-5-b", "GRI 302-5-c"]
+    for requirement_id in cases:
+        disclosure_id = "GRI 302-5" if requirement_id.startswith("GRI 302-5") else "GRI 302-4"
+        task = DisclosureTask(
+            task_id=f"task-{requirement_id}",
+            run_id="run-1",
+            report_id="report-1",
+            standard_id="GRI 302",
+            standard_version="2016",
+            disclosure_id=disclosure_id,
+            requirement_id=requirement_id,
+            requirement_text="energy reduction basis or product energy requirements.",
+            keywords=["基准", "方法", "售出产品"],
+            candidate_pages=[23, 63],
+            candidate_page_source="gri_report_index+requirement_supplement",
+            index_page=73,
+        )
+        chunk = DocumentChunk(
+            chunk_id=f"chunk-{requirement_id}",
+            report_id="report-1",
+            text="节能改造 节能措施促成节电量。",
+            source_page=63,
+            source_method=EvidenceSourceMethod.PDFPLUMBER,
+            source_file_hash="hash-1",
+        )
+
+        result = DisclosureAgent().analyze(task, [chunk], confirm_llm=False)
+
+        assert result.assessment.verdict is AssessmentVerdict.UNKNOWN
+        assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+        assert result.assessment.evidence == []
+
+
+def test_disclosure_agent_handles_303_water_management_and_accounting_partial_rules():
+    cases = [
+        ("GRI 303-1-a", "GRI 303-1", [(25, "水资源使用 风险评估 取水 排水 耗水"), (63, "水资源 KPI 总取水量 总排水量")]),
+        ("GRI 303-1-b", "GRI 303-1", [(25, "WWF Water Risk Filter 水资源风险评估")]),
+        ("GRI 303-1-c", "GRI 303-1", [(22, "废水分类处理 回用"), (25, "节水 循环水 雨水替代 逆流清洗")]),
+        ("GRI 303-1-d", "GRI 303-1", [(16, "水资源目标 行动路径"), (25, "水资源管理目标")]),
+        ("GRI 303-2-a", "GRI 303-2", [(22, "废水分类收集 分质处理 排放水质达到或优于法规限值")]),
+        ("GRI 303-2-a-ii", "GRI 303-2", [(22, "水资源管控标准"), (25, "水资源管理标准和政策")]),
+        ("GRI 303-3-a", "GRI 303-3", [(25, "高风险区域运营地点和取水占比"), (63, "总取水量 地表水总量 地下水总量 第三方取水总量")]),
+        ("GRI 303-3-a-i", "GRI 303-3", [(63, "地表水总量")]),
+        ("GRI 303-3-a-ii", "GRI 303-3", [(63, "地下水总量")]),
+        ("GRI 303-3-a-v", "GRI 303-3", [(63, "第三方取水总量")]),
+        ("GRI 303-3-b", "GRI 303-3", [(25, "高风险区域运营地点和取水占比"), (63, "高水风险区域取水")]),
+        ("GRI 303-3-c", "GRI 303-3", [(63, "第三方淡水总量 第三方其他水总量")]),
+        ("GRI 303-3-c-i", "GRI 303-3", [(63, "第三方淡水总量")]),
+        ("GRI 303-3-c-ii", "GRI 303-3", [(63, "第三方其他水总量")]),
+        ("GRI 303-4-a", "GRI 303-4", [(22, "废水分类处理"), (63, "总排水量")]),
+        ("GRI 303-4-b", "GRI 303-4", [(63, "淡水排水量 其他水排水量")]),
+        ("GRI 303-4-b-i", "GRI 303-4", [(63, "淡水排水量")]),
+        ("GRI 303-4-b-ii", "GRI 303-4", [(63, "其他水排水量")]),
+    ]
+    for requirement_id, disclosure_id, page_texts in cases:
+        task = DisclosureTask(
+            task_id=f"task-{requirement_id}",
+            run_id="run-1",
+            report_id="report-1",
+            standard_id="GRI 303",
+            standard_version="2018",
+            disclosure_id=disclosure_id,
+            requirement_id=requirement_id,
+            requirement_text="water management, withdrawal, or discharge disclosure.",
+            keywords=["水资源", "取水", "排水", "废水", "淡水", "第三方"],
+            candidate_pages=[page for page, _ in page_texts],
+            candidate_page_source="gri_report_index+requirement_supplement",
+            index_page=73,
+        )
+        chunks = [
+            DocumentChunk(
+                chunk_id=f"chunk-{requirement_id}-{page}",
+                report_id="report-1",
+                text=text,
+                source_page=page,
+                source_method=EvidenceSourceMethod.PDFPLUMBER,
+                source_file_hash="hash-1",
+            )
+            for page, text in page_texts
+        ]
+
+        result = DisclosureAgent().analyze(task, chunks, confirm_llm=False)
+
+        assert result.assessment.verdict is AssessmentVerdict.PARTIALLY_DISCLOSED
+        assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+        assert [item.source_page for item in result.assessment.evidence] == [page for page, _ in page_texts]
+
+
+def test_disclosure_agent_keeps_unreported_303_water_subitems_unknown():
+    cases = [
+        "GRI 303-2-a-i",
+        "GRI 303-2-a-iii",
+        "GRI 303-2-a-iv",
+        "GRI 303-3-a-iii",
+        "GRI 303-3-a-iv",
+        "GRI 303-3-b-i",
+        "GRI 303-3-b-ii",
+        "GRI 303-3-b-iii",
+        "GRI 303-3-b-iv",
+        "GRI 303-3-b-v",
+        "GRI 303-3-d",
+        "GRI 303-4-a-i",
+        "GRI 303-4-a-ii",
+        "GRI 303-4-a-iii",
+        "GRI 303-4-a-iv",
+    ]
+    for requirement_id in cases:
+        disclosure_id = "GRI 303-2" if requirement_id.startswith("GRI 303-2") else ("GRI 303-4" if requirement_id.startswith("GRI 303-4") else "GRI 303-3")
+        task = DisclosureTask(
+            task_id=f"task-{requirement_id}",
+            run_id="run-1",
+            report_id="report-1",
+            standard_id="GRI 303",
+            standard_version="2018",
+            disclosure_id=disclosure_id,
+            requirement_id=requirement_id,
+            requirement_text="unreported water disclosure subitem.",
+            keywords=["海水", "采出水", "受纳水体", "地表水排放"],
+            candidate_pages=[22, 25, 63],
+            candidate_page_source="gri_report_index+requirement_supplement",
+            index_page=73,
+        )
+        chunk = DocumentChunk(
+            chunk_id=f"chunk-{requirement_id}",
+            report_id="report-1",
+            text="水资源管理 取水 排水 KPI。",
+            source_page=63,
+            source_method=EvidenceSourceMethod.PDFPLUMBER,
+            source_file_hash="hash-1",
+        )
+
+        result = DisclosureAgent().analyze(task, [chunk], confirm_llm=False)
+
+        assert result.assessment.verdict is AssessmentVerdict.UNKNOWN
+        assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+        assert result.assessment.evidence == []

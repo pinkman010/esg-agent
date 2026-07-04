@@ -33,7 +33,7 @@ class DisclosureAgent:
             rationale=rationale,
             missing_items=missing_items,
         )
-        if task.requirement_id == "GRI 2-7-c-ii" and assessment.verdict is AssessmentVerdict.DISCLOSED:
+        if task.requirement_id in {"GRI 2-7-c-ii", "GRI 302-1-e"} and assessment.verdict is AssessmentVerdict.DISCLOSED:
             assessment.review_status = ReviewStatus.NOT_REQUIRED
         recommendations = self._build_recommendations(task, assessment)
         return DisclosureAgentResult(assessment=assessment, recommendations=recommendations)
@@ -130,6 +130,35 @@ class DisclosureAgent:
             "GRI 207-3-a-iii",
             "GRI 302-1-b",
             "GRI 302-1-d",
+            "GRI 302-1-f",
+            "GRI 302-1-g",
+            "GRI 302-2-a",
+            "GRI 302-2-b",
+            "GRI 302-2-c",
+            "GRI 302-3-a",
+            "GRI 302-3-b",
+            "GRI 302-3-c",
+            "GRI 302-3-d",
+            "GRI 302-4-c",
+            "GRI 302-4-d",
+            "GRI 302-5-a",
+            "GRI 302-5-b",
+            "GRI 302-5-c",
+            "GRI 303-2-a-i",
+            "GRI 303-2-a-iii",
+            "GRI 303-2-a-iv",
+            "GRI 303-3-a-iii",
+            "GRI 303-3-a-iv",
+            "GRI 303-3-b-i",
+            "GRI 303-3-b-ii",
+            "GRI 303-3-b-iii",
+            "GRI 303-3-b-iv",
+            "GRI 303-3-b-v",
+            "GRI 303-3-d",
+            "GRI 303-4-a-i",
+            "GRI 303-4-a-ii",
+            "GRI 303-4-a-iii",
+            "GRI 303-4-a-iv",
         }
         if task.requirement_id.startswith("GRI 2-9-c") or task.disclosure_id == "GRI 2-11":
             return []
@@ -213,6 +242,27 @@ class DisclosureAgent:
             "GRI 207-3-a": {57},
             "GRI 302-1-a": {63},
             "GRI 302-1-c": {63},
+            "GRI 302-1-e": {63},
+            "GRI 302-4-a": {23, 63},
+            "GRI 302-4-b": {23, 63},
+            "GRI 303-1-a": {25, 63},
+            "GRI 303-1-b": {25},
+            "GRI 303-1-c": {22, 25},
+            "GRI 303-1-d": {16, 25},
+            "GRI 303-2-a": {22},
+            "GRI 303-2-a-ii": {22, 25},
+            "GRI 303-3-a": {25, 63},
+            "GRI 303-3-a-i": {63},
+            "GRI 303-3-a-ii": {63},
+            "GRI 303-3-a-v": {63},
+            "GRI 303-3-b": {25, 63},
+            "GRI 303-3-c": {63},
+            "GRI 303-3-c-i": {63},
+            "GRI 303-3-c-ii": {63},
+            "GRI 303-4-a": {22, 63},
+            "GRI 303-4-b": {63},
+            "GRI 303-4-b-i": {63},
+            "GRI 303-4-b-ii": {63},
         }
 
     def _mark_requirement_specific_quality_flags(self, task: DisclosureTask, evidence: list[EvidenceItem]) -> None:
@@ -224,7 +274,8 @@ class DisclosureAgent:
                     and task.requirement_id != "GRI 205-3-b"
                     and item.source_page == 68
                 )
-                or (task.disclosure_id == "GRI 302-1" and item.source_page == 63)
+                or (task.disclosure_id.startswith("GRI 302") and item.source_page == 63)
+                or (task.disclosure_id.startswith("GRI 303") and item.source_page == 63)
             )
             if is_complex_table_page and PageQualityFlag.COMPLEX_TABLE not in item.quality_flags:
                 item.quality_flags.append(PageQualityFlag.COMPLEX_TABLE)
@@ -464,6 +515,47 @@ class DisclosureAgent:
                 AssessmentVerdict.PARTIALLY_DISCLOSED,
                 "Bounded KPI evidence discloses energy consumption figures, but it does not fully establish all GRI 302-1 unit, fuel-type, heating, cooling, steam, and methodology requirements.",
                 ["完整能源类型和单位口径", "热力、制冷、蒸汽要素", "编制方法人工复核"],
+            )
+
+        if task.requirement_id == "GRI 302-1-e":
+            return (
+                AssessmentVerdict.DISCLOSED,
+                "Bounded KPI evidence directly discloses total energy consumption inside the organization.",
+                [],
+            )
+
+        if task.requirement_id in {"GRI 302-4-a", "GRI 302-4-b"}:
+            return (
+                AssessmentVerdict.PARTIALLY_DISCLOSED,
+                "Bounded evidence discloses electricity-saving reductions, but it does not fully disclose all energy types, baseline, methods, assumptions, or calculation tools required by GRI 302-4.",
+                ["完整能源类型", "节能量计算基准", "计算方法、假设或工具"],
+            )
+
+        water_partial_items = {
+            "GRI 303-1-a",
+            "GRI 303-1-b",
+            "GRI 303-1-c",
+            "GRI 303-1-d",
+            "GRI 303-2-a",
+            "GRI 303-2-a-ii",
+            "GRI 303-3-a",
+            "GRI 303-3-a-i",
+            "GRI 303-3-a-ii",
+            "GRI 303-3-a-v",
+            "GRI 303-3-b",
+            "GRI 303-3-c",
+            "GRI 303-3-c-i",
+            "GRI 303-3-c-ii",
+            "GRI 303-4-a",
+            "GRI 303-4-b",
+            "GRI 303-4-b-i",
+            "GRI 303-4-b-ii",
+        }
+        if task.requirement_id in water_partial_items:
+            return (
+                AssessmentVerdict.PARTIALLY_DISCLOSED,
+                "Bounded evidence provides water management, withdrawal, or discharge figures directionally, but it does not fully disclose all GRI-required source, destination, stress-area, standard, method, and compilation details.",
+                ["完整水源或排放目的地拆分", "高水风险区域拆分", "内部标准或方法说明", "数据编制方法"],
             )
 
         if task.requirement_id == "GRI 2-3-a":

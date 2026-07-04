@@ -528,3 +528,45 @@ def test_gri_adapter_adds_chinese_keywords_for_tax_and_energy_250_rules(tmp_path
     assert "因商业保密限制从略披露" in keywords_by_id["GRI 207-4-b-x"]
     assert "不可再生能源消耗总量" in keywords_by_id["GRI 302-1-a"]
     assert "电力消耗总量" in keywords_by_id["GRI 302-1-c"]
+
+
+def test_gri_adapter_adds_chinese_keywords_for_energy_and_water_300_rules(tmp_path):
+    path = tmp_path / "gri-checklist.json"
+    path.write_text(
+        json.dumps(
+            {
+                "metadata": {"manifest_version": "test"},
+                "requirements": [
+                    {
+                        "requirement_id": f"current_gap:GRI{standard}:{disclosure}:{suffix}",
+                        "canonical_disclosure_id": disclosure,
+                        "requirement_text": requirement_text,
+                        "requirement_type": "requirement",
+                        "is_mandatory": True,
+                        "scoring_role": "hard_score",
+                        "standard_year": "2021",
+                        "assessment_mode": "current_gap",
+                    }
+                    for standard, disclosure, suffix, requirement_text in [
+                        ("302", "302-1", "e", "total energy consumption inside the organization;"),
+                        ("302", "302-4", "a", "amount of reductions in energy consumption achieved;"),
+                        ("303", "303-1", "b", "approach to identifying water-related impacts;"),
+                        ("303", "303-2", "a", "minimum standards set for quality of effluent discharge;"),
+                        ("303", "303-3", "a:i", "surface water withdrawal;"),
+                        ("303", "303-4", "b:ii", "other water discharge;"),
+                    ]
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    requirements = GRIAdapter(path).load_requirements()
+    keywords_by_id = {requirement.requirement_id: requirement.keywords for requirement in requirements}
+
+    assert "能源使用总量" in keywords_by_id["GRI 302-1-e"]
+    assert "节能措施促成节电量" in keywords_by_id["GRI 302-4-a"]
+    assert "WWF Water Risk Filter" in keywords_by_id["GRI 303-1-b"]
+    assert "废水分类收集" in keywords_by_id["GRI 303-2-a"]
+    assert "地表水总量" in keywords_by_id["GRI 303-3-a-i"]
+    assert "其他水排水量" in keywords_by_id["GRI 303-4-b-ii"]

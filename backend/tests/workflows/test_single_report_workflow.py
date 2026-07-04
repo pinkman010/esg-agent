@@ -644,3 +644,69 @@ def test_single_report_workflow_supplements_candidate_pages_for_tax_and_energy_2
     assert enriched[4].candidate_pdf_pages == [73]
     assert enriched[5].candidate_pdf_pages == [63]
     assert enriched[6].candidate_pdf_pages == [63]
+
+
+def test_single_report_workflow_supplements_candidate_pages_for_energy_and_water_300_rules(tmp_path):
+    pack_path = tmp_path / "gri_requirement_pack.json"
+    pack_path.write_text(
+        json.dumps(
+            {
+                "requirements": [
+                    {"canonical_disclosure_id": "302-1", "report_index_pdf_page": 73, "report_index_report_page": 72},
+                    {"canonical_disclosure_id": "302-4", "report_index_pdf_page": 73, "report_index_report_page": 72},
+                    {"canonical_disclosure_id": "303-1", "report_index_pdf_page": 73, "report_index_report_page": 72},
+                    {"canonical_disclosure_id": "303-2", "report_index_pdf_page": 73, "report_index_report_page": 72},
+                    {"canonical_disclosure_id": "303-3", "report_index_pdf_page": 73, "report_index_report_page": 72},
+                    {"canonical_disclosure_id": "303-4", "report_index_pdf_page": 73, "report_index_report_page": 72},
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    workflow = SingleReportWorkflow(
+        None,
+        FakeParser(),
+        FakeAdapter(),
+        DisclosureAgent(),
+        requirement_pack_path=pack_path,
+    )
+    pages = [
+        PageExtraction(report_id="report-1", page_number=16, text="水资源目标 行动路径。"),
+        PageExtraction(report_id="report-1", page_number=22, text="废水分类收集 分质处理 排放水质达到法规限值。"),
+        PageExtraction(report_id="report-1", page_number=23, text="节能改造 年节约用电约 9360 kWh。"),
+        PageExtraction(report_id="report-1", page_number=25, text="水资源使用 WWF Water Risk Filter 水资源风险评估 取水 排水 耗水 循环水 雨水替代。"),
+        PageExtraction(report_id="report-1", page_number=63, text="能源使用总量 节能措施促成节电量 总取水量 地表水总量 地下水总量 第三方取水总量 高水风险区域取水 总排水量 淡水排水量 其他水排水量。"),
+        PageExtraction(
+            report_id="report-1",
+            page_number=73,
+            text=(
+                "302-1 组织内部的能源消耗 附录一：关键绩效数据表 62\n"
+                "302-4 减少能源消耗 环境：远瞩绿能 智护地球 22 附录一：关键绩效数据表 62\n"
+                "303-1 组织与水作为共有资源的相互影响 环境：远瞩绿能 智护地球 24\n"
+                "303-2 管理与排水相关的影响 环境：远瞩绿能 智护地球 21\n"
+                "303-3 取水 附录一：关键绩效数据表 62\n"
+                "303-4 排水 附录一：关键绩效数据表 62"
+            ),
+        ),
+    ]
+    from src.domain.models import DisclosureTask
+
+    tasks = [
+        DisclosureTask(task_id="task-302-1-e", run_id="run-1", report_id="report-1", standard_id="GRI 302", standard_version="2016", disclosure_id="GRI 302-1", requirement_id="GRI 302-1-e", requirement_text="total energy consumption.", keywords=["能源使用总量"]),
+        DisclosureTask(task_id="task-302-4-a", run_id="run-1", report_id="report-1", standard_id="GRI 302", standard_version="2016", disclosure_id="GRI 302-4", requirement_id="GRI 302-4-a", requirement_text="energy reductions.", keywords=["节电量"]),
+        DisclosureTask(task_id="task-303-1-a", run_id="run-1", report_id="report-1", standard_id="GRI 303", standard_version="2018", disclosure_id="GRI 303-1", requirement_id="GRI 303-1-a", requirement_text="interactions with water.", keywords=["水资源"]),
+        DisclosureTask(task_id="task-303-1-d", run_id="run-1", report_id="report-1", standard_id="GRI 303", standard_version="2018", disclosure_id="GRI 303-1", requirement_id="GRI 303-1-d", requirement_text="water-related goals.", keywords=["目标"]),
+        DisclosureTask(task_id="task-303-2-a", run_id="run-1", report_id="report-1", standard_id="GRI 303", standard_version="2018", disclosure_id="GRI 303-2", requirement_id="GRI 303-2-a", requirement_text="effluent discharge standards.", keywords=["废水"]),
+        DisclosureTask(task_id="task-303-3-a", run_id="run-1", report_id="report-1", standard_id="GRI 303", standard_version="2018", disclosure_id="GRI 303-3", requirement_id="GRI 303-3-a", requirement_text="water withdrawal.", keywords=["取水"]),
+        DisclosureTask(task_id="task-303-4-a", run_id="run-1", report_id="report-1", standard_id="GRI 303", standard_version="2018", disclosure_id="GRI 303-4", requirement_id="GRI 303-4-a", requirement_text="water discharge.", keywords=["排水"]),
+    ]
+
+    enriched = workflow._attach_report_index_candidates(pages, tasks)
+
+    assert enriched[0].candidate_pdf_pages == [63]
+    assert enriched[1].candidate_pdf_pages == [23, 63]
+    assert enriched[2].candidate_pdf_pages == [25, 63]
+    assert enriched[3].candidate_pdf_pages == [16, 25]
+    assert enriched[4].candidate_pdf_pages == [22]
+    assert enriched[5].candidate_pdf_pages == [25, 63]
+    assert enriched[6].candidate_pdf_pages == [22, 63]
