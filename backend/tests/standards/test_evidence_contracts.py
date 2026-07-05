@@ -186,3 +186,22 @@ def test_ghg_emissions_contracts_have_ontology_metadata():
         assert set(contract.evidence_kinds) == expected_evidence_kinds
         assert contract.verdict is None
         assert contract.review_status is None
+
+
+def test_energy_contracts_have_ontology_metadata():
+    cases = {
+        "GRI 302-1-a": {RequirementFacet.REQUIRES_COUNT, RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION},
+        "GRI 302-1-c": {RequirementFacet.REQUIRES_COUNT, RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION},
+        "GRI 302-1-e": {RequirementFacet.REQUIRES_COUNT},
+        "GRI 302-4-a": {RequirementFacet.REQUIRES_COUNT, RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION},
+        "GRI 302-4-b": {RequirementFacet.REQUIRES_COUNT, RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION},
+    }
+
+    for requirement_id, expected_facets in cases.items():
+        contract = get_requirement_contract(requirement_id)
+        assert contract is not None
+        assert contract.semantic_group is SemanticGroup.ENERGY_KPI
+        assert set(contract.facets) == expected_facets
+        assert contract.evidence_kinds == (EvidenceKind.KPI_VALUE,)
+        assert contract.verdict is None
+        assert contract.review_status is None

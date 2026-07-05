@@ -43,6 +43,7 @@ class SemanticGroup(StrEnum):
     HUMAN_RIGHTS_TRAINING = "human_rights_training"
     ZERO_EVENT_COMPLIANCE = "zero_event_compliance"
     GHG_EMISSIONS_KPI = "ghg_emissions_kpi"
+    ENERGY_KPI = "energy_kpi"
 
 
 @dataclass(frozen=True)
@@ -112,6 +113,21 @@ def evaluate_ontology_verdict(
                 verdict=AssessmentVerdict.DISCLOSED,
                 review_status=ReviewStatus.NOT_REQUIRED,
                 rationale="GHG KPI evidence directly satisfies the emissions amount requirement.",
+            )
+
+    if semantic_group is SemanticGroup.ENERGY_KPI:
+        if RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION in facets and EvidenceKind.KPI_VALUE in evidence_kinds:
+            return OntologyVerdictResult(
+                verdict=AssessmentVerdict.PARTIALLY_DISCLOSED,
+                review_status=ReviewStatus.NEEDS_MANUAL_REVIEW,
+                rationale="Energy KPI evidence is directionally relevant, but the full GRI-required energy type, unit, baseline, method, assumption, or calculation-tool detail remains subject to sufficiency review.",
+                missing_items=("完整能源类型、单位或方法口径",),
+            )
+        if RequirementFacet.REQUIRES_COUNT in facets and EvidenceKind.KPI_VALUE in evidence_kinds:
+            return OntologyVerdictResult(
+                verdict=AssessmentVerdict.DISCLOSED,
+                review_status=ReviewStatus.NOT_REQUIRED,
+                rationale="Energy KPI evidence directly satisfies the energy amount requirement.",
             )
 
     if semantic_group is SemanticGroup.SUPPLIER_ASSESSMENT:

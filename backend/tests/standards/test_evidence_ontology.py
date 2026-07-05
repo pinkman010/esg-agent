@@ -102,6 +102,29 @@ def test_ghg_emissions_kpi_keeps_methodology_partial():
     assert "完整温室气体核算方法或排放因子口径" in result.missing_items
 
 
+def test_energy_kpi_discloses_direct_energy_amount():
+    result = evaluate_ontology_verdict(
+        semantic_group=SemanticGroup.ENERGY_KPI,
+        facets={RequirementFacet.REQUIRES_COUNT},
+        evidence_kinds={EvidenceKind.KPI_VALUE},
+    )
+
+    assert result.verdict is AssessmentVerdict.DISCLOSED
+    assert result.review_status is ReviewStatus.NOT_REQUIRED
+
+
+def test_energy_kpi_keeps_method_dependent_items_partial():
+    result = evaluate_ontology_verdict(
+        semantic_group=SemanticGroup.ENERGY_KPI,
+        facets={RequirementFacet.REQUIRES_COUNT, RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION},
+        evidence_kinds={EvidenceKind.KPI_VALUE},
+    )
+
+    assert result.verdict is AssessmentVerdict.PARTIALLY_DISCLOSED
+    assert result.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+    assert "完整能源类型、单位或方法口径" in result.missing_items
+
+
 def test_ontology_keeps_security_training_unknown_for_general_training_evidence():
     result = evaluate_ontology_verdict(
         semantic_group=SemanticGroup.HUMAN_RIGHTS_TRAINING,
