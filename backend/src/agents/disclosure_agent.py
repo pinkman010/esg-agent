@@ -3,6 +3,7 @@ import re
 
 from src.domain.enums import AssessmentVerdict, PageQualityFlag, ReviewStatus
 from src.domain.models import DisclosureAssessment, DisclosureTask, DocumentChunk, EvidenceItem, Recommendation
+from src.standards.compilation_guardrails import get_compilation_guardrails
 from src.standards.evidence_contracts import get_requirement_contract
 from src.standards.evidence_ontology import EvidenceKind, evaluate_ontology_verdict
 from src.tools.evidence import build_kpi_evidence_preview, chunk_to_evidence
@@ -35,6 +36,7 @@ class DisclosureAgent:
             rationale=rationale,
             missing_items=missing_items,
         )
+        self._apply_compilation_guardrails(task, assessment)
         disclosed_not_required_overrides = {
             "GRI 2-7-c-ii",
             "GRI 205-3-b",
@@ -62,6 +64,14 @@ class DisclosureAgent:
             assessment.review_status = ReviewStatus.NOT_REQUIRED
         recommendations = self._build_recommendations(task, assessment)
         return DisclosureAgentResult(assessment=assessment, recommendations=recommendations)
+
+    def _apply_compilation_guardrails(self, task: DisclosureTask, assessment: DisclosureAssessment) -> None:
+        if assessment.verdict is AssessmentVerdict.DISCLOSED:
+            return
+        for guardrail in get_compilation_guardrails(task.requirement_id):
+            for missing_item in guardrail.missing_item_templates:
+                if missing_item not in assessment.missing_items:
+                    assessment.missing_items.append(missing_item)
 
     def _supplement_requirement_specific_evidence(
         self,

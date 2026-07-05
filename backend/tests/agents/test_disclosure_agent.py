@@ -3303,3 +3303,27 @@ def test_disclosure_agent_handles_416_417_418_product_and_privacy_rules():
         assert [item.source_page for item in result.assessment.evidence] == expected_pages
         if 68 in expected_pages:
             assert PageQualityFlag.COMPLEX_TABLE in result.assessment.evidence[-1].quality_flags
+
+
+def test_disclosure_agent_applies_compilation_guardrail_missing_items_without_creating_evidence():
+    task = DisclosureTask(
+        task_id="task-GRI 416-2-a-i",
+        run_id="run-1",
+        report_id="report-1",
+        standard_id="GRI 416",
+        standard_version="2016",
+        disclosure_id="GRI 416-2",
+        requirement_id="GRI 416-2-a-i",
+        requirement_text="incidents of non-compliance resulting in a fine or penalty;",
+        keywords=["产品质量安全", "罚款", "处罚"],
+        candidate_pages=[],
+        candidate_page_source="gri_report_index+requirement_supplement",
+        index_page=76,
+    )
+
+    result = DisclosureAgent().analyze(task, [], confirm_llm=False)
+
+    assert result.assessment.verdict is AssessmentVerdict.UNKNOWN
+    assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+    assert result.assessment.evidence == []
+    assert "exclude incidents where organization was determined not at fault" in result.assessment.missing_items
