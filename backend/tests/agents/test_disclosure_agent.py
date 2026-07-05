@@ -2448,3 +2448,191 @@ def test_disclosure_agent_handles_306_waste_management_and_kpi_partial_rules():
         assert [item.source_page for item in result.assessment.evidence] == [page for page, _ in page_texts]
         if any(page == 64 for page, _ in page_texts):
             assert PageQualityFlag.COMPLEX_TABLE in result.assessment.evidence[-1].quality_flags
+
+
+def test_disclosure_agent_handles_308_supplier_environmental_assessment_rules():
+    cases = [
+        ("GRI 308-1-a", [(67, "使用环境评价维度筛选的新供应商百分比（%） 100")], AssessmentVerdict.DISCLOSED, ReviewStatus.NOT_REQUIRED, [67]),
+        ("GRI 308-2-a", [(67, "开展环境影响评估的供应商数量（个）")], AssessmentVerdict.DISCLOSED, ReviewStatus.NOT_REQUIRED, [67]),
+        ("GRI 308-2-b", [(67, "具有重大实际/潜在负面环境影响的供应商数量（个）")], AssessmentVerdict.DISCLOSED, ReviewStatus.NOT_REQUIRED, [67]),
+        ("GRI 308-2-c", [(52, "供应商环境影响管理背景"), (67, "具有重大实际/潜在负面环境影响的供应商数量（个） 0")], AssessmentVerdict.PARTIALLY_DISCLOSED, ReviewStatus.NEEDS_MANUAL_REVIEW, [52, 67]),
+        ("GRI 308-2-d", [(67, "具有重大实际/潜在负面环境影响，且评估后一致同意改进的供应商百分比（%）")], AssessmentVerdict.DISCLOSED, ReviewStatus.NOT_REQUIRED, [67]),
+        ("GRI 308-2-e", [(54, "供应商退出机制"), (67, "评估后终止关系的供应商百分比（%）")], AssessmentVerdict.PARTIALLY_DISCLOSED, ReviewStatus.NEEDS_MANUAL_REVIEW, [54, 67]),
+    ]
+    for requirement_id, page_texts, verdict, review_status, expected_pages in cases:
+        task = DisclosureTask(
+            task_id=f"task-{requirement_id}",
+            run_id="run-1",
+            report_id="report-1",
+            standard_id="GRI 308",
+            standard_version="2016",
+            disclosure_id="GRI 308-1" if requirement_id.startswith("GRI 308-1") else "GRI 308-2",
+            requirement_id=requirement_id,
+            requirement_text="supplier environmental assessment requirement.",
+            keywords=["供应商", "环境影响评估", "环境评价维度", "终止关系"],
+            candidate_pages=[page for page, _ in page_texts],
+            candidate_page_source="gri_report_index+requirement_supplement",
+            index_page=75,
+        )
+        chunks = [
+            DocumentChunk(
+                chunk_id=f"chunk-{requirement_id}-{page}",
+                report_id="report-1",
+                text=text,
+                source_page=page,
+                source_method=EvidenceSourceMethod.PDFPLUMBER,
+                source_file_hash="hash-1",
+            )
+            for page, text in page_texts
+        ]
+
+        result = DisclosureAgent().analyze(task, chunks, confirm_llm=False)
+
+        assert result.assessment.verdict is verdict
+        assert result.assessment.review_status is review_status
+        assert [item.source_page for item in result.assessment.evidence] == expected_pages
+        if 67 in expected_pages:
+            assert PageQualityFlag.COMPLEX_TABLE in result.assessment.evidence[-1].quality_flags
+
+
+def test_disclosure_agent_handles_401_employment_rules():
+    cases = [
+        ("GRI 401-1-a", "GRI 401-1", [(33, "新进员工总数 性别 年龄结构"), (65, "新进员工总数 新进员工性别结构 新进员工年龄结构")], AssessmentVerdict.PARTIALLY_DISCLOSED, ReviewStatus.NEEDS_MANUAL_REVIEW, [33, 65]),
+        ("GRI 401-1-b", "GRI 401-1", [(33, "离职员工性别 年龄结构 员工流失率"), (65, "离职员工性别结构 离职员工年龄结构 员工流失率")], AssessmentVerdict.PARTIALLY_DISCLOSED, ReviewStatus.NEEDS_MANUAL_REVIEW, [33, 65]),
+        ("GRI 401-2-a", "GRI 401-2", [(34, "薪酬福利 医疗保险 带薪假期 育儿假 补充商业医疗 补充住房公积金")], AssessmentVerdict.PARTIALLY_DISCLOSED, ReviewStatus.NEEDS_MANUAL_REVIEW, [34]),
+        ("GRI 401-2-a-ii", "GRI 401-2", [(34, "医疗保险 补充商业医疗 定期体检")], AssessmentVerdict.PARTIALLY_DISCLOSED, ReviewStatus.NEEDS_MANUAL_REVIEW, [34]),
+        ("GRI 401-2-a-iv", "GRI 401-2", [(34, "带薪假期 育儿假")], AssessmentVerdict.PARTIALLY_DISCLOSED, ReviewStatus.NEEDS_MANUAL_REVIEW, [34]),
+        ("GRI 401-2-a-vii", "GRI 401-2", [(34, "补充住房公积金 家庭支持计划")], AssessmentVerdict.PARTIALLY_DISCLOSED, ReviewStatus.NEEDS_MANUAL_REVIEW, [34]),
+        ("GRI 401-3-c", "GRI 401-3", [(32, "员工关怀正文"), (66, "假期结束返岗男性员工数 假期结束返岗女性员工数")], AssessmentVerdict.DISCLOSED, ReviewStatus.NOT_REQUIRED, [66]),
+        ("GRI 401-3-d", "GRI 401-3", [(32, "员工关怀正文"), (66, "假期结束返岗且12个月后仍在职男性员工数量 假期结束返岗且12个月后仍在职女性员工数量")], AssessmentVerdict.DISCLOSED, ReviewStatus.NOT_REQUIRED, [66]),
+        ("GRI 401-3-e", "GRI 401-3", [(32, "员工关怀正文"), (66, "返岗率 留任率 男性员工数 女性员工数")], AssessmentVerdict.PARTIALLY_DISCLOSED, ReviewStatus.NEEDS_MANUAL_REVIEW, [66]),
+    ]
+    for requirement_id, disclosure_id, page_texts, verdict, review_status, expected_pages in cases:
+        task = DisclosureTask(
+            task_id=f"task-{requirement_id}",
+            run_id="run-1",
+            report_id="report-1",
+            standard_id="GRI 401",
+            standard_version="2016",
+            disclosure_id=disclosure_id,
+            requirement_id=requirement_id,
+            requirement_text="employment requirement.",
+            keywords=["新进员工", "离职员工", "福利", "育儿假", "返岗", "留任"],
+            candidate_pages=[page for page, _ in page_texts],
+            candidate_page_source="gri_report_index+requirement_supplement",
+            index_page=75,
+        )
+        chunks = [
+            DocumentChunk(
+                chunk_id=f"chunk-{requirement_id}-{page}",
+                report_id="report-1",
+                text=text,
+                source_page=page,
+                source_method=EvidenceSourceMethod.PDFPLUMBER,
+                source_file_hash="hash-1",
+            )
+            for page, text in page_texts
+        ]
+
+        result = DisclosureAgent().analyze(task, chunks, confirm_llm=False)
+
+        assert result.assessment.verdict is verdict
+        assert result.assessment.review_status is review_status
+        assert [item.source_page for item in result.assessment.evidence] == expected_pages
+        if any(page in {65, 66} for page in expected_pages):
+            assert PageQualityFlag.COMPLEX_TABLE in result.assessment.evidence[-1].quality_flags
+
+
+def test_disclosure_agent_handles_402_labor_relations_notice_period():
+    task = DisclosureTask(
+        task_id="task-GRI 402-1-a",
+        run_id="run-1",
+        report_id="report-1",
+        standard_id="GRI 402",
+        standard_version="2016",
+        disclosure_id="GRI 402-1",
+        requirement_id="GRI 402-1-a",
+        requirement_text="Minimum number of weeks' notice typically provided to employees prior to significant operational changes.",
+        keywords=["提前通知", "最短周数", "重大运营变更"],
+        candidate_pages=[33, 66],
+        candidate_page_source="gri_report_index+requirement_supplement",
+        index_page=75,
+    )
+    chunks = [
+        DocumentChunk(
+            chunk_id="chunk-GRI 402-1-a-33",
+            report_id="report-1",
+            text="重大运营变更前提前4周通知员工",
+            source_page=33,
+            source_method=EvidenceSourceMethod.PDFPLUMBER,
+            source_file_hash="hash-1",
+        ),
+        DocumentChunk(
+            chunk_id="chunk-GRI 402-1-a-66",
+            report_id="report-1",
+            text="提前通知员工及其代表的最短周数（周） 4",
+            source_page=66,
+            source_method=EvidenceSourceMethod.PDFPLUMBER,
+            source_file_hash="hash-1",
+        ),
+    ]
+
+    result = DisclosureAgent().analyze(task, chunks, confirm_llm=False)
+
+    assert result.assessment.verdict is AssessmentVerdict.DISCLOSED
+    assert result.assessment.review_status is ReviewStatus.NOT_REQUIRED
+    assert [item.source_page for item in result.assessment.evidence] == [33, 66]
+    assert PageQualityFlag.COMPLEX_TABLE in result.assessment.evidence[-1].quality_flags
+
+
+def test_disclosure_agent_handles_403_ohs_partial_rules():
+    cases = [
+        ("GRI 403-1-a", [(38, "EHS治理架构 职业健康安全管理体系"), (39, "参照 ISO 45001"), (66, "通过ISO 45001认证的工厂占比 100")]),
+        ("GRI 403-1-a-ii", [(38, "EHS治理架构 职业健康安全管理体系"), (39, "参照 ISO 45001"), (66, "通过ISO 45001认证的工厂占比 100")]),
+        ("GRI 403-1-b", [(38, "EHS治理架构 职业健康安全管理体系"), (39, "参照 ISO 45001"), (66, "通过ISO 45001认证的工厂占比 100")]),
+        ("GRI 403-2-a", [(39, "风险评估 隐患排查 双重预防管控机制 全员隐患上报"), (41, "作业安全风险识别 隐患排查闭环")]),
+        ("GRI 403-2-a-i", [(39, "风险评估 隐患排查 双重预防管控机制"), (41, "作业安全风险识别")]),
+        ("GRI 403-2-a-ii", [(39, "全员隐患上报 流程指标看板"), (41, "事故事件管理 事故汇报 整改流程")]),
+        ("GRI 403-2-b", [(39, "隐患排查 双重预防管控机制"), (41, "隐患排查闭环 事故事件管理")]),
+        ("GRI 403-2-d", [(39, "流程指标看板"), (41, "事故汇报和整改流程")]),
+        ("GRI 403-3-a", [(38, "环保和职业健康技术专委会"), (66, "员工体检率 100"), (67, "职业病病例数量")]),
+        ("GRI 403-4-a", [(38, "多级EHS委员会"), (39, "全员隐患上报"), (41, "全员参与隐患排查"), (66, "由管理层和员工代表组成的健康与安全委员会代表的员工比例 100")]),
+        ("GRI 403-4-b", [(38, "多级EHS委员会"), (39, "全员隐患上报"), (41, "全员参与隐患排查"), (66, "由管理层和员工代表组成的健康与安全委员会代表的员工比例 100")]),
+        ("GRI 403-5-a", [(41, "EHS培训对象 目的 方式 课程 师资安排 考核"), (66, "EHS培训指标")]),
+        ("GRI 403-6-a", [(34, "医疗保险 定期体检 补充商业医疗 家庭支持计划"), (66, "员工体检率"), (67, "职业病病例数量")]),
+    ]
+    for requirement_id, page_texts in cases:
+        disclosure_id = "-".join(requirement_id.split("-")[:3])
+        task = DisclosureTask(
+            task_id=f"task-{requirement_id}",
+            run_id="run-1",
+            report_id="report-1",
+            standard_id="GRI 403",
+            standard_version="2018",
+            disclosure_id=disclosure_id,
+            requirement_id=requirement_id,
+            requirement_text="occupational health and safety requirement.",
+            keywords=["EHS", "职业健康", "安全", "隐患", "培训", "体检"],
+            candidate_pages=[page for page, _ in page_texts],
+            candidate_page_source="gri_report_index+requirement_supplement",
+            index_page=75,
+        )
+        chunks = [
+            DocumentChunk(
+                chunk_id=f"chunk-{requirement_id}-{page}",
+                report_id="report-1",
+                text=text,
+                source_page=page,
+                source_method=EvidenceSourceMethod.PDFPLUMBER,
+                source_file_hash="hash-1",
+            )
+            for page, text in page_texts
+        ]
+
+        result = DisclosureAgent().analyze(task, chunks, confirm_llm=False)
+
+        assert result.assessment.verdict is AssessmentVerdict.PARTIALLY_DISCLOSED
+        assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+        assert [item.source_page for item in result.assessment.evidence] == [page for page, _ in page_texts]
+        if any(page in {66, 67} for page in [page for page, _ in page_texts]):
+            assert PageQualityFlag.COMPLEX_TABLE in result.assessment.evidence[-1].quality_flags

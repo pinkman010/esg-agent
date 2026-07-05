@@ -56,7 +56,7 @@ def audit_review_csv(path: str | Path, report_total_pages: int) -> ReviewCsvAudi
                 result.errors.append(f"{requirement_id} source page {source_page_int} exceeds report total pages")
             if requirement_id.startswith("GRI 305") and source_page_int == 3:
                 result.errors.append(f"{requirement_id} uses forbidden PDF page 3")
-            if source_page_int in {63, 65, 68} and "complex_table" not in quality_flags:
+            if source_page_int in {63, 65, 66, 67, 68} and "complex_table" not in quality_flags:
                 result.errors.append(f"{requirement_id} KPI page {source_page_int} missing complex_table")
             if source_page_int == 77:
                 requires_ocr = row.get("requires_ocr", "").lower() == "true"

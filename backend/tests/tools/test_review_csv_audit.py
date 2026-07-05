@@ -72,6 +72,20 @@ def test_review_csv_audit_reports_hard_gate_failures(tmp_path):
                 "requires_ocr": "False",
                 "needs_ocr_or_vlm": "False",
             },
+            {
+                "requirement_id": "GRI 308-1-a",
+                "verdict": "disclosed",
+                "review_status": "not_required",
+                "retrieval_strategy": "index_page_bounded",
+                "evidence_type": "substantive",
+                "source_pdf_page": "67",
+                "source_report_page": "66",
+                "page_label": "PDF 第 67 页 / 报告页 66",
+                "candidate_pdf_pages": "[67]",
+                "quality_flags": "[\"digital_text\"]",
+                "requires_ocr": "False",
+                "needs_ocr_or_vlm": "False",
+            },
         ],
     )
 
@@ -80,3 +94,4 @@ def test_review_csv_audit_reports_hard_gate_failures(tmp_path):
     assert "GRI 305-2-a uses forbidden PDF page 3" in result.errors
     assert "GRI 304-4-a omission_note cannot be partially_disclosed" in result.errors
     assert "GRI 205-3-b KPI page 68 missing complex_table" in result.errors
+    assert "GRI 308-1-a KPI page 67 missing complex_table" in result.errors
