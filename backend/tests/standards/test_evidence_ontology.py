@@ -120,3 +120,61 @@ def test_supplier_assessment_exit_mechanism_does_not_satisfy_percentage_and_reas
     assert result.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
     assert "终止关系百分比" in result.missing_items
     assert "终止关系原因说明" in result.missing_items
+
+
+def test_ohs_kpi_discloses_direct_employee_count_or_hours():
+    result = evaluate_ontology_verdict(
+        semantic_group=SemanticGroup.OHS_KPI,
+        facets={RequirementFacet.REQUIRES_COUNT},
+        evidence_kinds={EvidenceKind.KPI_VALUE},
+    )
+
+    assert result.verdict is AssessmentVerdict.DISCLOSED
+    assert result.review_status is ReviewStatus.NOT_REQUIRED
+
+
+def test_ohs_kpi_discloses_rate_basis_when_methodology_evidence_matches():
+    result = evaluate_ontology_verdict(
+        semantic_group=SemanticGroup.OHS_KPI,
+        facets={RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION},
+        evidence_kinds={EvidenceKind.METHODOLOGY},
+    )
+
+    assert result.verdict is AssessmentVerdict.DISCLOSED
+    assert result.review_status is ReviewStatus.NOT_REQUIRED
+
+
+def test_ohs_kpi_keeps_external_worker_boundary_partial():
+    result = evaluate_ontology_verdict(
+        semantic_group=SemanticGroup.OHS_KPI,
+        facets={RequirementFacet.REQUIRES_COUNT, RequirementFacet.REQUIRES_WORKER_BOUNDARY},
+        evidence_kinds={EvidenceKind.KPI_VALUE},
+    )
+
+    assert result.verdict is AssessmentVerdict.PARTIALLY_DISCLOSED
+    assert result.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+    assert "受组织控制的非雇员工作者口径" in result.missing_items
+
+
+def test_ohs_kpi_keeps_incomplete_ill_health_scope_partial():
+    result = evaluate_ontology_verdict(
+        semantic_group=SemanticGroup.OHS_KPI,
+        facets={RequirementFacet.REQUIRES_COUNT, RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION},
+        evidence_kinds={EvidenceKind.KPI_VALUE},
+    )
+
+    assert result.verdict is AssessmentVerdict.PARTIALLY_DISCLOSED
+    assert result.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+    assert "完整口径或方法说明" in result.missing_items
+
+
+def test_ohs_kpi_hazard_type_is_not_satisfied_by_kpi_value():
+    result = evaluate_ontology_verdict(
+        semantic_group=SemanticGroup.OHS_KPI,
+        facets={RequirementFacet.REQUIRES_IMPACT_TYPE},
+        evidence_kinds={EvidenceKind.KPI_VALUE},
+    )
+
+    assert result.verdict is AssessmentVerdict.PARTIALLY_DISCLOSED
+    assert result.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+    assert "主要类型或危害清单" in result.missing_items

@@ -75,6 +75,33 @@ def test_ohs_injury_and_ill_health_contracts_share_semantic_group():
     assert RequirementFacet.REQUIRES_COUNT in contract_403_10.facets
 
 
+def test_ohs_kpi_contracts_have_pilot_ontology_metadata():
+    cases = {
+        "GRI 403-9-a-i": ({RequirementFacet.REQUIRES_COUNT}, {EvidenceKind.KPI_VALUE}),
+        "GRI 403-9-a-ii": ({RequirementFacet.REQUIRES_COUNT, RequirementFacet.REQUIRES_IMPACT_TYPE}, {EvidenceKind.KPI_VALUE}),
+        "GRI 403-9-a-iii": ({RequirementFacet.REQUIRES_COUNT}, {EvidenceKind.KPI_VALUE}),
+        "GRI 403-9-a-v": ({RequirementFacet.REQUIRES_COUNT}, {EvidenceKind.KPI_VALUE}),
+        "GRI 403-9-b-i": ({RequirementFacet.REQUIRES_COUNT, RequirementFacet.REQUIRES_WORKER_BOUNDARY}, {EvidenceKind.KPI_VALUE}),
+        "GRI 403-9-b-iii": ({RequirementFacet.REQUIRES_COUNT, RequirementFacet.REQUIRES_WORKER_BOUNDARY}, {EvidenceKind.KPI_VALUE}),
+        "GRI 403-9-b-v": ({RequirementFacet.REQUIRES_COUNT, RequirementFacet.REQUIRES_WORKER_BOUNDARY}, {EvidenceKind.KPI_VALUE}),
+        "GRI 403-9-e": ({RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION}, {EvidenceKind.METHODOLOGY}),
+        "GRI 403-10-a-i": ({RequirementFacet.REQUIRES_COUNT}, {EvidenceKind.KPI_VALUE}),
+        "GRI 403-10-a-ii": ({RequirementFacet.REQUIRES_COUNT, RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION}, {EvidenceKind.KPI_VALUE}),
+        "GRI 403-10-b-i": ({RequirementFacet.REQUIRES_COUNT, RequirementFacet.REQUIRES_WORKER_BOUNDARY}, {EvidenceKind.KPI_VALUE}),
+        "GRI 403-10-b-ii": (
+            {RequirementFacet.REQUIRES_COUNT, RequirementFacet.REQUIRES_WORKER_BOUNDARY, RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION},
+            {EvidenceKind.KPI_VALUE},
+        ),
+    }
+
+    for requirement_id, (expected_facets, expected_evidence_kinds) in cases.items():
+        contract = get_requirement_contract(requirement_id)
+        assert contract is not None
+        assert contract.semantic_group is SemanticGroup.OHS_KPI
+        assert set(contract.facets) == expected_facets
+        assert set(contract.evidence_kinds) == expected_evidence_kinds
+
+
 def test_training_and_diversity_contracts_share_breakdown_dimension_group():
     contract_404 = get_requirement_contract("GRI 404-1-a")
     contract_405 = get_requirement_contract("GRI 405-1-b")

@@ -96,6 +96,35 @@ def evaluate_ontology_verdict(
                 missing_items=("重大负面影响类型",),
             )
 
+    if semantic_group is SemanticGroup.OHS_KPI:
+        if RequirementFacet.REQUIRES_WORKER_BOUNDARY in facets and EvidenceKind.KPI_VALUE in evidence_kinds:
+            return OntologyVerdictResult(
+                verdict=AssessmentVerdict.PARTIALLY_DISCLOSED,
+                review_status=ReviewStatus.NEEDS_MANUAL_REVIEW,
+                rationale="OHS KPI evidence is directionally relevant, but the worker boundary is narrower than the GRI-controlled worker scope.",
+                missing_items=("受组织控制的非雇员工作者口径",),
+            )
+        if RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION in facets and EvidenceKind.METHODOLOGY in evidence_kinds:
+            return OntologyVerdictResult(
+                verdict=AssessmentVerdict.DISCLOSED,
+                review_status=ReviewStatus.NOT_REQUIRED,
+                rationale="Methodology evidence directly satisfies the OHS rate basis or method requirement.",
+            )
+        if RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION in facets and EvidenceKind.KPI_VALUE in evidence_kinds:
+            return OntologyVerdictResult(
+                verdict=AssessmentVerdict.PARTIALLY_DISCLOSED,
+                review_status=ReviewStatus.NEEDS_MANUAL_REVIEW,
+                rationale="OHS KPI evidence is directionally relevant, but the full scope, method, or assumptions are missing.",
+                missing_items=("完整口径或方法说明",),
+            )
+        if RequirementFacet.REQUIRES_IMPACT_TYPE in facets and EvidenceKind.KPI_VALUE in evidence_kinds:
+            return OntologyVerdictResult(
+                verdict=AssessmentVerdict.PARTIALLY_DISCLOSED,
+                review_status=ReviewStatus.NEEDS_MANUAL_REVIEW,
+                rationale="OHS KPI evidence is directionally relevant, but it does not disclose the required injury or ill-health types and hazards.",
+                missing_items=("主要类型或危害清单",),
+            )
+
     if _requires_breakdown(facets) and EvidenceKind.KPI_BREAKDOWN not in evidence_kinds:
         return OntologyVerdictResult(
             verdict=AssessmentVerdict.PARTIALLY_DISCLOSED,
