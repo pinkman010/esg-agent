@@ -3071,3 +3071,134 @@ def test_disclosure_agent_handles_413_and_414_community_and_supplier_social_rule
         assert [item.source_page for item in result.assessment.evidence] == expected_pages
         if 67 in expected_pages:
             assert PageQualityFlag.COMPLEX_TABLE in result.assessment.evidence[-1].quality_flags
+
+
+def test_disclosure_agent_handles_416_417_418_product_and_privacy_rules():
+    cases = [
+        (
+            "GRI 416-2-a",
+            "GRI 416-2",
+            [(46, "未发生因产品质量安全而导致客户健康安全受到伤害的事件")],
+            AssessmentVerdict.PARTIALLY_DISCLOSED,
+            ReviewStatus.NEEDS_MANUAL_REVIEW,
+            [46],
+        ),
+        (
+            "GRI 416-2-a-i",
+            "GRI 416-2",
+            [(46, "未发生因产品质量安全而导致客户健康安全受到伤害的事件")],
+            AssessmentVerdict.UNKNOWN,
+            ReviewStatus.NEEDS_MANUAL_REVIEW,
+            [],
+        ),
+        (
+            "GRI 416-2-b",
+            "GRI 416-2",
+            [(46, "未发生因产品质量安全而导致客户健康安全受到伤害的事件")],
+            AssessmentVerdict.PARTIALLY_DISCLOSED,
+            ReviewStatus.NEEDS_MANUAL_REVIEW,
+            [46],
+        ),
+        (
+            "GRI 417-1-a",
+            "GRI 417-1",
+            [(46, "产品说明书介绍潜在环境、健康与安全影响及注意事项")],
+            AssessmentVerdict.PARTIALLY_DISCLOSED,
+            ReviewStatus.NEEDS_MANUAL_REVIEW,
+            [46],
+        ),
+        (
+            "GRI 417-1-a-ii",
+            "GRI 417-1",
+            [(46, "产品说明书介绍潜在环境、健康与安全影响及注意事项")],
+            AssessmentVerdict.PARTIALLY_DISCLOSED,
+            ReviewStatus.NEEDS_MANUAL_REVIEW,
+            [46],
+        ),
+        (
+            "GRI 417-1-a-iii",
+            "GRI 417-1",
+            [(46, "产品说明书介绍潜在环境、健康与安全影响及注意事项")],
+            AssessmentVerdict.PARTIALLY_DISCLOSED,
+            ReviewStatus.NEEDS_MANUAL_REVIEW,
+            [46],
+        ),
+        (
+            "GRI 417-2-a",
+            "GRI 417-2",
+            [(46, "产品说明书介绍潜在环境、健康与安全影响及注意事项")],
+            AssessmentVerdict.UNKNOWN,
+            ReviewStatus.NEEDS_MANUAL_REVIEW,
+            [],
+        ),
+        (
+            "GRI 418-1-a",
+            "GRI 418-1",
+            [(61, "报告期内未接到任何涉及侵犯客户隐私或数据丢失的投诉")],
+            AssessmentVerdict.DISCLOSED,
+            ReviewStatus.NOT_REQUIRED,
+            [61],
+        ),
+        (
+            "GRI 418-1-a-i",
+            "GRI 418-1",
+            [(61, "报告期内未接到任何涉及侵犯客户隐私或数据丢失的投诉")],
+            AssessmentVerdict.UNKNOWN,
+            ReviewStatus.NEEDS_MANUAL_REVIEW,
+            [],
+        ),
+        (
+            "GRI 418-1-b",
+            "GRI 418-1",
+            [
+                (60, "客户数据保护 DLP 数据泄露风险监控"),
+                (61, "报告期内未接到任何涉及侵犯客户隐私或数据丢失的投诉"),
+                (68, "信息安全 KPI 数据泄露风险监控"),
+            ],
+            AssessmentVerdict.PARTIALLY_DISCLOSED,
+            ReviewStatus.NEEDS_MANUAL_REVIEW,
+            [60, 61, 68],
+        ),
+        (
+            "GRI 418-1-c",
+            "GRI 418-1",
+            [(61, "报告期内未接到任何涉及侵犯客户隐私或数据丢失的投诉")],
+            AssessmentVerdict.DISCLOSED,
+            ReviewStatus.NOT_REQUIRED,
+            [61],
+        ),
+    ]
+    for requirement_id, disclosure_id, page_texts, verdict, review_status, expected_pages in cases:
+        task = DisclosureTask(
+            task_id=f"task-{requirement_id}",
+            run_id="run-1",
+            report_id="report-1",
+            standard_id=disclosure_id.rsplit("-", 1)[0],
+            standard_version="2016",
+            disclosure_id=disclosure_id,
+            requirement_id=requirement_id,
+            requirement_text="product responsibility or customer privacy requirement.",
+            keywords=["产品说明书", "产品质量安全", "客户隐私", "数据丢失", "投诉"],
+            candidate_pages=[page for page, _ in page_texts],
+            candidate_page_source="gri_report_index+requirement_supplement",
+            index_page=76,
+        )
+        chunks = [
+            DocumentChunk(
+                chunk_id=f"chunk-{requirement_id}-{page}",
+                report_id="report-1",
+                text=text,
+                source_page=page,
+                source_method=EvidenceSourceMethod.PDFPLUMBER,
+                source_file_hash="hash-1",
+            )
+            for page, text in page_texts
+        ]
+
+        result = DisclosureAgent().analyze(task, chunks, confirm_llm=False)
+
+        assert result.assessment.verdict is verdict
+        assert result.assessment.review_status is review_status
+        assert [item.source_page for item in result.assessment.evidence] == expected_pages
+        if 68 in expected_pages:
+            assert PageQualityFlag.COMPLEX_TABLE in result.assessment.evidence[-1].quality_flags
