@@ -2636,3 +2636,262 @@ def test_disclosure_agent_handles_403_ohs_partial_rules():
         assert [item.source_page for item in result.assessment.evidence] == [page for page, _ in page_texts]
         if any(page in {66, 67} for page in [page for page, _ in page_texts]):
             assert PageQualityFlag.COMPLEX_TABLE in result.assessment.evidence[-1].quality_flags
+
+
+def test_disclosure_agent_handles_403_6_to_403_8_followup_rules():
+    cases = [
+        (
+            "GRI 403-6-b",
+            [(34, "定期体检 医疗保险 补充商业医疗"), (67, "员工体检率 100%")],
+            AssessmentVerdict.PARTIALLY_DISCLOSED,
+            ReviewStatus.NEEDS_MANUAL_REVIEW,
+            [34, 67],
+        ),
+        (
+            "GRI 403-7-a",
+            [(38, "外部供应商 EHS 管理"), (39, "岗位资格培训 定期复训"), (41, "承包商施工方案安全审查"), (52, "供应商管理"), (54, "供应商培训")],
+            AssessmentVerdict.PARTIALLY_DISCLOSED,
+            ReviewStatus.NEEDS_MANUAL_REVIEW,
+            [38, 39, 41, 52, 54],
+        ),
+        (
+            "GRI 403-8-a",
+            [(38, "职业健康安全管理体系"), (39, "ISO 45001"), (66, "通过ISO 45001认证的工厂占比 100%")],
+            AssessmentVerdict.PARTIALLY_DISCLOSED,
+            ReviewStatus.NEEDS_MANUAL_REVIEW,
+            [38, 39, 66],
+        ),
+        (
+            "GRI 403-8-a-i",
+            [(66, "通过ISO 45001认证的工厂占比 100%")],
+            AssessmentVerdict.PARTIALLY_DISCLOSED,
+            ReviewStatus.NEEDS_MANUAL_REVIEW,
+            [66],
+        ),
+        (
+            "GRI 403-8-a-ii",
+            [(66, "ISO 45001 工厂占比 100%")],
+            AssessmentVerdict.UNKNOWN,
+            ReviewStatus.NEEDS_MANUAL_REVIEW,
+            [],
+        ),
+        (
+            "GRI 403-8-a-iii",
+            [(66, "通过ISO 45001认证的工厂占比 100%")],
+            AssessmentVerdict.PARTIALLY_DISCLOSED,
+            ReviewStatus.NEEDS_MANUAL_REVIEW,
+            [66],
+        ),
+        (
+            "GRI 403-8-b",
+            [(66, "通过ISO 45001认证的工厂占比 100%")],
+            AssessmentVerdict.UNKNOWN,
+            ReviewStatus.NEEDS_MANUAL_REVIEW,
+            [],
+        ),
+        (
+            "GRI 403-8-c",
+            [(66, "通过ISO 45001认证的工厂占比 100%")],
+            AssessmentVerdict.UNKNOWN,
+            ReviewStatus.NEEDS_MANUAL_REVIEW,
+            [],
+        ),
+    ]
+    for requirement_id, page_texts, verdict, review_status, expected_pages in cases:
+        disclosure_id = "GRI " + "-".join(requirement_id.split(" ", 1)[1].split("-")[:2])
+        task = DisclosureTask(
+            task_id=f"task-{requirement_id}",
+            run_id="run-1",
+            report_id="report-1",
+            standard_id="GRI 403",
+            standard_version="2018",
+            disclosure_id=disclosure_id,
+            requirement_id=requirement_id,
+            requirement_text="occupational health and safety coverage requirement.",
+            keywords=["职业健康", "ISO 45001", "体检", "供应商", "EHS"],
+            candidate_pages=[page for page, _ in page_texts],
+            candidate_page_source="gri_report_index+requirement_supplement",
+            index_page=75,
+        )
+        chunks = [
+            DocumentChunk(
+                chunk_id=f"chunk-{requirement_id}-{page}",
+                report_id="report-1",
+                text=text,
+                source_page=page,
+                source_method=EvidenceSourceMethod.PDFPLUMBER,
+                source_file_hash="hash-1",
+            )
+            for page, text in page_texts
+        ]
+
+        result = DisclosureAgent().analyze(task, chunks, confirm_llm=False)
+
+        assert result.assessment.verdict is verdict
+        assert result.assessment.review_status is review_status
+        assert [item.source_page for item in result.assessment.evidence] == expected_pages
+        if any(page in {66, 67} for page in expected_pages):
+            assert PageQualityFlag.COMPLEX_TABLE in result.assessment.evidence[-1].quality_flags
+
+
+def test_disclosure_agent_handles_403_9_work_injury_kpi_rules():
+    cases = [
+        ("GRI 403-9-a", [(40, "员工工伤管理 高后果工伤风险"), (67, "员工可记录工伤数量 13 TRIR 0.29 死亡数量 0")], AssessmentVerdict.PARTIALLY_DISCLOSED, [40, 67]),
+        ("GRI 403-9-a-i", [(67, "员工工伤死亡数量 0 死亡率 0")], AssessmentVerdict.DISCLOSED, [67]),
+        ("GRI 403-9-a-ii", [(67, "员工损失工时事故率 LTIR")], AssessmentVerdict.PARTIALLY_DISCLOSED, [67]),
+        ("GRI 403-9-a-iii", [(67, "员工可记录工伤数量 13 TRIR 0.29")], AssessmentVerdict.DISCLOSED, [67]),
+        ("GRI 403-9-a-iv", [(67, "员工可记录工伤数量 13")], AssessmentVerdict.UNKNOWN, []),
+        ("GRI 403-9-a-v", [(67, "员工工作小时数 44,528,901")], AssessmentVerdict.DISCLOSED, [67]),
+        ("GRI 403-9-b", [(67, "外部供方工作小时数 TRIR LTIR 可记录工伤数量 死亡数量")], AssessmentVerdict.PARTIALLY_DISCLOSED, [67]),
+        ("GRI 403-9-b-i", [(67, "外部供方工伤死亡数量 0 死亡率 0")], AssessmentVerdict.PARTIALLY_DISCLOSED, [67]),
+        ("GRI 403-9-b-ii", [(67, "外部供方 LTIR")], AssessmentVerdict.PARTIALLY_DISCLOSED, [67]),
+        ("GRI 403-9-b-iii", [(67, "外部供方可记录工伤数量 TRIR")], AssessmentVerdict.PARTIALLY_DISCLOSED, [67]),
+        ("GRI 403-9-b-iv", [(67, "外部供方可记录工伤数量")], AssessmentVerdict.UNKNOWN, []),
+        ("GRI 403-9-b-v", [(67, "外部供方工作小时数")], AssessmentVerdict.PARTIALLY_DISCLOSED, [67]),
+        ("GRI 403-9-c", [(40, "主要工伤风险"), (67, "可记录工伤 KPI")], AssessmentVerdict.PARTIALLY_DISCLOSED, [40, 67]),
+        ("GRI 403-9-c-i", [(40, "高后果工伤风险 管控措施")], AssessmentVerdict.PARTIALLY_DISCLOSED, [40]),
+        ("GRI 403-9-c-ii", [(67, "工伤 KPI")], AssessmentVerdict.UNKNOWN, []),
+        ("GRI 403-9-c-iii", [(40, "工伤风险管控措施")], AssessmentVerdict.PARTIALLY_DISCLOSED, [40]),
+        ("GRI 403-9-d", [(40, "事故调查 整改闭环"), (67, "TRIR LTIR")], AssessmentVerdict.PARTIALLY_DISCLOSED, [40, 67]),
+        ("GRI 403-9-e", [(67, "TRIR 和 LTIR 按百万工时计算")], AssessmentVerdict.DISCLOSED, [67]),
+        ("GRI 403-9-f", [(67, "TRIR LTIR")], AssessmentVerdict.UNKNOWN, []),
+        ("GRI 403-9-g", [(67, "TRIR LTIR")], AssessmentVerdict.UNKNOWN, []),
+    ]
+    for requirement_id, page_texts, verdict, expected_pages in cases:
+        task = DisclosureTask(
+            task_id=f"task-{requirement_id}",
+            run_id="run-1",
+            report_id="report-1",
+            standard_id="GRI 403",
+            standard_version="2018",
+            disclosure_id="GRI 403-9",
+            requirement_id=requirement_id,
+            requirement_text="work-related injury requirement.",
+            keywords=["TRIR", "LTIR", "工伤", "工作小时数", "死亡"],
+            candidate_pages=[page for page, _ in page_texts],
+            candidate_page_source="gri_report_index+requirement_supplement",
+            index_page=75,
+        )
+        chunks = [
+            DocumentChunk(
+                chunk_id=f"chunk-{requirement_id}-{page}",
+                report_id="report-1",
+                text=text,
+                source_page=page,
+                source_method=EvidenceSourceMethod.PDFPLUMBER,
+                source_file_hash="hash-1",
+            )
+            for page, text in page_texts
+        ]
+
+        result = DisclosureAgent().analyze(task, chunks, confirm_llm=False)
+
+        assert result.assessment.verdict is verdict
+        assert result.assessment.review_status is (
+            ReviewStatus.NOT_REQUIRED if verdict is AssessmentVerdict.DISCLOSED else ReviewStatus.NEEDS_MANUAL_REVIEW
+        )
+        assert [item.source_page for item in result.assessment.evidence] == expected_pages
+        if 67 in expected_pages:
+            assert PageQualityFlag.COMPLEX_TABLE in result.assessment.evidence[-1].quality_flags
+
+
+def test_disclosure_agent_handles_403_10_ill_health_kpi_rules():
+    cases = [
+        ("GRI 403-10-a", [(67, "员工职业病病例数量 0 工作相关健康问题导致死亡数 0")], AssessmentVerdict.PARTIALLY_DISCLOSED, [67]),
+        ("GRI 403-10-a-i", [(67, "员工工作相关健康问题导致死亡数 0")], AssessmentVerdict.DISCLOSED, [67]),
+        ("GRI 403-10-a-ii", [(67, "员工职业病病例数量 0")], AssessmentVerdict.PARTIALLY_DISCLOSED, [67]),
+        ("GRI 403-10-a-iii", [(67, "员工职业病病例数量 0")], AssessmentVerdict.UNKNOWN, []),
+        ("GRI 403-10-b", [(67, "外部供方职业病病例数量 0 工作相关健康问题导致死亡数 0")], AssessmentVerdict.PARTIALLY_DISCLOSED, [67]),
+        ("GRI 403-10-b-i", [(67, "外部供方工作相关健康问题导致死亡数 0")], AssessmentVerdict.PARTIALLY_DISCLOSED, [67]),
+        ("GRI 403-10-b-ii", [(67, "外部供方职业病病例数量 0")], AssessmentVerdict.PARTIALLY_DISCLOSED, [67]),
+        ("GRI 403-10-b-iii", [(67, "外部供方职业病病例数量 0")], AssessmentVerdict.UNKNOWN, []),
+        ("GRI 403-10-c", [(38, "职业健康风险管理"), (67, "职业病病例数量 0")], AssessmentVerdict.PARTIALLY_DISCLOSED, [38, 67]),
+        ("GRI 403-10-c-i", [(38, "职业健康风险管理"), (67, "职业病病例数量 0")], AssessmentVerdict.PARTIALLY_DISCLOSED, [38, 67]),
+        ("GRI 403-10-c-ii", [(67, "职业病病例数量 0")], AssessmentVerdict.UNKNOWN, []),
+        ("GRI 403-10-c-iii", [(38, "职业健康风险管控措施")], AssessmentVerdict.PARTIALLY_DISCLOSED, [38]),
+        ("GRI 403-10-d", [(67, "职业病病例数量 0")], AssessmentVerdict.UNKNOWN, []),
+        ("GRI 403-10-e", [(67, "职业病病例数量 0")], AssessmentVerdict.UNKNOWN, []),
+    ]
+    for requirement_id, page_texts, verdict, expected_pages in cases:
+        task = DisclosureTask(
+            task_id=f"task-{requirement_id}",
+            run_id="run-1",
+            report_id="report-1",
+            standard_id="GRI 403",
+            standard_version="2018",
+            disclosure_id="GRI 403-10",
+            requirement_id=requirement_id,
+            requirement_text="work-related ill health requirement.",
+            keywords=["职业病", "工作相关健康问题", "死亡", "职业健康"],
+            candidate_pages=[page for page, _ in page_texts],
+            candidate_page_source="gri_report_index+requirement_supplement",
+            index_page=75,
+        )
+        chunks = [
+            DocumentChunk(
+                chunk_id=f"chunk-{requirement_id}-{page}",
+                report_id="report-1",
+                text=text,
+                source_page=page,
+                source_method=EvidenceSourceMethod.PDFPLUMBER,
+                source_file_hash="hash-1",
+            )
+            for page, text in page_texts
+        ]
+
+        result = DisclosureAgent().analyze(task, chunks, confirm_llm=False)
+
+        assert result.assessment.verdict is verdict
+        assert result.assessment.review_status is (
+            ReviewStatus.NOT_REQUIRED if verdict is AssessmentVerdict.DISCLOSED else ReviewStatus.NEEDS_MANUAL_REVIEW
+        )
+        assert [item.source_page for item in result.assessment.evidence] == expected_pages
+        if 67 in expected_pages:
+            assert PageQualityFlag.COMPLEX_TABLE in result.assessment.evidence[-1].quality_flags
+
+
+def test_disclosure_agent_handles_404_and_405_partial_rules():
+    cases = [
+        ("GRI 404-1-a", "GRI 404-1", [(35, "员工培训总时数 259,036 小时 人均受训 56.30 小时"), (66, "员工培训总时数 人均受训小时")], AssessmentVerdict.PARTIALLY_DISCLOSED, [35, 66]),
+        ("GRI 404-1-a-i", "GRI 404-1", [(66, "员工培训总时数 人均受训小时")], AssessmentVerdict.UNKNOWN, []),
+        ("GRI 404-1-a-ii", "GRI 404-1", [(66, "员工培训总时数 人均受训小时")], AssessmentVerdict.UNKNOWN, []),
+        ("GRI 404-2-a", "GRI 404-2", [(35, "员工发展手册 横向 纵向发展路径"), (36, "智慧制造训战 女性领导力 管理能力 专业培训 导师计划"), (41, "EHS 培训")], AssessmentVerdict.PARTIALLY_DISCLOSED, [35, 36, 41]),
+        ("GRI 404-2-b", "GRI 404-2", [(35, "员工发展手册 培训项目")], AssessmentVerdict.UNKNOWN, []),
+        ("GRI 404-3-a", "GRI 404-3", [(35, "绩效和职业发展考核"), (66, "接受定期绩效和职业发展考核的员工比例 100%")], AssessmentVerdict.PARTIALLY_DISCLOSED, [35, 66]),
+        ("GRI 405-1-a", "GRI 405-1", [(33, "女性高管比例 管理层年龄 少数民族高管比例 外籍高管比例"), (65, "管理层年龄 女性高管比例 少数民族高管比例 外籍高管比例")], AssessmentVerdict.PARTIALLY_DISCLOSED, [33, 65]),
+        ("GRI 405-1-a-i", "GRI 405-1", [(33, "女性高管比例 管理层年龄 少数民族高管比例 外籍高管比例"), (65, "管理层年龄 女性高管比例 少数民族高管比例 外籍高管比例")], AssessmentVerdict.PARTIALLY_DISCLOSED, [33, 65]),
+    ]
+    for requirement_id, disclosure_id, page_texts, verdict, expected_pages in cases:
+        task = DisclosureTask(
+            task_id=f"task-{requirement_id}",
+            run_id="run-1",
+            report_id="report-1",
+            standard_id=disclosure_id.rsplit("-", 1)[0],
+            standard_version="2016",
+            disclosure_id=disclosure_id,
+            requirement_id=requirement_id,
+            requirement_text="training or diversity requirement.",
+            keywords=["培训", "绩效", "职业发展", "女性高管", "管理层"],
+            candidate_pages=[page for page, _ in page_texts],
+            candidate_page_source="gri_report_index+requirement_supplement",
+            index_page=75,
+        )
+        chunks = [
+            DocumentChunk(
+                chunk_id=f"chunk-{requirement_id}-{page}",
+                report_id="report-1",
+                text=text,
+                source_page=page,
+                source_method=EvidenceSourceMethod.PDFPLUMBER,
+                source_file_hash="hash-1",
+            )
+            for page, text in page_texts
+        ]
+
+        result = DisclosureAgent().analyze(task, chunks, confirm_llm=False)
+
+        assert result.assessment.verdict is verdict
+        assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+        assert [item.source_page for item in result.assessment.evidence] == expected_pages
+        if any(page in {65, 66} for page in expected_pages):
+            assert PageQualityFlag.COMPLEX_TABLE in result.assessment.evidence[-1].quality_flags
