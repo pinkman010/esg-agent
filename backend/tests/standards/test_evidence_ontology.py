@@ -42,3 +42,81 @@ def test_ontology_keeps_security_training_unknown_for_general_training_evidence(
     assert result.verdict is AssessmentVerdict.UNKNOWN
     assert result.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
     assert "security personnel human rights training percentage" in result.missing_items
+
+
+def test_supplier_assessment_discloses_direct_kpi_count_or_percentage():
+    percentage = evaluate_ontology_verdict(
+        semantic_group=SemanticGroup.SUPPLIER_ASSESSMENT,
+        facets={RequirementFacet.REQUIRES_PERCENTAGE},
+        evidence_kinds={EvidenceKind.KPI_VALUE},
+    )
+    count = evaluate_ontology_verdict(
+        semantic_group=SemanticGroup.SUPPLIER_ASSESSMENT,
+        facets={RequirementFacet.REQUIRES_COUNT},
+        evidence_kinds={EvidenceKind.KPI_VALUE},
+    )
+
+    assert percentage.verdict is AssessmentVerdict.DISCLOSED
+    assert percentage.review_status is ReviewStatus.NOT_REQUIRED
+    assert count.verdict is AssessmentVerdict.DISCLOSED
+    assert count.review_status is ReviewStatus.NOT_REQUIRED
+
+
+def test_supplier_assessment_keeps_impact_type_partial_when_only_kpi_value_exists():
+    result = evaluate_ontology_verdict(
+        semantic_group=SemanticGroup.SUPPLIER_ASSESSMENT,
+        facets={RequirementFacet.REQUIRES_IMPACT_TYPE},
+        evidence_kinds={EvidenceKind.KPI_VALUE},
+    )
+
+    assert result.verdict is AssessmentVerdict.PARTIALLY_DISCLOSED
+    assert result.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+    assert "重大负面影响类型" in result.missing_items
+
+
+def test_supplier_assessment_keeps_termination_reason_partial_when_reason_is_missing():
+    result = evaluate_ontology_verdict(
+        semantic_group=SemanticGroup.SUPPLIER_ASSESSMENT,
+        facets={RequirementFacet.REQUIRES_PERCENTAGE, RequirementFacet.REQUIRES_REASON_WHY},
+        evidence_kinds={EvidenceKind.KPI_VALUE},
+    )
+
+    assert result.verdict is AssessmentVerdict.PARTIALLY_DISCLOSED
+    assert result.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+    assert "终止关系原因说明" in result.missing_items
+
+
+def test_supplier_assessment_policy_only_cannot_disclose_quantity_or_percentage():
+    result = evaluate_ontology_verdict(
+        semantic_group=SemanticGroup.SUPPLIER_ASSESSMENT,
+        facets={RequirementFacet.REQUIRES_PERCENTAGE},
+        evidence_kinds={EvidenceKind.MANAGEMENT_MECHANISM},
+    )
+
+    assert result.verdict is AssessmentVerdict.PARTIALLY_DISCLOSED
+    assert result.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+    assert "percentage" in result.missing_items
+
+
+def test_supplier_assessment_impact_count_does_not_satisfy_impact_type():
+    result = evaluate_ontology_verdict(
+        semantic_group=SemanticGroup.SUPPLIER_ASSESSMENT,
+        facets={RequirementFacet.REQUIRES_IMPACT_TYPE},
+        evidence_kinds={EvidenceKind.KPI_VALUE},
+    )
+
+    assert result.verdict is AssessmentVerdict.PARTIALLY_DISCLOSED
+    assert "重大负面影响类型" in result.missing_items
+
+
+def test_supplier_assessment_exit_mechanism_does_not_satisfy_percentage_and_reason():
+    result = evaluate_ontology_verdict(
+        semantic_group=SemanticGroup.SUPPLIER_ASSESSMENT,
+        facets={RequirementFacet.REQUIRES_PERCENTAGE, RequirementFacet.REQUIRES_REASON_WHY},
+        evidence_kinds={EvidenceKind.MANAGEMENT_MECHANISM},
+    )
+
+    assert result.verdict is AssessmentVerdict.PARTIALLY_DISCLOSED
+    assert result.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+    assert "终止关系百分比" in result.missing_items
+    assert "终止关系原因说明" in result.missing_items

@@ -90,6 +90,54 @@ def test_disclosure_agent_applies_ontology_matrix_before_generic_disclosed(monke
     assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
     assert "按性别拆分" in result.assessment.missing_items
     assert "按员工类别拆分" in result.assessment.missing_items
+    assert result.assessment.evidence[0].metadata["decision_source"] == "ontology_matrix"
+
+
+def test_disclosure_agent_merges_contract_missing_items_with_ontology_result(monkeypatch):
+    def fake_contract(requirement_id):
+        if requirement_id != "GRI TEST-supplier-termination":
+            return None
+        return RequirementEvidenceContract(
+            requirement_id=requirement_id,
+            allowed_pages=(67,),
+            candidate_pages=(67,),
+            kpi_table_pages=(67,),
+            facets=(RequirementFacet.REQUIRES_PERCENTAGE, RequirementFacet.REQUIRES_REASON_WHY),
+            evidence_kinds=(EvidenceKind.KPI_VALUE,),
+            semantic_group=SemanticGroup.SUPPLIER_ASSESSMENT,
+            missing_items=("终止关系百分比", "终止关系原因说明"),
+        )
+
+    monkeypatch.setattr("src.agents.disclosure_agent.get_requirement_contract", fake_contract)
+    task = DisclosureTask(
+        task_id="task-supplier-termination",
+        run_id="run-1",
+        report_id="report-1",
+        standard_id="GRI TEST",
+        standard_version="2021",
+        disclosure_id="GRI TEST",
+        requirement_id="GRI TEST-supplier-termination",
+        requirement_text="percentage of supplier relationships terminated and why.",
+        keywords=["终止关系", "供应商"],
+        candidate_pages=[67],
+        candidate_page_source="contract_candidate",
+    )
+    chunk = DocumentChunk(
+        chunk_id="chunk-supplier-termination",
+        report_id="report-1",
+        text="评估后终止关系的供应商百分比（%） 0",
+        source_page=67,
+        source_method=EvidenceSourceMethod.PDFPLUMBER,
+        source_file_hash="hash-1",
+    )
+
+    result = DisclosureAgent().analyze(task, [chunk], confirm_llm=False)
+
+    assert result.assessment.verdict is AssessmentVerdict.PARTIALLY_DISCLOSED
+    assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+    assert result.assessment.evidence[0].metadata["decision_source"] == "contract_guardrail+ontology_matrix"
+    assert result.assessment.missing_items.count("终止关系原因说明") == 1
+    assert "终止关系百分比" in result.assessment.missing_items
 
 
 def test_disclosure_agent_uses_database_safe_recommendation_id_for_long_task_id():

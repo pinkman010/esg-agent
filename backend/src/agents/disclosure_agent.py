@@ -50,6 +50,14 @@ class DisclosureAgent:
             and assessment.verdict is AssessmentVerdict.DISCLOSED
         ):
             assessment.review_status = ReviewStatus.NOT_REQUIRED
+        elif (
+            assessment.verdict is AssessmentVerdict.DISCLOSED
+            and any(
+                item.metadata.get("ontology_review_status") == ReviewStatus.NOT_REQUIRED.value
+                for item in assessment.evidence
+            )
+        ):
+            assessment.review_status = ReviewStatus.NOT_REQUIRED
         elif task.requirement_id in disclosed_not_required_overrides and assessment.verdict is AssessmentVerdict.DISCLOSED:
             assessment.review_status = ReviewStatus.NOT_REQUIRED
         recommendations = self._build_recommendations(task, assessment)
@@ -432,6 +440,8 @@ class DisclosureAgent:
 
         contract = get_requirement_contract(task.requirement_id)
         if contract is not None and contract.verdict is not None:
+            for item in evidence:
+                item.metadata.setdefault("decision_source", "contract_explicit_verdict")
             return (
                 contract.verdict,
                 contract.rationale,
@@ -448,10 +458,18 @@ class DisclosureAgent:
                 facets=contract.facets,
                 evidence_kinds=contract.evidence_kinds,
             )
+            decision_source = "contract_guardrail+ontology_matrix" if contract.missing_items else "ontology_matrix"
+            for item in evidence:
+                item.metadata.setdefault("decision_source", decision_source)
+                item.metadata.setdefault("ontology_review_status", ontology_result.review_status.value)
+            missing_items = [*ontology_result.missing_items]
+            for item in contract.missing_items:
+                if item not in missing_items:
+                    missing_items.append(item)
             return (
                 ontology_result.verdict,
                 ontology_result.rationale,
-                list(ontology_result.missing_items),
+                missing_items,
             )
 
         if task.requirement_id == "GRI 2-26-a-ii":

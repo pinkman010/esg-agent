@@ -73,6 +73,29 @@ def evaluate_ontology_verdict(
             missing_items=("security personnel human rights training percentage",),
         )
 
+    if semantic_group is SemanticGroup.SUPPLIER_ASSESSMENT:
+        if RequirementFacet.REQUIRES_REASON_WHY in facets and EvidenceKind.KPI_VALUE in evidence_kinds:
+            return OntologyVerdictResult(
+                verdict=AssessmentVerdict.PARTIALLY_DISCLOSED,
+                review_status=ReviewStatus.NEEDS_MANUAL_REVIEW,
+                rationale="KPI evidence is directionally relevant, but the reason why supplier relationships were terminated is missing.",
+                missing_items=("终止关系原因说明",),
+            )
+        if RequirementFacet.REQUIRES_REASON_WHY in facets and EvidenceKind.MANAGEMENT_MECHANISM in evidence_kinds:
+            return OntologyVerdictResult(
+                verdict=AssessmentVerdict.PARTIALLY_DISCLOSED,
+                review_status=ReviewStatus.NEEDS_MANUAL_REVIEW,
+                rationale="Supplier exit mechanism evidence is directionally relevant, but it does not disclose the termination percentage or reasons.",
+                missing_items=("终止关系百分比", "终止关系原因说明"),
+            )
+        if RequirementFacet.REQUIRES_IMPACT_TYPE in facets and EvidenceKind.KPI_VALUE in evidence_kinds:
+            return OntologyVerdictResult(
+                verdict=AssessmentVerdict.PARTIALLY_DISCLOSED,
+                review_status=ReviewStatus.NEEDS_MANUAL_REVIEW,
+                rationale="KPI evidence discloses supplier impact assessment results, but it does not describe the significant impact types.",
+                missing_items=("重大负面影响类型",),
+            )
+
     if _requires_breakdown(facets) and EvidenceKind.KPI_BREAKDOWN not in evidence_kinds:
         return OntologyVerdictResult(
             verdict=AssessmentVerdict.PARTIALLY_DISCLOSED,

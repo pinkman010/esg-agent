@@ -1,6 +1,6 @@
 from src.domain.enums import AssessmentVerdict, ReviewStatus
 from src.standards.evidence_contracts import get_requirement_contract
-from src.standards.evidence_ontology import RequirementFacet, SemanticGroup
+from src.standards.evidence_ontology import EvidenceKind, RequirementFacet, SemanticGroup
 
 
 def test_evidence_contract_returns_305_2_allowed_and_forbidden_pages():
@@ -37,6 +37,30 @@ def test_supplier_environmental_and_social_contracts_share_semantic_group():
     assert contract_414.semantic_group is SemanticGroup.SUPPLIER_ASSESSMENT
     assert RequirementFacet.REQUIRES_PERCENTAGE in contract_308.facets
     assert RequirementFacet.REQUIRES_PERCENTAGE in contract_414.facets
+
+
+def test_supplier_assessment_contracts_have_shared_ontology_metadata():
+    cases = {
+        "GRI 308-1-a": {RequirementFacet.REQUIRES_PERCENTAGE},
+        "GRI 308-2-a": {RequirementFacet.REQUIRES_COUNT},
+        "GRI 308-2-b": {RequirementFacet.REQUIRES_COUNT},
+        "GRI 308-2-c": {RequirementFacet.REQUIRES_IMPACT_TYPE},
+        "GRI 308-2-d": {RequirementFacet.REQUIRES_PERCENTAGE},
+        "GRI 308-2-e": {RequirementFacet.REQUIRES_PERCENTAGE, RequirementFacet.REQUIRES_REASON_WHY},
+        "GRI 414-1-a": {RequirementFacet.REQUIRES_PERCENTAGE},
+        "GRI 414-2-a": {RequirementFacet.REQUIRES_COUNT},
+        "GRI 414-2-b": {RequirementFacet.REQUIRES_COUNT},
+        "GRI 414-2-c": {RequirementFacet.REQUIRES_IMPACT_TYPE},
+        "GRI 414-2-d": {RequirementFacet.REQUIRES_COUNT},
+        "GRI 414-2-e": {RequirementFacet.REQUIRES_PERCENTAGE, RequirementFacet.REQUIRES_REASON_WHY},
+    }
+
+    for requirement_id, expected_facets in cases.items():
+        contract = get_requirement_contract(requirement_id)
+        assert contract is not None
+        assert contract.semantic_group is SemanticGroup.SUPPLIER_ASSESSMENT
+        assert set(contract.facets) == expected_facets
+        assert EvidenceKind.KPI_VALUE in contract.evidence_kinds
 
 
 def test_ohs_injury_and_ill_health_contracts_share_semantic_group():
