@@ -44,6 +44,41 @@ def test_ontology_marks_governance_body_breakdown_partial_when_management_kpi_ex
     assert "治理机构口径确认" in result.missing_items
 
 
+def test_zero_event_compliance_discloses_direct_zero_count_statement():
+    result = evaluate_ontology_verdict(
+        semantic_group=SemanticGroup.ZERO_EVENT_COMPLIANCE,
+        facets={RequirementFacet.REQUIRES_COUNT},
+        evidence_kinds={EvidenceKind.EXPLICIT_ZERO_STATEMENT},
+    )
+
+    assert result.verdict is AssessmentVerdict.DISCLOSED
+    assert result.review_status is ReviewStatus.NOT_REQUIRED
+
+
+def test_zero_event_compliance_keeps_classification_partial():
+    result = evaluate_ontology_verdict(
+        semantic_group=SemanticGroup.ZERO_EVENT_COMPLIANCE,
+        facets={RequirementFacet.REQUIRES_COUNT, RequirementFacet.REQUIRES_INCIDENT_CLASSIFICATION},
+        evidence_kinds={EvidenceKind.EXPLICIT_ZERO_STATEMENT},
+    )
+
+    assert result.verdict is AssessmentVerdict.PARTIALLY_DISCLOSED
+    assert result.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+    assert "不合规事件分类" in result.missing_items
+
+
+def test_zero_event_compliance_does_not_split_complaint_sources():
+    result = evaluate_ontology_verdict(
+        semantic_group=SemanticGroup.ZERO_EVENT_COMPLIANCE,
+        facets={RequirementFacet.REQUIRES_COUNT, RequirementFacet.REQUIRES_COMPLAINT_SOURCE_BREAKDOWN},
+        evidence_kinds={EvidenceKind.EXPLICIT_ZERO_STATEMENT},
+    )
+
+    assert result.verdict is AssessmentVerdict.UNKNOWN
+    assert result.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+    assert "投诉来源分类" in result.missing_items
+
+
 def test_ontology_keeps_security_training_unknown_for_general_training_evidence():
     result = evaluate_ontology_verdict(
         semantic_group=SemanticGroup.HUMAN_RIGHTS_TRAINING,

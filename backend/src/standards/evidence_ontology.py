@@ -19,6 +19,8 @@ class RequirementFacet(StrEnum):
     REQUIRES_REASON_WHY = "requires_reason_why"
     REQUIRES_GOVERNANCE_BODY = "requires_governance_body"
     REQUIRES_SECURITY_PERSONNEL = "requires_security_personnel"
+    REQUIRES_INCIDENT_CLASSIFICATION = "requires_incident_classification"
+    REQUIRES_COMPLAINT_SOURCE_BREAKDOWN = "requires_complaint_source_breakdown"
 
 
 class EvidenceKind(StrEnum):
@@ -39,6 +41,7 @@ class SemanticGroup(StrEnum):
     OHS_KPI = "ohs_kpi"
     BREAKDOWN_DIMENSION = "breakdown_dimension"
     HUMAN_RIGHTS_TRAINING = "human_rights_training"
+    ZERO_EVENT_COMPLIANCE = "zero_event_compliance"
 
 
 @dataclass(frozen=True)
@@ -72,6 +75,28 @@ def evaluate_ontology_verdict(
             rationale="General training or management mechanism evidence does not satisfy security personnel human rights training disclosure.",
             missing_items=("security personnel human rights training percentage",),
         )
+
+    if semantic_group is SemanticGroup.ZERO_EVENT_COMPLIANCE:
+        if RequirementFacet.REQUIRES_INCIDENT_CLASSIFICATION in facets:
+            return OntologyVerdictResult(
+                verdict=AssessmentVerdict.PARTIALLY_DISCLOSED,
+                review_status=ReviewStatus.NEEDS_MANUAL_REVIEW,
+                rationale="Explicit zero-event evidence is directionally relevant, but it does not classify non-compliance incidents by regulatory or voluntary-code category.",
+                missing_items=("不合规事件分类",),
+            )
+        if RequirementFacet.REQUIRES_COMPLAINT_SOURCE_BREAKDOWN in facets:
+            return OntologyVerdictResult(
+                verdict=AssessmentVerdict.UNKNOWN,
+                review_status=ReviewStatus.NEEDS_MANUAL_REVIEW,
+                rationale="A general zero complaint statement does not split complaints by source.",
+                missing_items=("投诉来源分类",),
+            )
+        if EvidenceKind.EXPLICIT_ZERO_STATEMENT in evidence_kinds and RequirementFacet.REQUIRES_COUNT in facets:
+            return OntologyVerdictResult(
+                verdict=AssessmentVerdict.DISCLOSED,
+                review_status=ReviewStatus.NOT_REQUIRED,
+                rationale="Explicit zero-event evidence directly satisfies the count or concise no-incident statement requirement.",
+            )
 
     if semantic_group is SemanticGroup.SUPPLIER_ASSESSMENT:
         if RequirementFacet.REQUIRES_REASON_WHY in facets and EvidenceKind.KPI_VALUE in evidence_kinds:

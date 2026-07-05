@@ -135,3 +135,27 @@ def test_breakdown_dimension_contracts_have_pilot_ontology_metadata():
         assert contract.semantic_group is SemanticGroup.BREAKDOWN_DIMENSION
         assert set(contract.facets) == expected_facets
         assert EvidenceKind.KPI_VALUE in contract.evidence_kinds
+
+
+def test_zero_event_compliance_contracts_have_pilot_ontology_metadata():
+    cases = {
+        "GRI 416-2-a": {
+            RequirementFacet.REQUIRES_COUNT,
+            RequirementFacet.REQUIRES_INCIDENT_CLASSIFICATION,
+        },
+        "GRI 416-2-b": {
+            RequirementFacet.REQUIRES_COUNT,
+            RequirementFacet.REQUIRES_INCIDENT_CLASSIFICATION,
+        },
+        "GRI 418-1-a": {RequirementFacet.REQUIRES_COUNT},
+        "GRI 418-1-c": {RequirementFacet.REQUIRES_COUNT},
+    }
+
+    for requirement_id, expected_facets in cases.items():
+        contract = get_requirement_contract(requirement_id)
+        assert contract is not None
+        assert contract.semantic_group is SemanticGroup.ZERO_EVENT_COMPLIANCE
+        assert set(contract.facets) == expected_facets
+        assert EvidenceKind.EXPLICIT_ZERO_STATEMENT in contract.evidence_kinds
+        assert contract.verdict is None
+        assert contract.review_status is None
