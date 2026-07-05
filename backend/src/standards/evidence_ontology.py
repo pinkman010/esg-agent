@@ -44,6 +44,7 @@ class SemanticGroup(StrEnum):
     ZERO_EVENT_COMPLIANCE = "zero_event_compliance"
     GHG_EMISSIONS_KPI = "ghg_emissions_kpi"
     ENERGY_KPI = "energy_kpi"
+    WATER_KPI = "water_kpi"
 
 
 @dataclass(frozen=True)
@@ -128,6 +129,17 @@ def evaluate_ontology_verdict(
                 verdict=AssessmentVerdict.DISCLOSED,
                 review_status=ReviewStatus.NOT_REQUIRED,
                 rationale="Energy KPI evidence directly satisfies the energy amount requirement.",
+            )
+
+    if semantic_group is SemanticGroup.WATER_KPI:
+        if RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION in facets and (
+            EvidenceKind.KPI_VALUE in evidence_kinds or EvidenceKind.MANAGEMENT_MECHANISM in evidence_kinds
+        ):
+            return OntologyVerdictResult(
+                verdict=AssessmentVerdict.PARTIALLY_DISCLOSED,
+                review_status=ReviewStatus.NEEDS_MANUAL_REVIEW,
+                rationale="Water evidence is directionally relevant, but the full GRI-required water source, discharge destination, stress-area, standard, method, or compilation detail remains subject to sufficiency review.",
+                missing_items=("完整水源、排放目的地、高水风险区域或方法口径",),
             )
 
     if semantic_group is SemanticGroup.SUPPLIER_ASSESSMENT:

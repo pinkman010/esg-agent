@@ -125,6 +125,18 @@ def test_energy_kpi_keeps_method_dependent_items_partial():
     assert "完整能源类型、单位或方法口径" in result.missing_items
 
 
+def test_water_kpi_keeps_water_source_and_method_items_partial():
+    result = evaluate_ontology_verdict(
+        semantic_group=SemanticGroup.WATER_KPI,
+        facets={RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION},
+        evidence_kinds={EvidenceKind.KPI_VALUE},
+    )
+
+    assert result.verdict is AssessmentVerdict.PARTIALLY_DISCLOSED
+    assert result.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+    assert "完整水源、排放目的地、高水风险区域或方法口径" in result.missing_items
+
+
 def test_ontology_keeps_security_training_unknown_for_general_training_evidence():
     result = evaluate_ontology_verdict(
         semantic_group=SemanticGroup.HUMAN_RIGHTS_TRAINING,
