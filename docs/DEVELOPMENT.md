@@ -159,6 +159,16 @@ pnpm generate:api
 
 ## 8. 开发日志
 
+### 2026-07-05
+
+- 生成 `tmp/review/current_600_review.csv` 时确认：当前 `GRIAdapter` 的独立核查过滤口径为 `assessment_mode=current_gap`、`requirement_type=requirement`、`is_mandatory=True`、`scoring_role=hard_score`，因此实际进入首轮证据核查的是 577 条 requirement，不是 checklist 总数 661 条。
+- checklist 剩余 84 条均为 `requirement_type=compilation_requirement`。这些条目不应作为独立 `disclosed` / `partially_disclosed` / `unknown` 任务处理，应映射到对应 leaf requirement 的充分性规则、`missing_items`、guardrail 或口径校验中。
+- `tmp/review/current_600_review.csv` 当前包含 773 行、577 个唯一 requirement；按唯一 requirement 聚合后为 37 条 `disclosed`、189 条 `partially_disclosed`、351 条 `unknown`，37 条 `not_required`、540 条 `needs_manual_review`。本轮未调用外部模型。
+- 新增第 551-577 条 requirement 均为 `unknown + needs_manual_review`，主题集中在 `GRI 416-2`、`GRI 417`、`GRI 418-1`。后续人工复核应重点判断是否存在产品责任、营销沟通、客户隐私相关的明确零事件声明、KPI 或从略说明。
+- `review_csv_audit` 对 `tmp/review/current_600_review.csv` 通过，未发现 `global_fallback`、页码越界、`page_label` 乱码、`omission_note` 升格、KPI 表缺少 `complex_table` 或鉴证页 OCR/VLM 标记回退。
+- 当前合理执行顺序：先完成 577 条独立 requirement 的首轮人工复核；再导出 84 条 `compilation_requirement` 映射表；复核映射后更新 ontology 计划；随后执行 requirement/evidence ontology refactor；改造后重新跑 577 条，并只对差异项做人工复核。
+- 84 条 `compilation_requirement` 映射表建议先作为阶段性审查产物输出到 `tmp/review/`，字段至少包括 `compilation_requirement_id`、`canonical_disclosure_id`、`target_requirement_ids`、`facet`、`missing_item_template`、`guardrail_effect`、`source_requirement_text`。确认稳定后再决定是否产品化为 manifest 或规则文件。
+
 ### 2026-07-04
 
 - 增加 `review_csv_audit` 工具，将人工复核硬规则固化为可重复运行的 review CSV gate；新增首批 leaf-level evidence contract，先覆盖 GRI 305 的候选页、禁用页、verdict 和 review status；PDF 第 63、65、68 页 KPI evidence 统一使用行级 preview helper，并修复 `GRI 205-3-b` PDF 第 68 页缺少 `complex_table` 的质量标记问题。
