@@ -31,6 +31,7 @@
 - pgvector 预留，第一版不生成真实 embedding。
 - Tesseract。
 - OCRmyPDF。
+- Ghostscript，供 OCRmyPDF 真实执行 OCR 时调用。
 - Node.js。
 - Python 3.11。
 
@@ -56,9 +57,18 @@
 - 上传文件目录。
 - 派生文件目录。
 - OCR/Tesseract 工具路径。
+- OCR 开关、语言和页数上限。
 - OpenAI-compatible API base URL。
 - 模型名称。
 - CORS 来源。
+
+OCR 相关环境变量：
+
+- `OCR_ENABLED=false`：默认关闭 OCR 自动路由。
+- `OCR_LANG=chi_sim+eng`：OCRmyPDF/Tesseract 语言。
+- `OCR_MAX_PAGES=5`：未显式指定页码时最多处理的低文本/扫描页数。
+- `TESSERACT_CMD`：Tesseract 命令或路径。
+- `OCRMYPDF_CMD=ocrmypdf`：OCRmyPDF 命令。
 
 测试默认使用独立 PostgreSQL 数据库，避免清空开发库：
 
@@ -190,6 +200,11 @@ pnpm generate:api
 
 ### 2026-07-05
 
+- 接入显式 OCRmyPDF/Tesseract 路由：`enable_ocr=false` 时保持现有 `pypdf + pdfplumber` 主链路；`enable_ocr=true` 时支持 `ocr_pages` 指定页码，未指定时仅选择 `low_text_density` 或 `scanned` 页并受 `OCR_MAX_PAGES` 限制。
+- OCR 派生 PDF 写入运行时派生目录；OCR chunk 使用 `source_method=ocr`，默认携带 `needs_manual_review`，不覆盖原始 PDF。
+- 新增 OCR 配置项：`OCR_ENABLED`、`OCR_LANG`、`OCR_MAX_PAGES`、`TESSERACT_CMD`、`OCRMYPDF_CMD`；后端依赖加入 `ocrmypdf` 并更新锁文件。
+- 验证：`uv run pytest -q --basetemp=../tmp/pytest-ocr-main-final` 通过，结果为 179 passed；`uv run ocrmypdf --version` 返回 17.8.0；Tesseract 可见 `chi_sim`、`eng`、`osd` 语言包。
+- 限制：Ghostscript 当前仍是本机外部前置条件；若 `gs`/`gswin64c` 不可用，真实 OCRmyPDF 执行会失败，单元测试只覆盖 mock 路径和默认关闭行为。
 - 生成 `tmp/review/current_600_review.csv` 时确认：当前 `GRIAdapter` 的独立核查过滤口径为 `assessment_mode=current_gap`、`requirement_type=requirement`、`is_mandatory=True`、`scoring_role=hard_score`，因此实际进入首轮证据核查的是 577 条 requirement，不是 checklist 总数 661 条。
 - checklist 剩余 84 条均为 `requirement_type=compilation_requirement`。这些条目不应作为独立 `disclosed` / `partially_disclosed` / `unknown` 任务处理，应映射到对应 leaf requirement 的充分性规则、`missing_items`、guardrail 或口径校验中。
 - `tmp/review/current_600_review.csv` 当前包含 773 行、577 个唯一 requirement；按唯一 requirement 聚合后为 37 条 `disclosed`、189 条 `partially_disclosed`、351 条 `unknown`，37 条 `not_required`、540 条 `needs_manual_review`。本轮未调用外部模型。
