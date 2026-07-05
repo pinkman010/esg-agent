@@ -138,6 +138,35 @@ print("warnings=", result.warnings)
 
 自查覆盖 `global_fallback`、页码越界、`page_label` 乱码、`omission_note` 升格、KPI 表缺少 `complex_table`、鉴证页缺少 OCR/VLM 风险标记、GRI 305 误挂 PDF 第 3 页等硬规则。
 
+### Requirement/Evidence Ontology
+
+系统将 requirement 拆为语义标签，将 evidence 拆为证据类型，再通过 verdict matrix 判断 `disclosed` / `partially_disclosed` / `unknown`。
+
+规则优先级：
+
+1. `omission_note` / `not_applicable` 先短路为 `unknown + needs_manual_review`。
+2. contract / report profile 提供候选页。
+3. evidence kind 识别证据类型。
+4. ontology matrix 给默认 verdict。
+5. per-ID contract 作为最终 override / guardrail。
+
+关键边界：
+
+- KPI 数量或比例可以支撑数值类 leaf。
+- 总体值不能自动传播到性别、员工类别、地区拆分 leaf。
+- 政策和管理机制不能自动支撑具体风险运营点、供应商类型或安保人员人权培训比例。
+- `compilation_requirement` 只转成充分性规则、`missing_items` 和 guardrail，不作为独立 assessment requirement。
+- 固定 PDF 页码只用于当前报告回归样本；跨报告逻辑必须依赖 KPI 行标签、年份列、单位和 evidence type。
+
+first-pass 质量评估命令：
+
+```powershell
+cd backend
+uv run --no-sync python -m src.tools.first_pass_quality ../tmp/review/current_550_review.csv ../tmp/review/current_550_review_after_rules.csv
+```
+
+该工具按 `requirement_id` 聚合首行，并支持人工复核字段：`manual_label`、`correct_pdf_pages`、`suggested_verdict`、`issue_type`。输出指标包括 first-pass recall、false disclosed、wrong source page、unknown leakage 和 after-rules delta。
+
 ## 7. OpenAPI 类型生成
 
 前端 API 类型通过 FastAPI OpenAPI 自动生成。
