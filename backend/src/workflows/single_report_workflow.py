@@ -4,7 +4,7 @@ from uuid import uuid4
 
 from src.agents.disclosure_agent import DisclosureAgent
 from src.db.repositories import Repository
-from src.domain.enums import RunStatus
+from src.domain.enums import PageQualityFlag, RunStatus
 from src.domain.models import AnalysisRun, DisclosureTask, PageExtraction
 from src.standards.evidence_contracts import get_requirement_contract
 from src.standards.gri_report_index import build_report_index
@@ -18,12 +18,14 @@ class SingleReportWorkflow:
         standard_adapter,
         disclosure_agent: DisclosureAgent,
         requirement_pack_path: Path | None = None,
+        ocr_max_pages: int = 5,
     ):
         self.repository = repository
         self.parser = parser
         self.standard_adapter = standard_adapter
         self.disclosure_agent = disclosure_agent
         self.requirement_pack_path = requirement_pack_path
+        self.ocr_max_pages = ocr_max_pages
 
     def run(
         self,
@@ -31,6 +33,8 @@ class SingleReportWorkflow:
         pdf_path: Path,
         source_file_hash: str,
         confirm_llm: bool,
+        enable_ocr: bool = False,
+        ocr_pages: list[int] | None = None,
     ) -> AnalysisRun:
         run_id = f"run-{uuid4().hex}"
         self.repository.create_run(
@@ -53,7 +57,17 @@ class SingleReportWorkflow:
                 pdf_path,
                 report_id=report_id,
                 source_file_hash=source_file_hash,
+                ocr_pages=self._explicit_ocr_pages(enable_ocr, ocr_pages),
             )
+            if enable_ocr and not ocr_pages:
+                selected_ocr_pages = self._select_ocr_pages(parsed.pages)
+                if selected_ocr_pages:
+                    parsed = self.parser.parse_pdf(
+                        pdf_path,
+                        report_id=report_id,
+                        source_file_hash=source_file_hash,
+                        ocr_pages=selected_ocr_pages,
+                    )
             self.repository.create_audit_event(
                 run_id,
                 "parse_completed",
@@ -76,6 +90,23 @@ class SingleReportWorkflow:
         except Exception as exc:
             self.repository.create_audit_event(run_id, "analysis_failed", {"error": str(exc)})
             return self.repository.update_run_status(run_id, RunStatus.FAILED, error_message=str(exc))
+
+    def _explicit_ocr_pages(self, enable_ocr: bool, ocr_pages: list[int] | None) -> list[int] | None:
+        if not enable_ocr:
+            return None
+        if not ocr_pages:
+            return None
+        return sorted({page for page in ocr_pages if page > 0})
+
+    def _select_ocr_pages(self, pages: list[PageExtraction]) -> list[int]:
+        selected: list[int] = []
+        for page in pages:
+            flags = set(page.quality_flags)
+            if PageQualityFlag.LOW_TEXT_DENSITY in flags or PageQualityFlag.SCANNED in flags:
+                selected.append(page.page_number)
+            if len(selected) >= self.ocr_max_pages:
+                break
+        return selected
 
     def _attach_report_index_candidates(
         self,

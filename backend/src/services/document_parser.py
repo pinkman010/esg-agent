@@ -110,12 +110,13 @@ class DocumentParser:
                         report_id=report_id,
                         text=result.text,
                         source_page=result.page_number,
-                        source_method=EvidenceSourceMethod.OCR,
-                        source_file_hash=source_file_hash,
-                        quality_flags=[PageQualityFlag.NEEDS_MANUAL_REVIEW],
-                        embedding_status="not_started",
+                            source_method=EvidenceSourceMethod.OCR,
+                            source_file_hash=source_file_hash,
+                            quality_flags=[PageQualityFlag.NEEDS_MANUAL_REVIEW],
+                            embedding_status="not_started",
+                            metadata={"ocr_page": result.page_number},
+                        )
                     )
-                )
 
         return ParsedDocument(
             report_id=report_id,

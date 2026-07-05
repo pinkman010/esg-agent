@@ -12,6 +12,9 @@ class Settings(BaseSettings):
     backend_cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:3000"])
     upload_dir: Path = Path("backend/data/runtime/uploads")
     derived_dir: Path = Path("backend/data/runtime/derived")
+    ocr_enabled: bool = False
+    ocr_lang: str = "chi_sim+eng"
+    ocr_max_pages: int = 5
     tesseract_cmd: str = ""
     ocrmypdf_cmd: str = "ocrmypdf"
     openai_compatible_api_base: str = ""

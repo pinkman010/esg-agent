@@ -17,7 +17,11 @@ from tests.database import make_test_engine, reset_database
 
 
 class FakeParser:
+    def __init__(self):
+        self.calls = []
+
     def parse_pdf(self, pdf_path, report_id, source_file_hash, ocr_pages=None):
+        self.calls.append(ocr_pages)
         return ParsedDocument(
             report_id=report_id,
             page_count=1,
@@ -40,6 +44,35 @@ class FakeParser:
 class FailingParser:
     def parse_pdf(self, pdf_path, report_id, source_file_hash, ocr_pages=None):
         raise RuntimeError("parse failed")
+
+
+class LowTextParser:
+    def __init__(self):
+        self.calls = []
+
+    def parse_pdf(self, pdf_path, report_id, source_file_hash, ocr_pages=None):
+        self.calls.append(ocr_pages)
+        if ocr_pages is None:
+            return ParsedDocument(
+                report_id=report_id,
+                page_count=3,
+                pages=[
+                    PageExtraction(report_id=report_id, page_number=1, text="Normal disclosure text."),
+                    PageExtraction(report_id=report_id, page_number=2, text="", quality_flags=["low_text_density"]),
+                    PageExtraction(report_id=report_id, page_number=3, text="", quality_flags=["scanned"]),
+                ],
+                chunks=[],
+                metadata={},
+                outline=[],
+            )
+        return ParsedDocument(
+            report_id=report_id,
+            page_count=3,
+            pages=[],
+            chunks=[],
+            metadata={},
+            outline=[],
+        )
 
 
 class IndexParser:
@@ -152,6 +185,42 @@ def test_single_report_workflow_completes_without_model_calls(repo_session):
         .order_by(AuditEventRecord.audit_event_id)
     ).all()
     assert event_types == ["analysis_started", "parse_completed", "analysis_completed"]
+
+
+def test_single_report_workflow_does_not_request_ocr_by_default(repo_session):
+    repo = Repository(repo_session)
+    seed_report(repo)
+    parser = FakeParser()
+    workflow = SingleReportWorkflow(repo, parser, FakeAdapter(), DisclosureAgent())
+
+    run = workflow.run("report-1", Path("report.pdf"), "hash-1", confirm_llm=False)
+
+    assert run.status is RunStatus.COMPLETED
+    assert parser.calls == [None]
+
+
+def test_single_report_workflow_passes_explicit_ocr_pages(repo_session):
+    repo = Repository(repo_session)
+    seed_report(repo)
+    parser = FakeParser()
+    workflow = SingleReportWorkflow(repo, parser, FakeAdapter(), DisclosureAgent())
+
+    run = workflow.run("report-1", Path("report.pdf"), "hash-1", confirm_llm=False, enable_ocr=True, ocr_pages=[77])
+
+    assert run.status is RunStatus.COMPLETED
+    assert parser.calls == [[77]]
+
+
+def test_single_report_workflow_selects_low_quality_pages_when_ocr_pages_are_empty(repo_session):
+    repo = Repository(repo_session)
+    seed_report(repo)
+    parser = LowTextParser()
+    workflow = SingleReportWorkflow(repo, parser, FakeAdapter(), DisclosureAgent(), ocr_max_pages=1)
+
+    run = workflow.run("report-1", Path("report.pdf"), "hash-1", confirm_llm=False, enable_ocr=True)
+
+    assert run.status is RunStatus.COMPLETED
+    assert parser.calls == [None, [2]]
 
 
 def test_single_report_workflow_marks_run_failed_on_parser_error(repo_session):

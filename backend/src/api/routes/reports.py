@@ -14,6 +14,7 @@ from src.db.session import get_db_session
 from src.domain.models import Report
 from src.services.document_parser import DocumentParser
 from src.services.document_store import DocumentStore
+from src.services.ocr import run_ocr_for_pages
 from src.standards.gri import GRIAdapter
 from src.workflows.single_report_workflow import SingleReportWorkflow
 
@@ -25,6 +26,8 @@ GRI_REQUIREMENTS_LIMIT = 10
 
 class AnalyzeRequest(BaseModel):
     confirm_llm: bool = False
+    enable_ocr: bool = False
+    ocr_pages: list[int] = []
 
 
 @router.post("/upload", response_model=ReportUploadResponse)
@@ -61,14 +64,35 @@ def analyze_report(report_id: str, request: AnalyzeRequest, session: Session = D
     if report is None:
         raise HTTPException(status_code=404, detail="report not found")
 
+    settings = get_settings()
+
+    def ocr_runner(pdf_path: Path, pages: list[int]):
+        return run_ocr_for_pages(
+            pdf_path,
+            pages,
+            report_id=report_id,
+            derived_dir=settings.derived_dir,
+            ocrmypdf_cmd=settings.ocrmypdf_cmd,
+            tesseract_cmd=settings.tesseract_cmd,
+            ocr_lang=settings.ocr_lang,
+        )
+
     workflow = SingleReportWorkflow(
         repo,
-        DocumentParser(),
+        DocumentParser(ocr_runner=ocr_runner),
         GRIAdapter(GRI_REQUIREMENTS_PATH, max_requirements=GRI_REQUIREMENTS_LIMIT),
         DisclosureAgent(),
         requirement_pack_path=GRI_REQUIREMENT_PACK_PATH,
+        ocr_max_pages=settings.ocr_max_pages,
     )
-    run = workflow.run(report_id, Path(report.stored_path), report.file_hash, confirm_llm=request.confirm_llm)
+    run = workflow.run(
+        report_id,
+        Path(report.stored_path),
+        report.file_hash,
+        confirm_llm=request.confirm_llm,
+        enable_ocr=request.enable_ocr,
+        ocr_pages=request.ocr_pages,
+    )
     return {
         "run_id": run.run_id,
         "report_id": run.report_id,

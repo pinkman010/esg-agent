@@ -57,3 +57,5 @@ def test_document_parser_uses_mocked_ocr_hook_for_selected_pages(tmp_path):
 
     assert parsed.chunks[0].source_method is EvidenceSourceMethod.OCR
     assert parsed.chunks[0].text == "OCR energy disclosure text"
+    assert PageQualityFlag.NEEDS_MANUAL_REVIEW in parsed.chunks[0].quality_flags
+    assert parsed.chunks[0].metadata["ocr_page"] == 1

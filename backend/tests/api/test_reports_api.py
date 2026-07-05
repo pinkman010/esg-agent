@@ -56,6 +56,65 @@ async def test_analyze_creates_run_without_model_call(api_client):
     assert body["confirm_llm"] is False
 
 
+async def test_analyze_defaults_to_ocr_disabled(api_client, monkeypatch):
+    captured = {}
+
+    class FakeWorkflow:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def run(self, report_id, pdf_path, source_file_hash, confirm_llm, enable_ocr=False, ocr_pages=None):
+            captured["enable_ocr"] = enable_ocr
+            captured["ocr_pages"] = ocr_pages
+            from src.domain.enums import RunStatus
+            from src.domain.models import AnalysisRun
+
+            return AnalysisRun(run_id="run-1", report_id=report_id, status=RunStatus.COMPLETED, confirm_llm=confirm_llm)
+
+    monkeypatch.setattr("src.api.routes.reports.SingleReportWorkflow", FakeWorkflow)
+    upload = await api_client.post(
+        "/api/reports/upload",
+        files={"file": ("report.pdf", make_pdf_bytes(), "application/pdf")},
+    )
+    report_id = upload.json()["report_id"]
+
+    response = await api_client.post(f"/api/reports/{report_id}/analyze", json={"confirm_llm": False})
+
+    assert response.status_code == 200
+    assert captured == {"enable_ocr": False, "ocr_pages": []}
+
+
+async def test_analyze_passes_explicit_ocr_pages(api_client, monkeypatch):
+    captured = {}
+
+    class FakeWorkflow:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def run(self, report_id, pdf_path, source_file_hash, confirm_llm, enable_ocr=False, ocr_pages=None):
+            captured["enable_ocr"] = enable_ocr
+            captured["ocr_pages"] = ocr_pages
+            from src.domain.enums import RunStatus
+            from src.domain.models import AnalysisRun
+
+            return AnalysisRun(run_id="run-1", report_id=report_id, status=RunStatus.COMPLETED, confirm_llm=confirm_llm)
+
+    monkeypatch.setattr("src.api.routes.reports.SingleReportWorkflow", FakeWorkflow)
+    upload = await api_client.post(
+        "/api/reports/upload",
+        files={"file": ("report.pdf", make_pdf_bytes(), "application/pdf")},
+    )
+    report_id = upload.json()["report_id"]
+
+    response = await api_client.post(
+        f"/api/reports/{report_id}/analyze",
+        json={"confirm_llm": False, "enable_ocr": True, "ocr_pages": [77]},
+    )
+
+    assert response.status_code == 200
+    assert captured == {"enable_ocr": True, "ocr_pages": [77]}
+
+
 async def test_reports_api_uses_real_gri_checklist_path():
     assert GRI_REQUIREMENTS_PATH.as_posix().endswith("backend/data/manifests/gri_requirement_checklist.json")
     assert GRI_REQUIREMENTS_LIMIT == 10
