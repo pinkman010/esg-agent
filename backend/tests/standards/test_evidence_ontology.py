@@ -319,3 +319,50 @@ def test_ohs_management_coverage_kpi_does_not_auto_disclose_worker_percentage():
     assert result.verdict is AssessmentVerdict.PARTIALLY_DISCLOSED
     assert result.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
     assert "完整 OHS 范围、覆盖、流程、职责或获取方式" in result.missing_items
+
+
+def test_employee_kpi_keeps_missing_region_breakdown_partial():
+    result = evaluate_ontology_verdict(
+        semantic_group=SemanticGroup.EMPLOYEE_KPI,
+        facets={RequirementFacet.REQUIRES_COUNT, RequirementFacet.REQUIRES_REGION_BREAKDOWN},
+        evidence_kinds={EvidenceKind.KPI_BREAKDOWN},
+    )
+
+    assert result.verdict is AssessmentVerdict.PARTIALLY_DISCLOSED
+    assert result.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+    assert "地区拆分" in result.missing_items
+
+
+def test_employee_kpi_discloses_direct_gender_count_breakdown():
+    result = evaluate_ontology_verdict(
+        semantic_group=SemanticGroup.EMPLOYEE_KPI,
+        facets={RequirementFacet.REQUIRES_COUNT, RequirementFacet.REQUIRES_GENDER_BREAKDOWN},
+        evidence_kinds={EvidenceKind.KPI_BREAKDOWN},
+    )
+
+    assert result.verdict is AssessmentVerdict.DISCLOSED
+    assert result.review_status is ReviewStatus.NOT_REQUIRED
+
+
+def test_employee_kpi_keeps_gender_rate_partial_when_only_overall_rate_exists():
+    result = evaluate_ontology_verdict(
+        semantic_group=SemanticGroup.EMPLOYEE_KPI,
+        facets={RequirementFacet.REQUIRES_PERCENTAGE, RequirementFacet.REQUIRES_GENDER_BREAKDOWN},
+        evidence_kinds={EvidenceKind.KPI_VALUE},
+    )
+
+    assert result.verdict is AssessmentVerdict.PARTIALLY_DISCLOSED
+    assert result.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+    assert "按性别披露的比率" in result.missing_items
+
+
+def test_benefits_policy_stays_partial_without_employee_category_comparison():
+    result = evaluate_ontology_verdict(
+        semantic_group=SemanticGroup.BENEFITS_POLICY,
+        facets={RequirementFacet.REQUIRES_EMPLOYEE_CATEGORY_BREAKDOWN, RequirementFacet.REQUIRES_REGION_BREAKDOWN},
+        evidence_kinds={EvidenceKind.POLICY},
+    )
+
+    assert result.verdict is AssessmentVerdict.PARTIALLY_DISCLOSED
+    assert result.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+    assert "员工类别福利差异" in result.missing_items

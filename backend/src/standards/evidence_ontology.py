@@ -47,6 +47,8 @@ class SemanticGroup(StrEnum):
     WATER_KPI = "water_kpi"
     WASTE_KPI = "waste_kpi"
     OHS_MANAGEMENT = "ohs_management"
+    EMPLOYEE_KPI = "employee_kpi"
+    BENEFITS_POLICY = "benefits_policy"
 
 
 @dataclass(frozen=True)
@@ -162,6 +164,45 @@ def evaluate_ontology_verdict(
                 review_status=ReviewStatus.NEEDS_MANUAL_REVIEW,
                 rationale="OHS management evidence is directionally relevant, but the full GRI-required scope, worker coverage, process, responsibility, participation, or access detail remains subject to sufficiency review.",
                 missing_items=("完整 OHS 范围、覆盖、流程、职责或获取方式",),
+            )
+
+    if semantic_group is SemanticGroup.EMPLOYEE_KPI:
+        if RequirementFacet.REQUIRES_REGION_BREAKDOWN in facets and (
+            EvidenceKind.KPI_VALUE in evidence_kinds or EvidenceKind.KPI_BREAKDOWN in evidence_kinds
+        ):
+            return OntologyVerdictResult(
+                verdict=AssessmentVerdict.PARTIALLY_DISCLOSED,
+                review_status=ReviewStatus.NEEDS_MANUAL_REVIEW,
+                rationale="Employee KPI evidence is directionally relevant, but the required regional breakdown is missing.",
+                missing_items=("地区拆分",),
+            )
+        if (
+            RequirementFacet.REQUIRES_PERCENTAGE in facets
+            and RequirementFacet.REQUIRES_GENDER_BREAKDOWN in facets
+            and EvidenceKind.KPI_VALUE in evidence_kinds
+        ):
+            return OntologyVerdictResult(
+                verdict=AssessmentVerdict.PARTIALLY_DISCLOSED,
+                review_status=ReviewStatus.NEEDS_MANUAL_REVIEW,
+                rationale="Overall employee KPI evidence is directionally relevant, but the required gender-specific rate is missing.",
+                missing_items=("按性别披露的比率",),
+            )
+        if RequirementFacet.REQUIRES_COUNT in facets and (
+            EvidenceKind.KPI_VALUE in evidence_kinds or EvidenceKind.KPI_BREAKDOWN in evidence_kinds
+        ):
+            return OntologyVerdictResult(
+                verdict=AssessmentVerdict.DISCLOSED,
+                review_status=ReviewStatus.NOT_REQUIRED,
+                rationale="Employee KPI evidence directly satisfies the employee count requirement.",
+            )
+
+    if semantic_group is SemanticGroup.BENEFITS_POLICY:
+        if EvidenceKind.POLICY in evidence_kinds or EvidenceKind.MANAGEMENT_MECHANISM in evidence_kinds:
+            return OntologyVerdictResult(
+                verdict=AssessmentVerdict.PARTIALLY_DISCLOSED,
+                review_status=ReviewStatus.NEEDS_MANUAL_REVIEW,
+                rationale="Benefits policy evidence is directionally relevant, but it does not compare employee categories by significant operating locations.",
+                missing_items=("员工类别福利差异", "significant locations of operation"),
             )
 
     if semantic_group is SemanticGroup.SUPPLIER_ASSESSMENT:

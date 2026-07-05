@@ -320,3 +320,55 @@ def test_waste_contracts_have_ontology_metadata():
         assert contract.evidence_kinds == (expected_kind,)
         assert contract.verdict is None
         assert contract.review_status is None
+
+
+def test_employee_and_benefits_contracts_have_ontology_metadata():
+    employee_cases = {
+        "GRI 401-1-a": (
+            {RequirementFacet.REQUIRES_COUNT, RequirementFacet.REQUIRES_REGION_BREAKDOWN},
+            {EvidenceKind.KPI_BREAKDOWN},
+        ),
+        "GRI 401-1-b": (
+            {RequirementFacet.REQUIRES_COUNT, RequirementFacet.REQUIRES_REGION_BREAKDOWN},
+            {EvidenceKind.KPI_BREAKDOWN},
+        ),
+        "GRI 401-3-c": (
+            {RequirementFacet.REQUIRES_COUNT, RequirementFacet.REQUIRES_GENDER_BREAKDOWN},
+            {EvidenceKind.KPI_BREAKDOWN},
+        ),
+        "GRI 401-3-d": (
+            {RequirementFacet.REQUIRES_COUNT, RequirementFacet.REQUIRES_GENDER_BREAKDOWN},
+            {EvidenceKind.KPI_BREAKDOWN},
+        ),
+        "GRI 401-3-e": (
+            {RequirementFacet.REQUIRES_PERCENTAGE, RequirementFacet.REQUIRES_GENDER_BREAKDOWN},
+            {EvidenceKind.KPI_VALUE},
+        ),
+    }
+    benefits_items = {
+        "GRI 401-2-a",
+        "GRI 401-2-a-ii",
+        "GRI 401-2-a-iv",
+        "GRI 401-2-a-vii",
+    }
+
+    for requirement_id, (expected_facets, expected_evidence_kinds) in employee_cases.items():
+        contract = get_requirement_contract(requirement_id)
+        assert contract is not None
+        assert contract.semantic_group is SemanticGroup.EMPLOYEE_KPI
+        assert set(contract.facets) == expected_facets
+        assert set(contract.evidence_kinds) == expected_evidence_kinds
+        assert contract.verdict is None
+        assert contract.review_status is None
+
+    for requirement_id in benefits_items:
+        contract = get_requirement_contract(requirement_id)
+        assert contract is not None
+        assert contract.semantic_group is SemanticGroup.BENEFITS_POLICY
+        assert set(contract.facets) == {
+            RequirementFacet.REQUIRES_EMPLOYEE_CATEGORY_BREAKDOWN,
+            RequirementFacet.REQUIRES_REGION_BREAKDOWN,
+        }
+        assert contract.evidence_kinds == (EvidenceKind.POLICY,)
+        assert contract.verdict is None
+        assert contract.review_status is None
