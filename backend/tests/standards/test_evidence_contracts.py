@@ -240,3 +240,31 @@ def test_water_contracts_have_ontology_metadata():
         assert contract.evidence_kinds == (expected_kind,)
         assert contract.verdict is None
         assert contract.review_status is None
+
+
+def test_waste_contracts_have_ontology_metadata():
+    management_items = {
+        "GRI 306-1-a",
+        "GRI 306-1-a-i",
+        "GRI 306-1-a-ii",
+        "GRI 306-2-a",
+        "GRI 306-2-b",
+        "GRI 306-4-b-i",
+        "GRI 306-4-c-i",
+    }
+    kpi_items = {
+        "GRI 306-3-a",
+        "GRI 306-4-a",
+        "GRI 306-4-b",
+        "GRI 306-4-c",
+    }
+
+    for requirement_id in sorted(management_items | kpi_items):
+        contract = get_requirement_contract(requirement_id)
+        assert contract is not None
+        assert contract.semantic_group is SemanticGroup.WASTE_KPI
+        assert contract.facets == (RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION,)
+        expected_kind = EvidenceKind.MANAGEMENT_MECHANISM if requirement_id in management_items else EvidenceKind.KPI_VALUE
+        assert contract.evidence_kinds == (expected_kind,)
+        assert contract.verdict is None
+        assert contract.review_status is None
