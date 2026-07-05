@@ -80,21 +80,36 @@ def test_ohs_injury_and_ill_health_contracts_share_semantic_group():
 
 def test_ohs_kpi_contracts_have_pilot_ontology_metadata():
     cases = {
+        "GRI 403-9-a": ({RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION}, {EvidenceKind.KPI_VALUE}),
         "GRI 403-9-a-i": ({RequirementFacet.REQUIRES_COUNT}, {EvidenceKind.KPI_VALUE}),
         "GRI 403-9-a-ii": ({RequirementFacet.REQUIRES_COUNT, RequirementFacet.REQUIRES_IMPACT_TYPE}, {EvidenceKind.KPI_VALUE}),
         "GRI 403-9-a-iii": ({RequirementFacet.REQUIRES_COUNT}, {EvidenceKind.KPI_VALUE}),
         "GRI 403-9-a-v": ({RequirementFacet.REQUIRES_COUNT}, {EvidenceKind.KPI_VALUE}),
+        "GRI 403-9-b": ({RequirementFacet.REQUIRES_COUNT, RequirementFacet.REQUIRES_WORKER_BOUNDARY}, {EvidenceKind.KPI_VALUE}),
         "GRI 403-9-b-i": ({RequirementFacet.REQUIRES_COUNT, RequirementFacet.REQUIRES_WORKER_BOUNDARY}, {EvidenceKind.KPI_VALUE}),
+        "GRI 403-9-b-ii": (
+            {RequirementFacet.REQUIRES_COUNT, RequirementFacet.REQUIRES_WORKER_BOUNDARY, RequirementFacet.REQUIRES_IMPACT_TYPE},
+            {EvidenceKind.KPI_VALUE},
+        ),
         "GRI 403-9-b-iii": ({RequirementFacet.REQUIRES_COUNT, RequirementFacet.REQUIRES_WORKER_BOUNDARY}, {EvidenceKind.KPI_VALUE}),
         "GRI 403-9-b-v": ({RequirementFacet.REQUIRES_COUNT, RequirementFacet.REQUIRES_WORKER_BOUNDARY}, {EvidenceKind.KPI_VALUE}),
+        "GRI 403-9-c": ({RequirementFacet.REQUIRES_IMPACT_TYPE}, {EvidenceKind.KPI_VALUE}),
+        "GRI 403-9-d": ({RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION}, {EvidenceKind.KPI_VALUE}),
         "GRI 403-9-e": ({RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION}, {EvidenceKind.METHODOLOGY}),
+        "GRI 403-10-a": ({RequirementFacet.REQUIRES_COUNT, RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION}, {EvidenceKind.KPI_VALUE}),
         "GRI 403-10-a-i": ({RequirementFacet.REQUIRES_COUNT}, {EvidenceKind.KPI_VALUE}),
         "GRI 403-10-a-ii": ({RequirementFacet.REQUIRES_COUNT, RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION}, {EvidenceKind.KPI_VALUE}),
+        "GRI 403-10-b": (
+            {RequirementFacet.REQUIRES_COUNT, RequirementFacet.REQUIRES_WORKER_BOUNDARY, RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION},
+            {EvidenceKind.KPI_VALUE},
+        ),
         "GRI 403-10-b-i": ({RequirementFacet.REQUIRES_COUNT, RequirementFacet.REQUIRES_WORKER_BOUNDARY}, {EvidenceKind.KPI_VALUE}),
         "GRI 403-10-b-ii": (
             {RequirementFacet.REQUIRES_COUNT, RequirementFacet.REQUIRES_WORKER_BOUNDARY, RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION},
             {EvidenceKind.KPI_VALUE},
         ),
+        "GRI 403-10-c": ({RequirementFacet.REQUIRES_IMPACT_TYPE}, {EvidenceKind.KPI_VALUE}),
+        "GRI 403-10-c-i": ({RequirementFacet.REQUIRES_IMPACT_TYPE}, {EvidenceKind.KPI_VALUE}),
     }
 
     for requirement_id, (expected_facets, expected_evidence_kinds) in cases.items():
@@ -122,6 +137,9 @@ def test_ohs_management_contracts_have_ontology_metadata():
         "GRI 403-6-a",
         "GRI 403-6-b",
         "GRI 403-7-a",
+        "GRI 403-9-c-i",
+        "GRI 403-9-c-iii",
+        "GRI 403-10-c-iii",
     }
     coverage_kpi_items = {
         "GRI 403-8-a",
