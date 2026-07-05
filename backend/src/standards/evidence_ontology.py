@@ -49,6 +49,7 @@ class SemanticGroup(StrEnum):
     OHS_MANAGEMENT = "ohs_management"
     EMPLOYEE_KPI = "employee_kpi"
     BENEFITS_POLICY = "benefits_policy"
+    HUMAN_RIGHTS_POLICY = "human_rights_policy"
 
 
 @dataclass(frozen=True)
@@ -203,6 +204,15 @@ def evaluate_ontology_verdict(
                 review_status=ReviewStatus.NEEDS_MANUAL_REVIEW,
                 rationale="Benefits policy evidence is directionally relevant, but it does not compare employee categories by significant operating locations.",
                 missing_items=("员工类别福利差异", "significant locations of operation"),
+            )
+
+    if semantic_group is SemanticGroup.HUMAN_RIGHTS_POLICY:
+        if EvidenceKind.POLICY in evidence_kinds or EvidenceKind.MANAGEMENT_MECHANISM in evidence_kinds:
+            return OntologyVerdictResult(
+                verdict=AssessmentVerdict.PARTIALLY_DISCLOSED,
+                review_status=ReviewStatus.NEEDS_MANUAL_REVIEW,
+                rationale="Human rights policy and management evidence is directionally relevant, but it does not identify specific high-risk operations, suppliers, regions, or risk results.",
+                missing_items=("高风险运营点、供应商、地区或风险识别结果",),
             )
 
     if semantic_group is SemanticGroup.SUPPLIER_ASSESSMENT:

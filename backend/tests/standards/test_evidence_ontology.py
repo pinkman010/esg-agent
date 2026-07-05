@@ -366,3 +366,15 @@ def test_benefits_policy_stays_partial_without_employee_category_comparison():
     assert result.verdict is AssessmentVerdict.PARTIALLY_DISCLOSED
     assert result.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
     assert "员工类别福利差异" in result.missing_items
+
+
+def test_human_rights_policy_stays_partial_without_risk_results():
+    result = evaluate_ontology_verdict(
+        semantic_group=SemanticGroup.HUMAN_RIGHTS_POLICY,
+        facets={RequirementFacet.REQUIRES_RISK_LOCATION},
+        evidence_kinds={EvidenceKind.POLICY, EvidenceKind.MANAGEMENT_MECHANISM},
+    )
+
+    assert result.verdict is AssessmentVerdict.PARTIALLY_DISCLOSED
+    assert result.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+    assert "高风险运营点、供应商、地区或风险识别结果" in result.missing_items

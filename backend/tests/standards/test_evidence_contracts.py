@@ -372,3 +372,24 @@ def test_employee_and_benefits_contracts_have_ontology_metadata():
         assert contract.evidence_kinds == (EvidenceKind.POLICY,)
         assert contract.verdict is None
         assert contract.review_status is None
+
+
+def test_human_rights_policy_contracts_have_ontology_metadata():
+    cases = {
+        "GRI 407-1-b": {EvidenceKind.MANAGEMENT_MECHANISM},
+        "GRI 408-1-a": {EvidenceKind.POLICY, EvidenceKind.MANAGEMENT_MECHANISM},
+        "GRI 408-1-a-i": {EvidenceKind.POLICY},
+        "GRI 408-1-a-ii": {EvidenceKind.POLICY, EvidenceKind.MANAGEMENT_MECHANISM},
+        "GRI 408-1-c": {EvidenceKind.POLICY, EvidenceKind.MANAGEMENT_MECHANISM},
+        "GRI 409-1-a": {EvidenceKind.POLICY, EvidenceKind.MANAGEMENT_MECHANISM},
+        "GRI 409-1-b": {EvidenceKind.POLICY, EvidenceKind.MANAGEMENT_MECHANISM},
+    }
+
+    for requirement_id, expected_evidence_kinds in cases.items():
+        contract = get_requirement_contract(requirement_id)
+        assert contract is not None
+        assert contract.semantic_group is SemanticGroup.HUMAN_RIGHTS_POLICY
+        assert RequirementFacet.REQUIRES_RISK_LOCATION in contract.facets
+        assert set(contract.evidence_kinds) == expected_evidence_kinds
+        assert contract.verdict is None
+        assert contract.review_status is None
