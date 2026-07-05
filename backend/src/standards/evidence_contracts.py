@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 from src.domain.enums import AssessmentVerdict, ReviewStatus
+from src.standards.evidence_ontology import EvidenceKind, RequirementFacet, SemanticGroup
 
 
 @dataclass(frozen=True)
@@ -14,6 +15,9 @@ class RequirementEvidenceContract:
     review_status: ReviewStatus | None = None
     rationale: str | None = None
     missing_items: tuple[str, ...] = ()
+    facets: tuple[RequirementFacet, ...] = ()
+    evidence_kinds: tuple[EvidenceKind, ...] = ()
+    semantic_group: SemanticGroup | None = None
 
 
 _CONTRACTS: dict[str, RequirementEvidenceContract] = {
@@ -253,6 +257,9 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
         allowed_pages=(67,),
         candidate_pages=(67,),
         kpi_table_pages=(67,),
+        facets=(RequirementFacet.REQUIRES_PERCENTAGE,),
+        evidence_kinds=(EvidenceKind.KPI_VALUE,),
+        semantic_group=SemanticGroup.SUPPLIER_ASSESSMENT,
         verdict=AssessmentVerdict.DISCLOSED,
         review_status=ReviewStatus.NOT_REQUIRED,
         rationale="Bounded KPI evidence directly discloses the percentage of new suppliers screened using environmental criteria.",
@@ -656,6 +663,9 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
         allowed_pages=(67,),
         candidate_pages=(67,),
         kpi_table_pages=(67,),
+        facets=(RequirementFacet.REQUIRES_COUNT,),
+        evidence_kinds=(EvidenceKind.KPI_VALUE,),
+        semantic_group=SemanticGroup.OHS_KPI,
         verdict=AssessmentVerdict.DISCLOSED,
         review_status=ReviewStatus.NOT_REQUIRED,
         rationale="Bounded KPI evidence directly discloses employee recordable injuries and TRIR.",
@@ -830,6 +840,9 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
         allowed_pages=(67,),
         candidate_pages=(67,),
         kpi_table_pages=(67,),
+        facets=(RequirementFacet.REQUIRES_COUNT,),
+        evidence_kinds=(EvidenceKind.KPI_VALUE,),
+        semantic_group=SemanticGroup.OHS_KPI,
         verdict=AssessmentVerdict.PARTIALLY_DISCLOSED,
         review_status=ReviewStatus.NEEDS_MANUAL_REVIEW,
         rationale="Bounded KPI evidence discloses employee occupational disease cases, but this is narrower than all recordable work-related ill health.",
@@ -939,6 +952,12 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
         allowed_pages=(35, 66),
         candidate_pages=(35, 66),
         kpi_table_pages=(66,),
+        facets=(
+            RequirementFacet.REQUIRES_GENDER_BREAKDOWN,
+            RequirementFacet.REQUIRES_EMPLOYEE_CATEGORY_BREAKDOWN,
+        ),
+        evidence_kinds=(EvidenceKind.KPI_VALUE,),
+        semantic_group=SemanticGroup.BREAKDOWN_DIMENSION,
         verdict=AssessmentVerdict.PARTIALLY_DISCLOSED,
         review_status=ReviewStatus.NEEDS_MANUAL_REVIEW,
         rationale="Bounded evidence discloses total training hours and average training hours per employee, but not average hours by gender and employee category.",
@@ -1032,6 +1051,12 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
         allowed_pages=(33, 65),
         candidate_pages=(33, 65),
         kpi_table_pages=(65,),
+        facets=(
+            RequirementFacet.REQUIRES_GENDER_BREAKDOWN,
+            RequirementFacet.REQUIRES_EMPLOYEE_CATEGORY_BREAKDOWN,
+        ),
+        evidence_kinds=(EvidenceKind.KPI_VALUE,),
+        semantic_group=SemanticGroup.BREAKDOWN_DIMENSION,
         verdict=AssessmentVerdict.PARTIALLY_DISCLOSED,
         review_status=ReviewStatus.NEEDS_MANUAL_REVIEW,
         rationale="Bounded evidence discloses employee gender, age, and level structures, but it does not provide a full cross-tabulation by employee category and diversity dimension.",
@@ -1381,6 +1406,9 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
         allowed_pages=(67,),
         candidate_pages=(67,),
         kpi_table_pages=(67,),
+        facets=(RequirementFacet.REQUIRES_PERCENTAGE,),
+        evidence_kinds=(EvidenceKind.KPI_VALUE,),
+        semantic_group=SemanticGroup.SUPPLIER_ASSESSMENT,
         verdict=AssessmentVerdict.DISCLOSED,
         review_status=ReviewStatus.NOT_REQUIRED,
         rationale="Bounded KPI evidence directly discloses the percentage of new suppliers screened using social criteria.",

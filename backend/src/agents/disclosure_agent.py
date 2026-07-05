@@ -4,6 +4,7 @@ import re
 from src.domain.enums import AssessmentVerdict, PageQualityFlag, ReviewStatus
 from src.domain.models import DisclosureAssessment, DisclosureTask, DocumentChunk, EvidenceItem, Recommendation
 from src.standards.evidence_contracts import get_requirement_contract
+from src.standards.evidence_ontology import EvidenceKind, evaluate_ontology_verdict
 from src.tools.evidence import build_kpi_evidence_preview, chunk_to_evidence
 from src.tools.guardrails import build_guarded_assessment
 from src.tools.ids import database_safe_id
@@ -325,6 +326,13 @@ class DisclosureAgent:
             if is_complex_table_page and PageQualityFlag.COMPLEX_TABLE not in item.quality_flags:
                 item.quality_flags.append(PageQualityFlag.COMPLEX_TABLE)
             if is_complex_table_page:
+                item.is_kpi_evidence = True
+                evidence_kind = (
+                    contract.evidence_kinds[0]
+                    if contract is not None and contract.evidence_kinds
+                    else EvidenceKind.KPI_VALUE
+                )
+                item.metadata.setdefault("evidence_kind", evidence_kind.value)
                 item.evidence_preview = build_kpi_evidence_preview(item.source_text, task.keywords)
 
     def _mark_omission_note_evidence(self, task: DisclosureTask, evidence: list[EvidenceItem]) -> None:
@@ -428,6 +436,22 @@ class DisclosureAgent:
                 contract.verdict,
                 contract.rationale,
                 list(contract.missing_items),
+            )
+        if (
+            contract is not None
+            and contract.semantic_group is not None
+            and contract.facets
+            and contract.evidence_kinds
+        ):
+            ontology_result = evaluate_ontology_verdict(
+                semantic_group=contract.semantic_group,
+                facets=contract.facets,
+                evidence_kinds=contract.evidence_kinds,
+            )
+            return (
+                ontology_result.verdict,
+                ontology_result.rationale,
+                list(ontology_result.missing_items),
             )
 
         if task.requirement_id == "GRI 2-26-a-ii":

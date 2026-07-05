@@ -1,6 +1,8 @@
 from src.agents.disclosure_agent import DisclosureAgent
 from src.domain.enums import AssessmentVerdict, EvidenceSourceMethod, PageQualityFlag, ReviewStatus
 from src.domain.models import DisclosureTask, DocumentChunk
+from src.standards.evidence_contracts import RequirementEvidenceContract
+from src.standards.evidence_ontology import EvidenceKind, RequirementFacet, SemanticGroup
 
 
 def make_task():
@@ -41,6 +43,53 @@ def test_disclosure_agent_marks_missing_evidence_for_manual_review_and_recommend
     assert result.assessment.verdict is AssessmentVerdict.UNKNOWN
     assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
     assert result.recommendations[0].requirement_id == "GRI 302-1-a"
+
+
+def test_disclosure_agent_applies_ontology_matrix_before_generic_disclosed(monkeypatch):
+    def fake_contract(requirement_id):
+        if requirement_id != "GRI TEST-1-a":
+            return None
+        return RequirementEvidenceContract(
+            requirement_id=requirement_id,
+            allowed_pages=(4,),
+            candidate_pages=(4,),
+            facets=(
+                RequirementFacet.REQUIRES_GENDER_BREAKDOWN,
+                RequirementFacet.REQUIRES_EMPLOYEE_CATEGORY_BREAKDOWN,
+            ),
+            evidence_kinds=(EvidenceKind.KPI_VALUE,),
+            semantic_group=SemanticGroup.BREAKDOWN_DIMENSION,
+        )
+
+    monkeypatch.setattr("src.agents.disclosure_agent.get_requirement_contract", fake_contract)
+    task = DisclosureTask(
+        task_id="task-ontology",
+        run_id="run-1",
+        report_id="report-1",
+        standard_id="GRI",
+        standard_version="2021",
+        disclosure_id="GRI TEST",
+        requirement_id="GRI TEST-1-a",
+        requirement_text="Disclose average hours by gender and employee category.",
+        keywords=["training"],
+        candidate_pages=[4],
+        candidate_page_source="contract_candidate",
+    )
+    chunk = DocumentChunk(
+        chunk_id="chunk-ontology",
+        report_id="report-1",
+        text="The report discloses total training hours and average training hours per employee.",
+        source_page=4,
+        source_method=EvidenceSourceMethod.PDFPLUMBER,
+        source_file_hash="hash-1",
+    )
+
+    result = DisclosureAgent().analyze(task, [chunk], confirm_llm=False)
+
+    assert result.assessment.verdict is AssessmentVerdict.PARTIALLY_DISCLOSED
+    assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+    assert "按性别拆分" in result.assessment.missing_items
+    assert "按员工类别拆分" in result.assessment.missing_items
 
 
 def test_disclosure_agent_uses_database_safe_recommendation_id_for_long_task_id():
@@ -2492,7 +2541,11 @@ def test_disclosure_agent_handles_308_supplier_environmental_assessment_rules():
         assert result.assessment.review_status is review_status
         assert [item.source_page for item in result.assessment.evidence] == expected_pages
         if 67 in expected_pages:
-            assert PageQualityFlag.COMPLEX_TABLE in result.assessment.evidence[-1].quality_flags
+            kpi_evidence = next(item for item in result.assessment.evidence if item.source_page == 67)
+            assert PageQualityFlag.COMPLEX_TABLE in kpi_evidence.quality_flags
+            assert kpi_evidence.is_kpi_evidence is True
+            assert kpi_evidence.metadata["evidence_kind"] == "kpi_value"
+            assert any(term in kpi_evidence.evidence_preview for term in task.keywords)
 
 
 def test_disclosure_agent_handles_401_employment_rules():
