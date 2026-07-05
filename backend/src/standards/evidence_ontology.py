@@ -125,6 +125,18 @@ def evaluate_ontology_verdict(
                 missing_items=("主要类型或危害清单",),
             )
 
+    if (
+        semantic_group is SemanticGroup.BREAKDOWN_DIMENSION
+        and RequirementFacet.REQUIRES_GOVERNANCE_BODY in facets
+        and EvidenceKind.KPI_VALUE in evidence_kinds
+    ):
+        return OntologyVerdictResult(
+            verdict=AssessmentVerdict.PARTIALLY_DISCLOSED,
+            review_status=ReviewStatus.NEEDS_MANUAL_REVIEW,
+            rationale="Management-level KPI evidence is directionally relevant, but it does not confirm the governance body scope.",
+            missing_items=("治理机构口径确认",),
+        )
+
     if _requires_breakdown(facets) and EvidenceKind.KPI_BREAKDOWN not in evidence_kinds:
         return OntologyVerdictResult(
             verdict=AssessmentVerdict.PARTIALLY_DISCLOSED,

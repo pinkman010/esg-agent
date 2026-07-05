@@ -32,6 +32,18 @@ def test_ontology_marks_breakdown_requirement_partial_when_only_overall_kpi_exis
     assert "按员工类别拆分" in result.missing_items
 
 
+def test_ontology_marks_governance_body_breakdown_partial_when_management_kpi_exists():
+    result = evaluate_ontology_verdict(
+        semantic_group=SemanticGroup.BREAKDOWN_DIMENSION,
+        facets={RequirementFacet.REQUIRES_GOVERNANCE_BODY},
+        evidence_kinds={EvidenceKind.KPI_VALUE},
+    )
+
+    assert result.verdict is AssessmentVerdict.PARTIALLY_DISCLOSED
+    assert result.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+    assert "治理机构口径确认" in result.missing_items
+
+
 def test_ontology_keeps_security_training_unknown_for_general_training_evidence():
     result = evaluate_ontology_verdict(
         semantic_group=SemanticGroup.HUMAN_RIGHTS_TRAINING,

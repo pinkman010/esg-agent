@@ -112,3 +112,26 @@ def test_training_and_diversity_contracts_share_breakdown_dimension_group():
     assert contract_405.semantic_group is SemanticGroup.BREAKDOWN_DIMENSION
     assert RequirementFacet.REQUIRES_GENDER_BREAKDOWN in contract_404.facets
     assert RequirementFacet.REQUIRES_EMPLOYEE_CATEGORY_BREAKDOWN in contract_405.facets
+
+
+def test_breakdown_dimension_contracts_have_pilot_ontology_metadata():
+    cases = {
+        "GRI 404-1-a": {RequirementFacet.REQUIRES_GENDER_BREAKDOWN, RequirementFacet.REQUIRES_EMPLOYEE_CATEGORY_BREAKDOWN},
+        "GRI 404-3-a": {RequirementFacet.REQUIRES_GENDER_BREAKDOWN, RequirementFacet.REQUIRES_EMPLOYEE_CATEGORY_BREAKDOWN},
+        "GRI 405-1-a": {RequirementFacet.REQUIRES_GOVERNANCE_BODY},
+        "GRI 405-1-a-i": {RequirementFacet.REQUIRES_GOVERNANCE_BODY, RequirementFacet.REQUIRES_GENDER_BREAKDOWN},
+        "GRI 405-1-a-ii": {RequirementFacet.REQUIRES_GOVERNANCE_BODY, RequirementFacet.REQUIRES_EMPLOYEE_CATEGORY_BREAKDOWN},
+        "GRI 405-1-a-iii": {RequirementFacet.REQUIRES_GOVERNANCE_BODY, RequirementFacet.REQUIRES_EMPLOYEE_CATEGORY_BREAKDOWN},
+        "GRI 405-1-b": {RequirementFacet.REQUIRES_GENDER_BREAKDOWN, RequirementFacet.REQUIRES_EMPLOYEE_CATEGORY_BREAKDOWN},
+        "GRI 405-1-b-i": {RequirementFacet.REQUIRES_GENDER_BREAKDOWN, RequirementFacet.REQUIRES_EMPLOYEE_CATEGORY_BREAKDOWN},
+        "GRI 405-1-b-ii": {RequirementFacet.REQUIRES_EMPLOYEE_CATEGORY_BREAKDOWN},
+        "GRI 405-1-b-iii": {RequirementFacet.REQUIRES_EMPLOYEE_CATEGORY_BREAKDOWN},
+        "GRI 405-2-a": {RequirementFacet.REQUIRES_EMPLOYEE_CATEGORY_BREAKDOWN, RequirementFacet.REQUIRES_REGION_BREAKDOWN},
+    }
+
+    for requirement_id, expected_facets in cases.items():
+        contract = get_requirement_contract(requirement_id)
+        assert contract is not None
+        assert contract.semantic_group is SemanticGroup.BREAKDOWN_DIMENSION
+        assert set(contract.facets) == expected_facets
+        assert EvidenceKind.KPI_VALUE in contract.evidence_kinds
