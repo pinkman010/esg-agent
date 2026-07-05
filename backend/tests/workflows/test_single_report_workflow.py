@@ -763,3 +763,52 @@ def test_single_report_workflow_supplements_candidate_pages_for_ghg_350_rules(tm
     assert enriched[5].candidate_pdf_pages == [20, 63]
     assert enriched[6].candidate_pdf_pages == []
     assert enriched[7].candidate_pdf_pages == [74]
+
+
+def test_single_report_workflow_uses_contract_candidates_without_report_index_entry(tmp_path):
+    pack_path = tmp_path / "pack.json"
+    pack_path.write_text(
+        json.dumps(
+            {
+                "requirements": [
+                    {"canonical_disclosure_id": "2-1", "report_index_pdf_page": 71, "report_index_report_page": 70}
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    workflow = SingleReportWorkflow(
+        None,
+        FakeParser(),
+        FakeAdapter(),
+        DisclosureAgent(),
+        requirement_pack_path=pack_path,
+    )
+    pages = [
+        PageExtraction(report_id="report-1", page_number=33, text="员工性别结构"),
+        PageExtraction(report_id="report-1", page_number=65, text="员工性别结构 管理层年龄"),
+        PageExtraction(report_id="report-1", page_number=66, text="同级别女性员工平均总时薪占男性员工平均总时薪的 100%"),
+    ]
+    from src.domain.models import DisclosureTask
+
+    tasks = [
+        DisclosureTask(
+            task_id="task-405-2-a",
+            run_id="run-1",
+            report_id="report-1",
+            standard_id="GRI 405",
+            standard_version="2016",
+            disclosure_id="GRI 405-2",
+            requirement_id="GRI 405-2-a",
+            requirement_text="pay ratio.",
+            keywords=["女性员工平均总时薪"],
+        )
+    ]
+
+    enriched = workflow._attach_report_index_candidates(pages, tasks)
+
+    assert enriched[0].candidate_pdf_pages == [33, 65, 66]
+    assert enriched[0].candidate_report_pages == [32, 64, 65]
+    assert enriched[0].report_index_pdf_page == 71
+    assert enriched[0].report_index_report_page == 70
+    assert enriched[0].candidate_pages == [33, 65, 66]

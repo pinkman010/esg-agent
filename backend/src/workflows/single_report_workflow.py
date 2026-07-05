@@ -92,6 +92,34 @@ class SingleReportWorkflow:
             disclosure_id = task.disclosure_id.removeprefix("GRI ").strip()
             entry = report_index.get(disclosure_id)
             if entry is None:
+                override_pages = self._candidate_page_overrides(task)
+                if override_pages is not None:
+                    page_count = max((page.page_number for page in pages), default=0)
+                    candidate_pages = [page for page in override_pages if 1 <= page <= page_count]
+                    fallback_index_pair = self._default_report_index_pair(raw.get("requirements", []))
+                    candidate_report_pages: list[int | None] = []
+                    update = {
+                        "candidate_pages": candidate_pages,
+                        "candidate_pdf_pages": candidate_pages,
+                        "candidate_report_pages": candidate_report_pages,
+                        "candidate_page_source": "requirement_contract",
+                    }
+                    if fallback_index_pair is not None:
+                        index_pdf_page, index_report_page = fallback_index_pair
+                        candidate_report_pages = self._candidate_report_pages(candidate_pages, index_pdf_page, index_report_page)
+                        update.update(
+                            {
+                                "candidate_report_pages": candidate_report_pages,
+                                "report_index_pdf_page": index_pdf_page,
+                                "report_index_report_page": index_report_page,
+                            }
+                        )
+                    enriched_tasks.append(
+                        task.model_copy(
+                            update=update
+                        )
+                    )
+                    continue
                 enriched_tasks.append(task)
                 continue
             candidate_pages = self._supplement_candidate_pages(task, pages, entry.candidate_pages)
@@ -144,6 +172,14 @@ class SingleReportWorkflow:
             report_page = pdf_page - offset
             report_pages.append(report_page if report_page > 0 else None)
         return report_pages
+
+    def _default_report_index_pair(self, requirements: list[dict]) -> tuple[int, int] | None:
+        for requirement in requirements:
+            index_pdf_page = requirement.get("report_index_pdf_page")
+            index_report_page = requirement.get("report_index_report_page")
+            if isinstance(index_pdf_page, int) and isinstance(index_report_page, int):
+                return index_pdf_page, index_report_page
+        return None
 
     def _supplement_candidate_pages(
         self,

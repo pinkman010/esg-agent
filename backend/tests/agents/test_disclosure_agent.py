@@ -2860,6 +2860,7 @@ def test_disclosure_agent_handles_404_and_405_partial_rules():
         ("GRI 404-3-a", "GRI 404-3", [(35, "绩效和职业发展考核"), (66, "接受定期绩效和职业发展考核的员工比例 100%")], AssessmentVerdict.PARTIALLY_DISCLOSED, [35, 66]),
         ("GRI 405-1-a", "GRI 405-1", [(33, "女性高管比例 管理层年龄 少数民族高管比例 外籍高管比例"), (65, "管理层年龄 女性高管比例 少数民族高管比例 外籍高管比例")], AssessmentVerdict.PARTIALLY_DISCLOSED, [33, 65]),
         ("GRI 405-1-a-i", "GRI 405-1", [(33, "女性高管比例 管理层年龄 少数民族高管比例 外籍高管比例"), (65, "管理层年龄 女性高管比例 少数民族高管比例 外籍高管比例")], AssessmentVerdict.PARTIALLY_DISCLOSED, [33, 65]),
+        ("GRI 405-2-a", "GRI 405-2", [(33, "员工性别结构 员工职级结构"), (65, "员工性别结构 管理层年龄"), (66, "同级别女性员工平均总时薪占男性员工平均总时薪的 100%")], AssessmentVerdict.PARTIALLY_DISCLOSED, [33, 65, 66]),
     ]
     for requirement_id, disclosure_id, page_texts, verdict, expected_pages in cases:
         task = DisclosureTask(
@@ -2894,4 +2895,179 @@ def test_disclosure_agent_handles_404_and_405_partial_rules():
         assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
         assert [item.source_page for item in result.assessment.evidence] == expected_pages
         if any(page in {65, 66} for page in expected_pages):
+            assert PageQualityFlag.COMPLEX_TABLE in result.assessment.evidence[-1].quality_flags
+
+
+def test_disclosure_agent_does_not_use_generic_pages_for_405_2_pay_ratio():
+    task = DisclosureTask(
+        task_id="task-GRI 405-2-a",
+        run_id="run-1",
+        report_id="report-1",
+        standard_id="GRI 405",
+        standard_version="2016",
+        disclosure_id="GRI 405-2",
+        requirement_id="GRI 405-2-a",
+        requirement_text="Ratio of the basic salary and remuneration of women to men for each employee category, by significant locations of operation.",
+        keywords=["报告边界", "多样化", "供应商", "温室气体"],
+        candidate_pages=[3, 25, 53, 64],
+        candidate_page_source="gri_report_index+requirement_supplement",
+        index_page=75,
+    )
+    chunks = [
+        DocumentChunk(
+            chunk_id="chunk-GRI 405-2-a-3",
+            report_id="report-1",
+            text="报告边界包含远景能源所有实际运营场所。",
+            source_page=3,
+            source_method=EvidenceSourceMethod.PDFPLUMBER,
+            source_file_hash="hash-1",
+        ),
+        DocumentChunk(
+            chunk_id="chunk-GRI 405-2-a-25",
+            report_id="report-1",
+            text="多样化的节水举措。",
+            source_page=25,
+            source_method=EvidenceSourceMethod.PDFPLUMBER,
+            source_file_hash="hash-1",
+        ),
+        DocumentChunk(
+            chunk_id="chunk-GRI 405-2-a-53",
+            report_id="report-1",
+            text="供应商行为准则。",
+            source_page=53,
+            source_method=EvidenceSourceMethod.PDFPLUMBER,
+            source_file_hash="hash-1",
+        ),
+        DocumentChunk(
+            chunk_id="chunk-GRI 405-2-a-64",
+            report_id="report-1",
+            text="温室气体核算方法。",
+            source_page=64,
+            source_method=EvidenceSourceMethod.PDFPLUMBER,
+            source_file_hash="hash-1",
+        ),
+    ]
+
+    result = DisclosureAgent().analyze(task, chunks, confirm_llm=False)
+
+    assert result.assessment.verdict is AssessmentVerdict.UNKNOWN
+    assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+    assert result.assessment.evidence == []
+
+
+def test_disclosure_agent_handles_406_to_409_human_rights_boundary_rules():
+    cases = [
+        ("GRI 406-1-a", "GRI 406-1", [(32, "报告期内，公司无歧视事件发生")], AssessmentVerdict.DISCLOSED, ReviewStatus.NOT_REQUIRED, [32]),
+        ("GRI 406-1-b", "GRI 406-1", [(32, "报告期内，公司无歧视事件发生")], AssessmentVerdict.UNKNOWN, ReviewStatus.NEEDS_MANUAL_REVIEW, []),
+        ("GRI 406-1-b-i", "GRI 406-1", [(32, "报告期内，公司无歧视事件发生")], AssessmentVerdict.UNKNOWN, ReviewStatus.NEEDS_MANUAL_REVIEW, []),
+        ("GRI 406-1-b-ii", "GRI 406-1", [(32, "报告期内，公司无歧视事件发生")], AssessmentVerdict.UNKNOWN, ReviewStatus.NEEDS_MANUAL_REVIEW, []),
+        ("GRI 406-1-b-iii", "GRI 406-1", [(32, "报告期内，公司无歧视事件发生")], AssessmentVerdict.UNKNOWN, ReviewStatus.NEEDS_MANUAL_REVIEW, []),
+        ("GRI 406-1-b-iv", "GRI 406-1", [(32, "报告期内，公司无歧视事件发生")], AssessmentVerdict.UNKNOWN, ReviewStatus.NEEDS_MANUAL_REVIEW, []),
+        ("GRI 407-1-a", "GRI 407-1", [(33, "集体协议覆盖率 100% 正式选举职工代表覆盖率 100%")], AssessmentVerdict.UNKNOWN, ReviewStatus.NEEDS_MANUAL_REVIEW, []),
+        ("GRI 407-1-a-i", "GRI 407-1", [(33, "集体协议覆盖率 100%")], AssessmentVerdict.UNKNOWN, ReviewStatus.NEEDS_MANUAL_REVIEW, []),
+        ("GRI 407-1-a-ii", "GRI 407-1", [(66, "正式选举职工代表覆盖率 100%")], AssessmentVerdict.UNKNOWN, ReviewStatus.NEEDS_MANUAL_REVIEW, []),
+        ("GRI 407-1-b", "GRI 407-1", [(33, "员工代表 沟通机制"), (66, "集体协议覆盖率 100% 正式选举职工代表覆盖率 100%")], AssessmentVerdict.PARTIALLY_DISCLOSED, ReviewStatus.NEEDS_MANUAL_REVIEW, [33, 66]),
+        ("GRI 408-1-a", "GRI 408-1", [(32, "禁止使用童工及童工补救管理 青年员工保护"), (52, "供应商行为准则"), (53, "供应商社会责任尽调 审计")], AssessmentVerdict.PARTIALLY_DISCLOSED, ReviewStatus.NEEDS_MANUAL_REVIEW, [32, 52, 53]),
+        ("GRI 408-1-a-i", "GRI 408-1", [(32, "禁止使用童工政策"), (52, "供应商不得使用童工")], AssessmentVerdict.PARTIALLY_DISCLOSED, ReviewStatus.NEEDS_MANUAL_REVIEW, [32, 52]),
+        ("GRI 408-1-a-ii", "GRI 408-1", [(32, "禁止使用童工及青年员工保护管理细则"), (52, "供应商不得使用童工"), (53, "供应商筛查 尽调 审计")], AssessmentVerdict.PARTIALLY_DISCLOSED, ReviewStatus.NEEDS_MANUAL_REVIEW, [32, 52, 53]),
+        ("GRI 408-1-b", "GRI 408-1", [(32, "禁止使用童工政策")], AssessmentVerdict.UNKNOWN, ReviewStatus.NEEDS_MANUAL_REVIEW, []),
+        ("GRI 408-1-b-i", "GRI 408-1", [(52, "供应商不得使用童工")], AssessmentVerdict.UNKNOWN, ReviewStatus.NEEDS_MANUAL_REVIEW, []),
+        ("GRI 408-1-b-ii", "GRI 408-1", [(52, "供应商不得使用童工")], AssessmentVerdict.UNKNOWN, ReviewStatus.NEEDS_MANUAL_REVIEW, []),
+        ("GRI 408-1-c", "GRI 408-1", [(32, "禁止使用童工及青年员工保护"), (52, "供应商不得使用童工"), (53, "供应商筛查 尽调 审计")], AssessmentVerdict.PARTIALLY_DISCLOSED, ReviewStatus.NEEDS_MANUAL_REVIEW, [32, 52, 53]),
+        ("GRI 409-1-a", "GRI 409-1", [(32, "防止强迫性劳动管理细则"), (52, "供应商劳工与人权准则"), (53, "英国现代奴役法 尽调流程")], AssessmentVerdict.PARTIALLY_DISCLOSED, ReviewStatus.NEEDS_MANUAL_REVIEW, [32, 52, 53]),
+        ("GRI 409-1-a-i", "GRI 409-1", [(32, "防止强迫性劳动管理细则")], AssessmentVerdict.UNKNOWN, ReviewStatus.NEEDS_MANUAL_REVIEW, []),
+        ("GRI 409-1-a-ii", "GRI 409-1", [(52, "供应商劳工与人权准则")], AssessmentVerdict.UNKNOWN, ReviewStatus.NEEDS_MANUAL_REVIEW, []),
+        ("GRI 409-1-b", "GRI 409-1", [(32, "防止强迫性劳动管理细则"), (52, "供应商劳工与人权准则"), (53, "英国现代奴役法 尽调流程")], AssessmentVerdict.PARTIALLY_DISCLOSED, ReviewStatus.NEEDS_MANUAL_REVIEW, [32, 52, 53]),
+    ]
+    for requirement_id, disclosure_id, page_texts, verdict, review_status, expected_pages in cases:
+        task = DisclosureTask(
+            task_id=f"task-{requirement_id}",
+            run_id="run-1",
+            report_id="report-1",
+            standard_id=disclosure_id.rsplit("-", 1)[0],
+            standard_version="2016",
+            disclosure_id=disclosure_id,
+            requirement_id=requirement_id,
+            requirement_text="human rights boundary requirement.",
+            keywords=["歧视", "集体协议", "童工", "强迫劳动", "供应商"],
+            candidate_pages=[page for page, _ in page_texts],
+            candidate_page_source="gri_report_index+requirement_supplement",
+            index_page=76,
+        )
+        chunks = [
+            DocumentChunk(
+                chunk_id=f"chunk-{requirement_id}-{page}",
+                report_id="report-1",
+                text=text,
+                source_page=page,
+                source_method=EvidenceSourceMethod.PDFPLUMBER,
+                source_file_hash="hash-1",
+            )
+            for page, text in page_texts
+        ]
+
+        result = DisclosureAgent().analyze(task, chunks, confirm_llm=False)
+
+        assert result.assessment.verdict is verdict
+        assert result.assessment.review_status is review_status
+        assert [item.source_page for item in result.assessment.evidence] == expected_pages
+        if 66 in expected_pages:
+            assert PageQualityFlag.COMPLEX_TABLE in result.assessment.evidence[-1].quality_flags
+
+
+def test_disclosure_agent_handles_413_and_414_community_and_supplier_social_rules():
+    cases = [
+        ("GRI 413-1-a", "GRI 413-1", [(14, "利益相关方识别与沟通"), (42, "乡村振兴 教育帮扶"), (43, "森林保护"), (44, "社区捐赠 公益项目")], AssessmentVerdict.PARTIALLY_DISCLOSED, ReviewStatus.NEEDS_MANUAL_REVIEW, [14, 42, 43, 44]),
+        ("GRI 413-1-a-i", "GRI 413-1", [(14, "利益相关方识别与沟通")], AssessmentVerdict.UNKNOWN, ReviewStatus.NEEDS_MANUAL_REVIEW, []),
+        ("GRI 413-1-a-ii", "GRI 413-1", [(42, "社区项目")], AssessmentVerdict.UNKNOWN, ReviewStatus.NEEDS_MANUAL_REVIEW, []),
+        ("GRI 413-1-a-iii", "GRI 413-1", [(42, "社区项目")], AssessmentVerdict.UNKNOWN, ReviewStatus.NEEDS_MANUAL_REVIEW, []),
+        ("GRI 413-1-a-iv", "GRI 413-1", [(14, "利益相关方识别与沟通"), (42, "社区发展项目")], AssessmentVerdict.PARTIALLY_DISCLOSED, ReviewStatus.NEEDS_MANUAL_REVIEW, [14, 42]),
+        ("GRI 413-1-a-v", "GRI 413-1", [(14, "利益相关方类别 关注议题 沟通渠道"), (42, "乡村振兴 教育帮扶"), (43, "森林保护"), (44, "公益项目")], AssessmentVerdict.PARTIALLY_DISCLOSED, ReviewStatus.NEEDS_MANUAL_REVIEW, [14, 42, 43, 44]),
+        ("GRI 413-1-a-vi", "GRI 413-1", [(42, "社区项目")], AssessmentVerdict.UNKNOWN, ReviewStatus.NEEDS_MANUAL_REVIEW, []),
+        ("GRI 413-1-a-vii", "GRI 413-1", [(42, "社区项目")], AssessmentVerdict.UNKNOWN, ReviewStatus.NEEDS_MANUAL_REVIEW, []),
+        ("GRI 413-1-a-viii", "GRI 413-1", [(42, "社区项目")], AssessmentVerdict.UNKNOWN, ReviewStatus.NEEDS_MANUAL_REVIEW, []),
+        ("GRI 413-2-a", "GRI 413-2", [(42, "社区项目")], AssessmentVerdict.UNKNOWN, ReviewStatus.NEEDS_MANUAL_REVIEW, []),
+        ("GRI 413-2-a-i", "GRI 413-2", [(42, "社区项目")], AssessmentVerdict.UNKNOWN, ReviewStatus.NEEDS_MANUAL_REVIEW, []),
+        ("GRI 413-2-a-ii", "GRI 413-2", [(42, "社区项目")], AssessmentVerdict.UNKNOWN, ReviewStatus.NEEDS_MANUAL_REVIEW, []),
+        ("GRI 414-1-a", "GRI 414-1", [(67, "使用社会评价维度筛选的新供应商百分比（%） 100")], AssessmentVerdict.DISCLOSED, ReviewStatus.NOT_REQUIRED, [67]),
+        ("GRI 414-2-a", "GRI 414-2", [(67, "开展社会影响评估的供应商数量（个） 85")], AssessmentVerdict.DISCLOSED, ReviewStatus.NOT_REQUIRED, [67]),
+        ("GRI 414-2-b", "GRI 414-2", [(67, "具有重大实际/潜在负面社会影响的供应商数量（个） 0")], AssessmentVerdict.DISCLOSED, ReviewStatus.NOT_REQUIRED, [67]),
+        ("GRI 414-2-c", "GRI 414-2", [(52, "供应商社会责任管理"), (67, "具有重大实际/潜在负面社会影响的供应商数量（个） 0")], AssessmentVerdict.PARTIALLY_DISCLOSED, ReviewStatus.NEEDS_MANUAL_REVIEW, [52, 67]),
+        ("GRI 414-2-d", "GRI 414-2", [(54, "供应商改进机制"), (67, "参与改进行动的供应商数量")], AssessmentVerdict.PARTIALLY_DISCLOSED, ReviewStatus.NEEDS_MANUAL_REVIEW, [54, 67]),
+        ("GRI 414-2-e", "GRI 414-2", [(54, "供应商退出机制"), (67, "终止关系的供应商")], AssessmentVerdict.PARTIALLY_DISCLOSED, ReviewStatus.NEEDS_MANUAL_REVIEW, [54, 67]),
+        ("GRI 416-1-a", "GRI 416-1", [(46, "产品质量和安全管理体系 产品开发安全风险管理流程")], AssessmentVerdict.UNKNOWN, ReviewStatus.NEEDS_MANUAL_REVIEW, []),
+    ]
+    for requirement_id, disclosure_id, page_texts, verdict, review_status, expected_pages in cases:
+        task = DisclosureTask(
+            task_id=f"task-{requirement_id}",
+            run_id="run-1",
+            report_id="report-1",
+            standard_id=disclosure_id.rsplit("-", 1)[0],
+            standard_version="2016",
+            disclosure_id=disclosure_id,
+            requirement_id=requirement_id,
+            requirement_text="community or supplier social requirement.",
+            keywords=["社区", "供应商", "社会影响", "产品质量"],
+            candidate_pages=[page for page, _ in page_texts],
+            candidate_page_source="gri_report_index+requirement_supplement",
+            index_page=76,
+        )
+        chunks = [
+            DocumentChunk(
+                chunk_id=f"chunk-{requirement_id}-{page}",
+                report_id="report-1",
+                text=text,
+                source_page=page,
+                source_method=EvidenceSourceMethod.PDFPLUMBER,
+                source_file_hash="hash-1",
+            )
+            for page, text in page_texts
+        ]
+
+        result = DisclosureAgent().analyze(task, chunks, confirm_llm=False)
+
+        assert result.assessment.verdict is verdict
+        assert result.assessment.review_status is review_status
+        assert [item.source_page for item in result.assessment.evidence] == expected_pages
+        if 67 in expected_pages:
             assert PageQualityFlag.COMPLEX_TABLE in result.assessment.evidence[-1].quality_flags
