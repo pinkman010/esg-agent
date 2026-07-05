@@ -50,6 +50,11 @@ class SemanticGroup(StrEnum):
     EMPLOYEE_KPI = "employee_kpi"
     BENEFITS_POLICY = "benefits_policy"
     HUMAN_RIGHTS_POLICY = "human_rights_policy"
+    NOTICE_PERIOD = "notice_period"
+    TRAINING_PROGRAM = "training_program"
+    COMMUNITY_PROGRAM = "community_program"
+    PRODUCT_INFORMATION = "product_information"
+    PRIVACY_MANAGEMENT = "privacy_management"
 
 
 @dataclass(frozen=True)
@@ -213,6 +218,50 @@ def evaluate_ontology_verdict(
                 review_status=ReviewStatus.NEEDS_MANUAL_REVIEW,
                 rationale="Human rights policy and management evidence is directionally relevant, but it does not identify specific high-risk operations, suppliers, regions, or risk results.",
                 missing_items=("高风险运营点、供应商、地区或风险识别结果",),
+            )
+
+    if semantic_group is SemanticGroup.NOTICE_PERIOD:
+        if EvidenceKind.KPI_VALUE in evidence_kinds or EvidenceKind.MANAGEMENT_MECHANISM in evidence_kinds:
+            return OntologyVerdictResult(
+                verdict=AssessmentVerdict.DISCLOSED,
+                review_status=ReviewStatus.NOT_REQUIRED,
+                rationale="Notice period evidence directly satisfies the minimum notice period requirement.",
+            )
+
+    if semantic_group is SemanticGroup.TRAINING_PROGRAM:
+        if EvidenceKind.MANAGEMENT_MECHANISM in evidence_kinds:
+            return OntologyVerdictResult(
+                verdict=AssessmentVerdict.PARTIALLY_DISCLOSED,
+                review_status=ReviewStatus.NEEDS_MANUAL_REVIEW,
+                rationale="Training program evidence is directionally relevant, but it does not fully disclose transition assistance or all GRI-required program scope details.",
+                missing_items=("完整项目范围或转型援助说明",),
+            )
+
+    if semantic_group is SemanticGroup.COMMUNITY_PROGRAM:
+        if EvidenceKind.CASE in evidence_kinds or EvidenceKind.MANAGEMENT_MECHANISM in evidence_kinds:
+            return OntologyVerdictResult(
+                verdict=AssessmentVerdict.PARTIALLY_DISCLOSED,
+                review_status=ReviewStatus.NEEDS_MANUAL_REVIEW,
+                rationale="Community program evidence is directionally relevant, but it does not disclose operation-level coverage or complete impact assessment scope.",
+                missing_items=("运营点覆盖比例", "影响评估覆盖范围"),
+            )
+
+    if semantic_group is SemanticGroup.PRODUCT_INFORMATION:
+        if EvidenceKind.MANAGEMENT_MECHANISM in evidence_kinds or EvidenceKind.POLICY in evidence_kinds:
+            return OntologyVerdictResult(
+                verdict=AssessmentVerdict.PARTIALLY_DISCLOSED,
+                review_status=ReviewStatus.NEEDS_MANUAL_REVIEW,
+                rationale="Product information evidence is directionally relevant, but it does not fully disclose labeling procedures, information categories, product categories, or coverage.",
+                missing_items=("标签程序", "信息类型清单", "适用类别和覆盖比例"),
+            )
+
+    if semantic_group is SemanticGroup.PRIVACY_MANAGEMENT:
+        if EvidenceKind.MANAGEMENT_MECHANISM in evidence_kinds or EvidenceKind.EXPLICIT_ZERO_STATEMENT in evidence_kinds:
+            return OntologyVerdictResult(
+                verdict=AssessmentVerdict.PARTIALLY_DISCLOSED,
+                review_status=ReviewStatus.NEEDS_MANUAL_REVIEW,
+                rationale="Privacy management evidence is directionally relevant, but it does not directly disclose identified customer data leaks, thefts, or losses.",
+                missing_items=("已识别客户数据泄露、被盗或丢失数量",),
             )
 
     if semantic_group is SemanticGroup.SUPPLIER_ASSESSMENT:

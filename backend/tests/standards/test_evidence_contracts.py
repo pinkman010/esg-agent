@@ -54,7 +54,7 @@ def test_supplier_assessment_contracts_have_shared_ontology_metadata():
         "GRI 414-2-a": {RequirementFacet.REQUIRES_COUNT},
         "GRI 414-2-b": {RequirementFacet.REQUIRES_COUNT},
         "GRI 414-2-c": {RequirementFacet.REQUIRES_IMPACT_TYPE},
-        "GRI 414-2-d": {RequirementFacet.REQUIRES_COUNT},
+        "GRI 414-2-d": {RequirementFacet.REQUIRES_PERCENTAGE},
         "GRI 414-2-e": {RequirementFacet.REQUIRES_PERCENTAGE, RequirementFacet.REQUIRES_REASON_WHY},
     }
 
@@ -63,7 +63,8 @@ def test_supplier_assessment_contracts_have_shared_ontology_metadata():
         assert contract is not None
         assert contract.semantic_group is SemanticGroup.SUPPLIER_ASSESSMENT
         assert set(contract.facets) == expected_facets
-        assert EvidenceKind.KPI_VALUE in contract.evidence_kinds
+        expected_kind = EvidenceKind.MANAGEMENT_MECHANISM if requirement_id == "GRI 414-2-d" else EvidenceKind.KPI_VALUE
+        assert expected_kind in contract.evidence_kinds
 
 
 def test_ohs_injury_and_ill_health_contracts_share_semantic_group():
@@ -390,6 +391,80 @@ def test_human_rights_policy_contracts_have_ontology_metadata():
         assert contract is not None
         assert contract.semantic_group is SemanticGroup.HUMAN_RIGHTS_POLICY
         assert RequirementFacet.REQUIRES_RISK_LOCATION in contract.facets
+        assert set(contract.evidence_kinds) == expected_evidence_kinds
+        assert contract.verdict is None
+        assert contract.review_status is None
+
+
+def test_residual_evidence_backed_contracts_have_ontology_metadata():
+    cases = {
+        "GRI 308-2-d": (
+            SemanticGroup.SUPPLIER_ASSESSMENT,
+            {RequirementFacet.REQUIRES_PERCENTAGE},
+            {EvidenceKind.KPI_VALUE},
+        ),
+        "GRI 402-1-a": (
+            SemanticGroup.NOTICE_PERIOD,
+            {RequirementFacet.REQUIRES_COUNT},
+            {EvidenceKind.KPI_VALUE},
+        ),
+        "GRI 404-2-a": (
+            SemanticGroup.TRAINING_PROGRAM,
+            {RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION},
+            {EvidenceKind.MANAGEMENT_MECHANISM},
+        ),
+        "GRI 406-1-a": (
+            SemanticGroup.ZERO_EVENT_COMPLIANCE,
+            {RequirementFacet.REQUIRES_COUNT},
+            {EvidenceKind.EXPLICIT_ZERO_STATEMENT},
+        ),
+        "GRI 413-1-a": (
+            SemanticGroup.COMMUNITY_PROGRAM,
+            {RequirementFacet.REQUIRES_PERCENTAGE, RequirementFacet.REQUIRES_IMPACT_TYPE},
+            {EvidenceKind.CASE, EvidenceKind.MANAGEMENT_MECHANISM},
+        ),
+        "GRI 413-1-a-iv": (
+            SemanticGroup.COMMUNITY_PROGRAM,
+            {RequirementFacet.REQUIRES_PERCENTAGE},
+            {EvidenceKind.CASE, EvidenceKind.MANAGEMENT_MECHANISM},
+        ),
+        "GRI 413-1-a-v": (
+            SemanticGroup.COMMUNITY_PROGRAM,
+            {RequirementFacet.REQUIRES_PERCENTAGE, RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION},
+            {EvidenceKind.CASE, EvidenceKind.MANAGEMENT_MECHANISM},
+        ),
+        "GRI 414-2-d": (
+            SemanticGroup.SUPPLIER_ASSESSMENT,
+            {RequirementFacet.REQUIRES_PERCENTAGE},
+            {EvidenceKind.MANAGEMENT_MECHANISM},
+        ),
+        "GRI 417-1-a": (
+            SemanticGroup.PRODUCT_INFORMATION,
+            {RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION},
+            {EvidenceKind.MANAGEMENT_MECHANISM},
+        ),
+        "GRI 417-1-a-ii": (
+            SemanticGroup.PRODUCT_INFORMATION,
+            {RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION},
+            {EvidenceKind.MANAGEMENT_MECHANISM},
+        ),
+        "GRI 417-1-a-iii": (
+            SemanticGroup.PRODUCT_INFORMATION,
+            {RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION},
+            {EvidenceKind.MANAGEMENT_MECHANISM},
+        ),
+        "GRI 418-1-b": (
+            SemanticGroup.PRIVACY_MANAGEMENT,
+            {RequirementFacet.REQUIRES_COUNT},
+            {EvidenceKind.MANAGEMENT_MECHANISM, EvidenceKind.EXPLICIT_ZERO_STATEMENT},
+        ),
+    }
+
+    for requirement_id, (expected_group, expected_facets, expected_evidence_kinds) in cases.items():
+        contract = get_requirement_contract(requirement_id)
+        assert contract is not None
+        assert contract.semantic_group is expected_group
+        assert set(contract.facets) == expected_facets
         assert set(contract.evidence_kinds) == expected_evidence_kinds
         assert contract.verdict is None
         assert contract.review_status is None

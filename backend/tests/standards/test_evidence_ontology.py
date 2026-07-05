@@ -378,3 +378,62 @@ def test_human_rights_policy_stays_partial_without_risk_results():
     assert result.verdict is AssessmentVerdict.PARTIALLY_DISCLOSED
     assert result.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
     assert "高风险运营点、供应商、地区或风险识别结果" in result.missing_items
+
+
+def test_notice_period_discloses_direct_notice_kpi():
+    result = evaluate_ontology_verdict(
+        semantic_group=SemanticGroup.NOTICE_PERIOD,
+        facets={RequirementFacet.REQUIRES_COUNT},
+        evidence_kinds={EvidenceKind.KPI_VALUE},
+    )
+
+    assert result.verdict is AssessmentVerdict.DISCLOSED
+    assert result.review_status is ReviewStatus.NOT_REQUIRED
+
+
+def test_training_program_stays_partial_without_complete_scope():
+    result = evaluate_ontology_verdict(
+        semantic_group=SemanticGroup.TRAINING_PROGRAM,
+        facets={RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION},
+        evidence_kinds={EvidenceKind.MANAGEMENT_MECHANISM},
+    )
+
+    assert result.verdict is AssessmentVerdict.PARTIALLY_DISCLOSED
+    assert result.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+    assert "完整项目范围或转型援助说明" in result.missing_items
+
+
+def test_community_program_stays_partial_without_operation_coverage():
+    result = evaluate_ontology_verdict(
+        semantic_group=SemanticGroup.COMMUNITY_PROGRAM,
+        facets={RequirementFacet.REQUIRES_PERCENTAGE},
+        evidence_kinds={EvidenceKind.CASE},
+    )
+
+    assert result.verdict is AssessmentVerdict.PARTIALLY_DISCLOSED
+    assert result.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+    assert "运营点覆盖比例" in result.missing_items
+
+
+def test_product_information_stays_partial_without_labeling_coverage():
+    result = evaluate_ontology_verdict(
+        semantic_group=SemanticGroup.PRODUCT_INFORMATION,
+        facets={RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION},
+        evidence_kinds={EvidenceKind.MANAGEMENT_MECHANISM},
+    )
+
+    assert result.verdict is AssessmentVerdict.PARTIALLY_DISCLOSED
+    assert result.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+    assert "标签程序" in result.missing_items
+
+
+def test_privacy_management_stays_partial_without_identified_leak_count():
+    result = evaluate_ontology_verdict(
+        semantic_group=SemanticGroup.PRIVACY_MANAGEMENT,
+        facets={RequirementFacet.REQUIRES_COUNT},
+        evidence_kinds={EvidenceKind.MANAGEMENT_MECHANISM, EvidenceKind.EXPLICIT_ZERO_STATEMENT},
+    )
+
+    assert result.verdict is AssessmentVerdict.PARTIALLY_DISCLOSED
+    assert result.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+    assert "已识别客户数据泄露、被盗或丢失数量" in result.missing_items
