@@ -79,6 +79,29 @@ def test_zero_event_compliance_does_not_split_complaint_sources():
     assert "投诉来源分类" in result.missing_items
 
 
+def test_ghg_emissions_kpi_discloses_direct_emissions_amount():
+    result = evaluate_ontology_verdict(
+        semantic_group=SemanticGroup.GHG_EMISSIONS_KPI,
+        facets={RequirementFacet.REQUIRES_COUNT},
+        evidence_kinds={EvidenceKind.KPI_VALUE},
+    )
+
+    assert result.verdict is AssessmentVerdict.DISCLOSED
+    assert result.review_status is ReviewStatus.NOT_REQUIRED
+
+
+def test_ghg_emissions_kpi_keeps_methodology_partial():
+    result = evaluate_ontology_verdict(
+        semantic_group=SemanticGroup.GHG_EMISSIONS_KPI,
+        facets={RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION},
+        evidence_kinds={EvidenceKind.METHODOLOGY},
+    )
+
+    assert result.verdict is AssessmentVerdict.PARTIALLY_DISCLOSED
+    assert result.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+    assert "完整温室气体核算方法或排放因子口径" in result.missing_items
+
+
 def test_ontology_keeps_security_training_unknown_for_general_training_evidence():
     result = evaluate_ontology_verdict(
         semantic_group=SemanticGroup.HUMAN_RIGHTS_TRAINING,

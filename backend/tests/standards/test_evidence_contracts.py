@@ -12,8 +12,11 @@ def test_evidence_contract_returns_305_2_allowed_and_forbidden_pages():
     assert contract.forbidden_pages == (3,)
     assert contract.candidate_pages == (20, 63)
     assert contract.kpi_table_pages == (63,)
-    assert contract.verdict is AssessmentVerdict.DISCLOSED
-    assert contract.review_status is ReviewStatus.NOT_REQUIRED
+    assert contract.verdict is None
+    assert contract.review_status is None
+    assert contract.semantic_group is SemanticGroup.GHG_EMISSIONS_KPI
+    assert contract.facets == (RequirementFacet.REQUIRES_COUNT,)
+    assert contract.evidence_kinds == (EvidenceKind.KPI_VALUE,)
 
 
 def test_evidence_contract_returns_unknown_only_305_2_c():
@@ -157,5 +160,29 @@ def test_zero_event_compliance_contracts_have_pilot_ontology_metadata():
         assert contract.semantic_group is SemanticGroup.ZERO_EVENT_COMPLIANCE
         assert set(contract.facets) == expected_facets
         assert EvidenceKind.EXPLICIT_ZERO_STATEMENT in contract.evidence_kinds
+        assert contract.verdict is None
+        assert contract.review_status is None
+
+
+def test_ghg_emissions_contracts_have_ontology_metadata():
+    cases = {
+        "GRI 305-1-a": ({RequirementFacet.REQUIRES_COUNT}, {EvidenceKind.KPI_VALUE}),
+        "GRI 305-1-e": ({RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION}, {EvidenceKind.METHODOLOGY}),
+        "GRI 305-1-g": ({RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION}, {EvidenceKind.METHODOLOGY}),
+        "GRI 305-2-a": ({RequirementFacet.REQUIRES_COUNT}, {EvidenceKind.KPI_VALUE}),
+        "GRI 305-2-b": ({RequirementFacet.REQUIRES_COUNT}, {EvidenceKind.KPI_VALUE}),
+        "GRI 305-2-e": ({RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION}, {EvidenceKind.METHODOLOGY}),
+        "GRI 305-2-g": ({RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION}, {EvidenceKind.METHODOLOGY}),
+        "GRI 305-3-a": ({RequirementFacet.REQUIRES_COUNT}, {EvidenceKind.KPI_VALUE}),
+        "GRI 305-3-f": ({RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION}, {EvidenceKind.METHODOLOGY}),
+        "GRI 305-5-a": ({RequirementFacet.REQUIRES_COUNT}, {EvidenceKind.KPI_VALUE}),
+    }
+
+    for requirement_id, (expected_facets, expected_evidence_kinds) in cases.items():
+        contract = get_requirement_contract(requirement_id)
+        assert contract is not None
+        assert contract.semantic_group is SemanticGroup.GHG_EMISSIONS_KPI
+        assert set(contract.facets) == expected_facets
+        assert set(contract.evidence_kinds) == expected_evidence_kinds
         assert contract.verdict is None
         assert contract.review_status is None

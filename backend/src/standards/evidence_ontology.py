@@ -42,6 +42,7 @@ class SemanticGroup(StrEnum):
     BREAKDOWN_DIMENSION = "breakdown_dimension"
     HUMAN_RIGHTS_TRAINING = "human_rights_training"
     ZERO_EVENT_COMPLIANCE = "zero_event_compliance"
+    GHG_EMISSIONS_KPI = "ghg_emissions_kpi"
 
 
 @dataclass(frozen=True)
@@ -96,6 +97,21 @@ def evaluate_ontology_verdict(
                 verdict=AssessmentVerdict.DISCLOSED,
                 review_status=ReviewStatus.NOT_REQUIRED,
                 rationale="Explicit zero-event evidence directly satisfies the count or concise no-incident statement requirement.",
+            )
+
+    if semantic_group is SemanticGroup.GHG_EMISSIONS_KPI:
+        if RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION in facets and EvidenceKind.METHODOLOGY in evidence_kinds:
+            return OntologyVerdictResult(
+                verdict=AssessmentVerdict.PARTIALLY_DISCLOSED,
+                review_status=ReviewStatus.NEEDS_MANUAL_REVIEW,
+                rationale="GHG methodology evidence is directionally relevant, but the full GRI-required method, factor, GWP, gas, base-year, or boundary detail remains subject to sufficiency review.",
+                missing_items=("完整温室气体核算方法或排放因子口径",),
+            )
+        if RequirementFacet.REQUIRES_COUNT in facets and EvidenceKind.KPI_VALUE in evidence_kinds:
+            return OntologyVerdictResult(
+                verdict=AssessmentVerdict.DISCLOSED,
+                review_status=ReviewStatus.NOT_REQUIRED,
+                rationale="GHG KPI evidence directly satisfies the emissions amount requirement.",
             )
 
     if semantic_group is SemanticGroup.SUPPLIER_ASSESSMENT:
