@@ -129,6 +129,14 @@ PDF 处理采用分级路由，不对所有页面默认全量 OCR。
   -> 分块入库并标记质量
 ```
 
+OCR 路由状态：
+
+- `pypdf + pdfplumber` 仍是默认主链路。
+- OCRmyPDF/Tesseract 已作为显式启用路由接入，默认不调用。
+- 分析请求可传 `enable_ocr=true` 启用 OCR。
+- 分析请求可传 `ocr_pages` 指定页码；未指定时只选择 `low_text_density` 或 `scanned` 页，且受 `OCR_MAX_PAGES` 限制。
+- OCR 产物保存为派生 PDF，后续由 `pdfplumber` 读取目标页文本并生成 `source_method=ocr` 的 chunk。
+
 关键原则：
 
 - 原始 PDF 不覆盖。
@@ -141,7 +149,7 @@ PDF 处理采用分级路由，不对所有页面默认全量 OCR。
 
 - pypdf/pdfplumber 主链路。
 - 页面预检测。
-- OCR/Tesseract 工具路径配置和关键页 OCR 入口。
+- OCRmyPDF/Tesseract 工具路径配置和显式关键页 OCR 入口。
 - Docling fallback 接口和状态字段。
 - VLM 辅助识别接口和状态字段。
 
@@ -237,7 +245,7 @@ GET  /api/audit/runs
 上传和分析分离：
 
 - 上传接口只保存文件和元数据。
-- 分析接口显式触发工作流。
+- 分析接口显式触发工作流；请求体支持 `confirm_llm`、`enable_ocr`、`ocr_pages`。
 - 前端通过 TanStack Query 轮询运行状态。
 
 ## 10. 测试与验证
@@ -276,7 +284,8 @@ GET  /api/audit/runs
 
 - 不默认全量同步 OCR。
 - 先做页面预检测。
-- 关键页 OCR，非关键页标记 `ocr_pending`。
+- 只有显式启用时才对指定页或低文本/扫描页 OCR。
+- OCR 页数受 `OCR_MAX_PAGES` 限制。
 - 后续可增量重跑。
 
 多模态识别幻觉：
