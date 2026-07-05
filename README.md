@@ -54,6 +54,12 @@ esg-agent/
 - PDF：混合多路由管线，包含 pypdf、pdfplumber、OCRmyPDF/Tesseract、Docling fallback、VLM 辅助识别。
 - 包管理：后端 uv，前端 pnpm。
 
+OCR 本地前置条件：
+
+- Tesseract 需可用，并安装 `chi_sim`、`eng` 语言包。
+- OCRmyPDF 由后端依赖安装；真实 OCR 执行还需要 Ghostscript 命令可用。
+- OCR 默认关闭，只在分析请求显式传入 `enable_ocr=true` 时运行。
+
 ## 开发提示
 
 - 修改技术设计前先更新 `docs/DESIGN.md`。
