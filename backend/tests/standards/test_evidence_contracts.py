@@ -1,6 +1,7 @@
 from src.domain.enums import AssessmentVerdict, ReviewStatus
 from src.standards.evidence_contracts import get_requirement_contract
 from src.standards.evidence_ontology import EvidenceKind, RequirementFacet, SemanticGroup
+from src.standards.no_evidence_guardrails import NoEvidenceGuardrailCategory, get_no_evidence_guardrail
 
 
 def test_evidence_contract_returns_305_2_allowed_and_forbidden_pages():
@@ -19,15 +20,21 @@ def test_evidence_contract_returns_305_2_allowed_and_forbidden_pages():
     assert contract.evidence_kinds == (EvidenceKind.KPI_VALUE,)
 
 
-def test_evidence_contract_returns_unknown_only_305_2_c():
+def test_evidence_contract_returns_no_evidence_metadata_for_305_2_c():
     contract = get_requirement_contract("GRI 305-2-c")
+    guardrail = get_no_evidence_guardrail("GRI 305-2-c")
 
     assert contract is not None
     assert contract.requirement_id == "GRI 305-2-c"
     assert contract.allowed_pages == ()
     assert contract.candidate_pages == ()
-    assert contract.verdict is AssessmentVerdict.UNKNOWN
-    assert contract.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+    assert contract.verdict is None
+    assert contract.review_status is None
+    assert contract.semantic_group is SemanticGroup.GHG_EMISSIONS_KPI
+    assert RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION in contract.facets
+    assert guardrail is not None
+    assert guardrail.category is NoEvidenceGuardrailCategory.METHOD_SCOPE
+    assert "温室气体种类" in guardrail.missing_items
 
 
 def test_supplier_environmental_and_social_contracts_share_semantic_group():

@@ -3327,3 +3327,137 @@ def test_disclosure_agent_applies_compilation_guardrail_missing_items_without_cr
     assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
     assert result.assessment.evidence == []
     assert "exclude incidents where organization was determined not at fault" in result.assessment.missing_items
+
+
+def test_no_evidence_guardrail_blocks_zero_event_statement_from_classification_leaf():
+    task = DisclosureTask(
+        task_id="task-GRI 416-2-a-i",
+        run_id="run-1",
+        report_id="report-1",
+        standard_id="GRI 416",
+        standard_version="2016",
+        disclosure_id="GRI 416-2",
+        requirement_id="GRI 416-2-a-i",
+        requirement_text="incidents of non-compliance resulting in a fine or penalty;",
+        keywords=["产品质量安全", "未发生", "罚款"],
+        candidate_pages=[46],
+        candidate_page_source="gri_report_index+requirement_supplement",
+        index_page=76,
+    )
+    chunk = DocumentChunk(
+        chunk_id="chunk-GRI 416-2-a-i-46",
+        report_id="report-1",
+        text="报告期内未发生因产品质量安全而导致客户健康安全受到伤害的事件",
+        source_page=46,
+        source_method=EvidenceSourceMethod.PDFPLUMBER,
+        source_file_hash="hash-1",
+    )
+
+    result = DisclosureAgent().analyze(task, [chunk], confirm_llm=False)
+
+    assert result.assessment.verdict is AssessmentVerdict.UNKNOWN
+    assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+    assert result.assessment.evidence == []
+    assert "罚款或处罚事件数量" in result.assessment.missing_items
+
+
+def test_no_evidence_guardrail_blocks_policy_from_risk_location_leaf():
+    task = DisclosureTask(
+        task_id="task-GRI 408-1-b-i",
+        run_id="run-1",
+        report_id="report-1",
+        standard_id="GRI 408",
+        standard_version="2016",
+        disclosure_id="GRI 408-1",
+        requirement_id="GRI 408-1-b-i",
+        requirement_text=(
+            "types of operations and suppliers considered to have significant risk for incidents "
+            "of young workers exposed to hazardous work;"
+        ),
+        keywords=["童工", "青年员工", "供应商"],
+        candidate_pages=[52],
+        candidate_page_source="gri_report_index+requirement_supplement",
+        index_page=76,
+    )
+    chunk = DocumentChunk(
+        chunk_id="chunk-GRI 408-1-b-i-52",
+        report_id="report-1",
+        text="供应商不得使用童工，并应遵守供应商行为准则。",
+        source_page=52,
+        source_method=EvidenceSourceMethod.PDFPLUMBER,
+        source_file_hash="hash-1",
+    )
+
+    result = DisclosureAgent().analyze(task, [chunk], confirm_llm=False)
+
+    assert result.assessment.verdict is AssessmentVerdict.UNKNOWN
+    assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+    assert result.assessment.evidence == []
+    assert "风险运营点或供应商类型" in result.assessment.missing_items
+
+
+def test_no_evidence_guardrail_blocks_kpi_from_method_scope_leaf():
+    task = DisclosureTask(
+        task_id="task-GRI 403-9-g",
+        run_id="run-1",
+        report_id="report-1",
+        standard_id="GRI 403",
+        standard_version="2018",
+        disclosure_id="GRI 403-9",
+        requirement_id="GRI 403-9-g",
+        requirement_text="whether the rates have been calculated based on 200,000 or 1,000,000 hours worked;",
+        keywords=["TRIR", "LTIR", "方法"],
+        candidate_pages=[67],
+        candidate_page_source="gri_report_index+requirement_supplement",
+        index_page=76,
+    )
+    chunk = DocumentChunk(
+        chunk_id="chunk-GRI 403-9-g-67",
+        report_id="report-1",
+        text="TRIR 0.29 LTIR 0.10 可记录工伤数量 13",
+        source_page=67,
+        source_method=EvidenceSourceMethod.PDFPLUMBER,
+        source_file_hash="hash-1",
+    )
+
+    result = DisclosureAgent().analyze(task, [chunk], confirm_llm=False)
+
+    assert result.assessment.verdict is AssessmentVerdict.UNKNOWN
+    assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+    assert result.assessment.evidence == []
+    assert "数据编制方法和假设" in result.assessment.missing_items
+
+
+def test_no_evidence_guardrail_blocks_general_training_from_security_personnel_leaf():
+    task = DisclosureTask(
+        task_id="task-GRI 410-1-a",
+        run_id="run-1",
+        report_id="report-1",
+        standard_id="GRI 410",
+        standard_version="2016",
+        disclosure_id="GRI 410-1",
+        requirement_id="GRI 410-1-a",
+        requirement_text=(
+            "percentage of security personnel who have received formal training in human rights "
+            "policies or procedures;"
+        ),
+        keywords=["人权", "培训", "安保"],
+        candidate_pages=[59],
+        candidate_page_source="gri_report_index+requirement_supplement",
+        index_page=76,
+    )
+    chunk = DocumentChunk(
+        chunk_id="chunk-GRI 410-1-a-59",
+        report_id="report-1",
+        text="公司开展商业道德和合规培训。",
+        source_page=59,
+        source_method=EvidenceSourceMethod.PDFPLUMBER,
+        source_file_hash="hash-1",
+    )
+
+    result = DisclosureAgent().analyze(task, [chunk], confirm_llm=False)
+
+    assert result.assessment.verdict is AssessmentVerdict.UNKNOWN
+    assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+    assert result.assessment.evidence == []
+    assert "安保人员人权政策培训比例" in result.assessment.missing_items

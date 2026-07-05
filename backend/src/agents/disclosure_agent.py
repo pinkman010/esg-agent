@@ -6,6 +6,7 @@ from src.domain.models import DisclosureAssessment, DisclosureTask, DocumentChun
 from src.standards.compilation_guardrails import get_compilation_guardrails
 from src.standards.evidence_contracts import get_requirement_contract
 from src.standards.evidence_ontology import EvidenceKind, evaluate_ontology_verdict
+from src.standards.no_evidence_guardrails import get_no_evidence_guardrail
 from src.tools.evidence import build_kpi_evidence_preview, chunk_to_evidence
 from src.tools.guardrails import build_guarded_assessment
 from src.tools.ids import database_safe_id
@@ -137,6 +138,10 @@ class DisclosureAgent:
         task: DisclosureTask,
         evidence: list[EvidenceItem],
     ) -> list[EvidenceItem]:
+        guardrail = get_no_evidence_guardrail(task.requirement_id)
+        if guardrail is not None:
+            return []
+
         contract = get_requirement_contract(task.requirement_id)
         if contract is not None:
             if contract.verdict is AssessmentVerdict.UNKNOWN and not contract.allowed_pages:
@@ -424,6 +429,13 @@ class DisclosureAgent:
         evidence: list[EvidenceItem],
     ) -> tuple[AssessmentVerdict | None, str | None, list[str]]:
         bounded_evidence = [item for item in evidence if item.metadata.get("retrieval_strategy") == "index_page_bounded"]
+        guardrail = get_no_evidence_guardrail(task.requirement_id)
+        if guardrail is not None and not bounded_evidence:
+            return (
+                AssessmentVerdict.UNKNOWN,
+                guardrail.rationale,
+                list(guardrail.missing_items),
+            )
         if task.requirement_id == "GRI 2-2-c-ii" and not bounded_evidence:
             return (
                 AssessmentVerdict.UNKNOWN,
