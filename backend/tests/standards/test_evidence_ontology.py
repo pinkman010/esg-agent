@@ -295,3 +295,27 @@ def test_ohs_kpi_hazard_type_is_not_satisfied_by_kpi_value():
     assert result.verdict is AssessmentVerdict.PARTIALLY_DISCLOSED
     assert result.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
     assert "主要类型或危害清单" in result.missing_items
+
+
+def test_ohs_management_mechanism_stays_partial():
+    result = evaluate_ontology_verdict(
+        semantic_group=SemanticGroup.OHS_MANAGEMENT,
+        facets={RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION},
+        evidence_kinds={EvidenceKind.MANAGEMENT_MECHANISM},
+    )
+
+    assert result.verdict is AssessmentVerdict.PARTIALLY_DISCLOSED
+    assert result.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+    assert "完整 OHS 范围、覆盖、流程、职责或获取方式" in result.missing_items
+
+
+def test_ohs_management_coverage_kpi_does_not_auto_disclose_worker_percentage():
+    result = evaluate_ontology_verdict(
+        semantic_group=SemanticGroup.OHS_MANAGEMENT,
+        facets={RequirementFacet.REQUIRES_PERCENTAGE, RequirementFacet.REQUIRES_WORKER_BOUNDARY},
+        evidence_kinds={EvidenceKind.KPI_VALUE},
+    )
+
+    assert result.verdict is AssessmentVerdict.PARTIALLY_DISCLOSED
+    assert result.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+    assert "完整 OHS 范围、覆盖、流程、职责或获取方式" in result.missing_items

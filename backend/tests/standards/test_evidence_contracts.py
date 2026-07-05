@@ -105,6 +105,40 @@ def test_ohs_kpi_contracts_have_pilot_ontology_metadata():
         assert set(contract.evidence_kinds) == expected_evidence_kinds
 
 
+def test_ohs_management_contracts_have_ontology_metadata():
+    management_items = {
+        "GRI 403-1-a",
+        "GRI 403-1-a-ii",
+        "GRI 403-1-b",
+        "GRI 403-2-a",
+        "GRI 403-2-a-i",
+        "GRI 403-2-a-ii",
+        "GRI 403-2-b",
+        "GRI 403-2-d",
+        "GRI 403-3-a",
+        "GRI 403-4-a",
+        "GRI 403-4-b",
+        "GRI 403-5-a",
+        "GRI 403-6-a",
+        "GRI 403-6-b",
+        "GRI 403-7-a",
+    }
+    coverage_kpi_items = {
+        "GRI 403-8-a",
+        "GRI 403-8-a-i",
+        "GRI 403-8-a-iii",
+    }
+
+    for requirement_id in sorted(management_items | coverage_kpi_items):
+        contract = get_requirement_contract(requirement_id)
+        assert contract is not None
+        assert contract.semantic_group is SemanticGroup.OHS_MANAGEMENT
+        expected_kind = EvidenceKind.KPI_VALUE if requirement_id in coverage_kpi_items else EvidenceKind.MANAGEMENT_MECHANISM
+        assert expected_kind in contract.evidence_kinds
+        assert contract.verdict is None
+        assert contract.review_status is None
+
+
 def test_training_and_diversity_contracts_share_breakdown_dimension_group():
     contract_404 = get_requirement_contract("GRI 404-1-a")
     contract_405 = get_requirement_contract("GRI 405-1-b")

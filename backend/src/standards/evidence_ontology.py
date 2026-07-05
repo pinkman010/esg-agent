@@ -46,6 +46,7 @@ class SemanticGroup(StrEnum):
     ENERGY_KPI = "energy_kpi"
     WATER_KPI = "water_kpi"
     WASTE_KPI = "waste_kpi"
+    OHS_MANAGEMENT = "ohs_management"
 
 
 @dataclass(frozen=True)
@@ -152,6 +153,15 @@ def evaluate_ontology_verdict(
                 review_status=ReviewStatus.NEEDS_MANUAL_REVIEW,
                 rationale="Waste evidence is directionally relevant, but the full GRI-required waste composition, impact boundary, recovery operation, disposal route, third-party process, or compilation detail remains subject to sufficiency review.",
                 missing_items=("完整废弃物组成、回收操作、处置去向或方法口径",),
+            )
+
+    if semantic_group is SemanticGroup.OHS_MANAGEMENT:
+        if EvidenceKind.MANAGEMENT_MECHANISM in evidence_kinds or EvidenceKind.KPI_VALUE in evidence_kinds:
+            return OntologyVerdictResult(
+                verdict=AssessmentVerdict.PARTIALLY_DISCLOSED,
+                review_status=ReviewStatus.NEEDS_MANUAL_REVIEW,
+                rationale="OHS management evidence is directionally relevant, but the full GRI-required scope, worker coverage, process, responsibility, participation, or access detail remains subject to sufficiency review.",
+                missing_items=("完整 OHS 范围、覆盖、流程、职责或获取方式",),
             )
 
     if semantic_group is SemanticGroup.SUPPLIER_ASSESSMENT:
