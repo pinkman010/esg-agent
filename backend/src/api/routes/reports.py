@@ -21,6 +21,7 @@ from src.workflows.single_report_workflow import SingleReportWorkflow
 router = APIRouter(prefix="/api/reports", tags=["reports"])
 GRI_REQUIREMENTS_PATH = Path(__file__).resolve().parents[3] / "data" / "manifests" / "gri_requirement_checklist.json"
 GRI_REQUIREMENT_PACK_PATH = Path(__file__).resolve().parents[3] / "data" / "manifests" / "gri_requirement_pack.json"
+ENVISION_2024_PROFILE_PATH = Path(__file__).resolve().parents[3] / "data" / "reports" / "profiles" / "envision_2024.json"
 GRI_REQUIREMENTS_LIMIT = 10
 
 
@@ -77,12 +78,19 @@ def analyze_report(report_id: str, request: AnalyzeRequest, session: Session = D
             ocr_lang=settings.ocr_lang,
         )
 
+    report_profile_path = (
+        ENVISION_2024_PROFILE_PATH
+        if ENVISION_2024_PROFILE_PATH.exists() and Path(report.original_filename).name == "Envision Energy 2024-zh.pdf"
+        else None
+    )
+
     workflow = SingleReportWorkflow(
         repo,
         DocumentParser(ocr_runner=ocr_runner),
         GRIAdapter(GRI_REQUIREMENTS_PATH, max_requirements=GRI_REQUIREMENTS_LIMIT),
         DisclosureAgent(),
         requirement_pack_path=GRI_REQUIREMENT_PACK_PATH,
+        report_profile_path=report_profile_path,
         ocr_max_pages=settings.ocr_max_pages,
     )
     run = workflow.run(

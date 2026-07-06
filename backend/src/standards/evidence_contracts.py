@@ -44,7 +44,6 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
     "GRI 302-1-e": RequirementEvidenceContract(
         requirement_id="GRI 302-1-e",
         allowed_pages=(63,),
-        candidate_pages=(63,),
         kpi_table_pages=(63,),
         facets=(RequirementFacet.REQUIRES_COUNT,),
         evidence_kinds=(EvidenceKind.KPI_VALUE,),
@@ -336,7 +335,6 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
     "GRI 305-3-a": RequirementEvidenceContract(
         requirement_id="GRI 305-3-a",
         allowed_pages=(20, 63),
-        candidate_pages=(20, 63),
         kpi_table_pages=(63,),
         facets=(RequirementFacet.REQUIRES_COUNT,),
         evidence_kinds=(EvidenceKind.KPI_VALUE,),
@@ -354,7 +352,6 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
     "GRI 305-5-a": RequirementEvidenceContract(
         requirement_id="GRI 305-5-a",
         allowed_pages=(63,),
-        candidate_pages=(63,),
         kpi_table_pages=(63,),
         facets=(RequirementFacet.REQUIRES_COUNT,),
         evidence_kinds=(EvidenceKind.KPI_VALUE,),
@@ -475,7 +472,6 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
     "GRI 308-1-a": RequirementEvidenceContract(
         requirement_id="GRI 308-1-a",
         allowed_pages=(67,),
-        candidate_pages=(67,),
         kpi_table_pages=(67,),
         facets=(RequirementFacet.REQUIRES_PERCENTAGE,),
         evidence_kinds=(EvidenceKind.KPI_VALUE,),
@@ -1583,7 +1579,6 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
     "GRI 414-1-a": RequirementEvidenceContract(
         requirement_id="GRI 414-1-a",
         allowed_pages=(67,),
-        candidate_pages=(67,),
         kpi_table_pages=(67,),
         facets=(RequirementFacet.REQUIRES_PERCENTAGE,),
         evidence_kinds=(EvidenceKind.KPI_VALUE,),
@@ -1833,7 +1828,6 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
     "GRI 418-1-b": RequirementEvidenceContract(
         requirement_id="GRI 418-1-b",
         allowed_pages=(60, 61, 68),
-        candidate_pages=(60, 61, 68),
         kpi_table_pages=(68,),
         facets=(RequirementFacet.REQUIRES_COUNT,),
         evidence_kinds=(EvidenceKind.MANAGEMENT_MECHANISM, EvidenceKind.EXPLICIT_ZERO_STATEMENT),

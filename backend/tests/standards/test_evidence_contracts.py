@@ -49,6 +49,16 @@ def test_supplier_environmental_and_social_contracts_share_semantic_group():
     assert RequirementFacet.REQUIRES_PERCENTAGE in contract_414.facets
 
 
+def test_kpi_profile_owned_requirement_contract_keeps_semantic_metadata_without_candidate_page():
+    contract = get_requirement_contract("GRI 414-1-a")
+
+    assert contract is not None
+    assert contract.candidate_pages is None or contract.candidate_pages == ()
+    assert contract.kpi_table_pages == (67,)
+    assert contract.semantic_group is SemanticGroup.SUPPLIER_ASSESSMENT
+    assert contract.evidence_kinds == (EvidenceKind.KPI_VALUE,)
+
+
 def test_supplier_assessment_contracts_have_shared_ontology_metadata():
     cases = {
         "GRI 308-1-a": {RequirementFacet.REQUIRES_PERCENTAGE},

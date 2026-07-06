@@ -215,6 +215,11 @@ pnpm generate:api
 - requirement/evidence ontology migration 已完成到 evidence-backed verdict 边界：`zero_event_compliance`、`compilation guardrail`、`GHG/energy/water/waste KPI`、`OHS management`、`OHS KPI parent`、`employee KPI / benefits`、`human_rights_policy` 以及 residual evidence-backed groups 均已迁入 ontology matrix 或 metadata。每批均执行 577 regression gate，结果均为 577 requirement 不变、`global_fallback=0`、无新增 `disclosed`、无 verdict/review/evidence/page/quality/OCR 字段变化，仅 `missing_items` 出现预期变化。
 - no-evidence guardrail migration 已完成：原剩余 68 条 `unknown + needs_manual_review` per-ID explicit verdict 已迁移到 `no_evidence_guardrails.py`，用于结构化阻断零事件分类、风险地点、方法范围、拆分维度和安保人员培训等无效 evidence 传播；`remaining_explicit_verdicts.csv` 重新导出后为 0 条。
 - ontology 后 577 回归产物：`tmp/review/current_577_review_after_ontology.csv`、`tmp/review/current_577_review_after_ontology_audit.json`、`tmp/review/current_577_review_ontology_diff.csv`、`tmp/review/current_577_review_ontology_diff_summary.json`。最新 gate 结论为 audit 通过，`compilation_overlap=0`，无新增或删除 requirement，无 verdict / review_status / source page / evidence_type / quality_flags / OCR-VLM 字段变化，`first_pass_quality` 的 disclosed/partial/unknown delta 均为 0；当前 diff 仅剩 ontology matrix 补充的 `missing_items` 差异。
+- Report profile 与 evidence routing 第一阶段已完成：新增 `backend/data/reports/profiles/envision_2024.json` 作为 Envision 2024 报告实例画像；PDF 和 manifests 仍沿用后端现有数据目录，profile 只保存报告级候选页、KPI 页、页码偏移和行级 KPI term。
+- Evidence routing 优先级为 GRI 索引、report profile、contract metadata、ontology metadata、KPI row matcher、ontology matrix、contract guardrail。固定 PDF 页码只作为当前报告 profile candidate，不作为跨报告通用规则。
+- 首批 KPI 行级匹配只覆盖 PDF 第 63-68 页，支持 `kpi_row_label`、`kpi_row_value`、`kpi_row_unit`、`kpi_year_column` metadata，并优先用 KPI 行片段生成 `evidence_preview`。
+- 577 profile routing 回归产物：`tmp/review/current_577_review_after_profile_routing.csv`、`tmp/review/current_577_review_after_profile_routing_audit.json`、`tmp/review/current_577_review_profile_routing_diff.csv`、`tmp/review/current_577_review_profile_routing_diff_summary.json`。本次 gate 结论为 audit 通过，577 requirement 不变，无新增 `disclosed`，无 verdict / review_status / source page / evidence_type / quality_flags / OCR-VLM 字段变化；仅 6 条 `candidate_page_source` 从 contract 切换为 profile。
+- Holdout 当前只实现接口和指标字段，不执行跨报告 holdout。正式 holdout 需要先确定新报告资产、人工复核样本和禁止新增 per-ID contract 的验收边界。
 
 ### 2026-07-04
 

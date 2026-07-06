@@ -17,6 +17,11 @@ def chunk_to_evidence(
     metadata = {**chunk.metadata, "task_id": task.task_id, "chunk_id": chunk.chunk_id}
     if retrieval_metadata:
         metadata.update(retrieval_metadata)
+    evidence_preview = (
+        str(metadata.get("kpi_row_preview"))
+        if metadata.get("kpi_row_preview")
+        else build_evidence_preview(chunk.text, task.keywords)
+    )
 
     return EvidenceItem(
         evidence_id=evidence_id_for(task.task_id, chunk.chunk_id),
@@ -28,7 +33,7 @@ def chunk_to_evidence(
         source_method=chunk.source_method,
         bbox=chunk.bbox,
         quality_flags=chunk.quality_flags,
-        evidence_preview=build_evidence_preview(chunk.text, task.keywords),
+        evidence_preview=evidence_preview,
         metadata=metadata,
     )
 

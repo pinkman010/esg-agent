@@ -6,8 +6,10 @@ from src.agents.disclosure_agent import DisclosureAgent
 from src.db.repositories import Repository
 from src.domain.enums import PageQualityFlag, RunStatus
 from src.domain.models import AnalysisRun, DisclosureTask, PageExtraction
+from src.reports.profile import ReportProfile, load_report_profile
 from src.standards.evidence_contracts import get_requirement_contract
 from src.standards.gri_report_index import build_report_index
+from src.tools.evidence_routing import EvidenceRouter
 
 
 class SingleReportWorkflow:
@@ -18,6 +20,7 @@ class SingleReportWorkflow:
         standard_adapter,
         disclosure_agent: DisclosureAgent,
         requirement_pack_path: Path | None = None,
+        report_profile_path: Path | None = None,
         ocr_max_pages: int = 5,
     ):
         self.repository = repository
@@ -26,6 +29,10 @@ class SingleReportWorkflow:
         self.disclosure_agent = disclosure_agent
         self.requirement_pack_path = requirement_pack_path
         self.ocr_max_pages = ocr_max_pages
+        self.report_profile: ReportProfile | None = (
+            load_report_profile(report_profile_path) if report_profile_path is not None else None
+        )
+        self.evidence_router = EvidenceRouter(self.report_profile)
 
     def run(
         self,
@@ -122,6 +129,28 @@ class SingleReportWorkflow:
         for task in tasks:
             disclosure_id = task.disclosure_id.removeprefix("GRI ").strip()
             entry = report_index.get(disclosure_id)
+            route = self.evidence_router.route(task)
+            if route.source == "report_profile":
+                enriched_tasks.append(
+                    task.model_copy(
+                        update={
+                            "candidate_pages": route.candidate_pdf_pages,
+                            "candidate_pdf_pages": route.candidate_pdf_pages,
+                            "candidate_report_pages": route.candidate_report_pages,
+                            "candidate_page_source": route.source,
+                            "kpi_table_pages": route.kpi_table_pages,
+                            "kpi_metric_terms": route.metric_terms,
+                            "kpi_year_columns": self._kpi_year_columns(route.kpi_table_pages),
+                            "report_index_pdf_page": self.report_profile.page_numbering.report_index_pdf_page
+                            if self.report_profile
+                            else None,
+                            "report_index_report_page": self.report_profile.page_numbering.report_index_report_page
+                            if self.report_profile
+                            else None,
+                        }
+                    )
+                )
+                continue
             if entry is None:
                 override_pages = self._candidate_page_overrides(task)
                 if override_pages is not None:
@@ -437,3 +466,13 @@ class SingleReportWorkflow:
         if task.requirement_id in pages_by_requirement:
             return pages_by_requirement[task.requirement_id]
         return pages_by_disclosure.get(task.disclosure_id)
+
+    def _kpi_year_columns(self, kpi_table_pages: list[int]) -> list[str]:
+        if self.report_profile is None:
+            return []
+        years: set[str] = set()
+        page_set = set(kpi_table_pages)
+        for table in self.report_profile.kpi_tables:
+            if page_set.intersection(table.pdf_pages):
+                years.update(table.year_columns)
+        return sorted(years)
