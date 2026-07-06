@@ -28,3 +28,23 @@ def test_profile_returns_requirement_route_without_global_logic():
     assert route is not None
     assert route.candidate_pdf_pages == [67]
     assert route.kpi_table_pages == [67]
+
+
+def test_envision_2024_profile_declares_verified_sections():
+    profile = load_report_profile(Path("data/reports/profiles/envision_2024.json"))
+
+    sections = {section.name: section for section in profile.sections}
+
+    assert sections["stakeholder_engagement"].pdf_pages == [14, 15]
+    assert sections["ohs_management"].pdf_pages == [38, 39, 40, 41]
+    assert "利益相关方" in sections["community_program"].terms
+
+
+def test_envision_2024_profile_declares_index_note_pages():
+    profile = load_report_profile(Path("data/reports/profiles/envision_2024.json"))
+
+    note_pages = {page.pdf_page: page for page in profile.index_note_pages}
+
+    assert note_pages[72].report_page == 71
+    assert "index_statement" in note_pages[72].note_types
+    assert "omission_note" in note_pages[73].note_types

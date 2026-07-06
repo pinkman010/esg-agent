@@ -71,3 +71,55 @@ def test_profile_takes_over_kpi_candidate_pages_after_contract_page_removal():
 
     assert route.candidate_pdf_pages == [67]
     assert route.source == "report_profile"
+
+
+def test_profile_owns_migrated_environment_kpi_routes():
+    profile = load_report_profile(Path("data/reports/profiles/envision_2024.json"))
+    router = EvidenceRouter(report_profile=profile)
+
+    route = router.route(make_task("GRI 303-4-b-i", "GRI 303-4"))
+
+    assert route.candidate_pdf_pages == [63]
+    assert route.candidate_report_pages == [62]
+    assert route.kpi_table_pages == [63]
+    assert route.source == "report_profile"
+    assert "淡水排水量" in route.metric_terms
+
+
+def test_profile_owns_migrated_social_kpi_routes():
+    profile = load_report_profile(Path("data/reports/profiles/envision_2024.json"))
+    router = EvidenceRouter(report_profile=profile)
+
+    route = router.route(make_task("GRI 403-9-a-iii", "GRI 403-9"))
+
+    assert route.candidate_pdf_pages == [67]
+    assert route.candidate_report_pages == [66]
+    assert route.kpi_table_pages == [67]
+    assert route.source == "report_profile"
+    assert "可记录工伤数量" in route.metric_terms
+
+
+def test_profile_owns_migrated_section_routes():
+    profile = load_report_profile(Path("data/reports/profiles/envision_2024.json"))
+    router = EvidenceRouter(report_profile=profile)
+
+    route = router.route(make_task("GRI 3-1-a", "GRI 3-1"))
+
+    assert route.candidate_pdf_pages == [14, 15]
+    assert route.candidate_report_pages == [13, 14]
+    assert route.kpi_table_pages == []
+    assert route.source == "report_profile"
+    assert "利益相关方" in route.metric_terms
+
+
+def test_profile_owns_migrated_index_note_routes():
+    profile = load_report_profile(Path("data/reports/profiles/envision_2024.json"))
+    router = EvidenceRouter(report_profile=profile)
+
+    route = router.route(make_task("GRI 204-1-a", "GRI 204-1"))
+
+    assert route.candidate_pdf_pages == [73]
+    assert route.candidate_report_pages == [72]
+    assert route.kpi_table_pages == []
+    assert route.source == "report_profile"
+    assert "从略披露" in route.metric_terms

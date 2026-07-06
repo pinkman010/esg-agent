@@ -3,6 +3,7 @@ import json
 from dataclasses import dataclass
 from functools import cache
 from importlib import resources
+from pathlib import Path
 
 
 @dataclass(frozen=True)
@@ -14,11 +15,24 @@ class CompilationGuardrail:
     guardrail_effects: tuple[str, ...]
 
 
+@dataclass(frozen=True)
+class CompilationGuardrailManifest:
+    rules: tuple[CompilationGuardrail, ...]
+
+
 @cache
 def load_compilation_guardrails() -> tuple[CompilationGuardrail, ...]:
     data_path = resources.files("src.standards.data").joinpath("compilation_requirement_guardrails.csv")
     with data_path.open("r", encoding="utf-8", newline="") as handle:
         return tuple(_guardrail_from_row(row) for row in csv.DictReader(handle))
+
+
+def load_compilation_guardrail_manifest(path: Path) -> CompilationGuardrailManifest:
+    raw = json.loads(path.read_text(encoding="utf-8"))
+    rules = raw.get("rules", [])
+    if not isinstance(rules, list):
+        raise ValueError("compilation guardrail manifest must contain a rules list")
+    return CompilationGuardrailManifest(rules=tuple(_guardrail_from_manifest_rule(rule) for rule in rules))
 
 
 @cache
@@ -41,6 +55,16 @@ def _guardrail_from_row(row: dict[str, str]) -> CompilationGuardrail:
         facets=tuple(_parse_json_list(row.get("facet", "[]"))),
         missing_item_templates=tuple(_parse_json_list(row.get("missing_item_template", "[]"))),
         guardrail_effects=tuple(_parse_json_list(row.get("guardrail_effect", "[]"))),
+    )
+
+
+def _guardrail_from_manifest_rule(rule: dict) -> CompilationGuardrail:
+    return CompilationGuardrail(
+        compilation_requirement_id=str(rule["compilation_requirement_id"]),
+        target_requirement_ids=tuple(str(item) for item in rule.get("target_requirement_ids", [])),
+        facets=tuple(str(item) for item in rule.get("facets", [])),
+        missing_item_templates=tuple(str(item) for item in rule.get("missing_item_templates", [])),
+        guardrail_effects=tuple(str(item) for item in rule.get("guardrail_effects", [])),
     )
 
 

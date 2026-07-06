@@ -168,6 +168,19 @@ print("warnings=", result.warnings)
 - `compilation_requirement` 只转成充分性规则、`missing_items` 和 guardrail，不作为独立 assessment requirement。
 - 固定 PDF 页码只用于当前报告回归样本；跨报告逻辑必须依赖 KPI 行标签、年份列、单位和 evidence type。
 
+### Envision 固定页码清单
+
+固定页码清单输出到 `tmp/review/envision_fixed_page_inventory.csv`，用于把 Envision 2024 的回归页码从通用 contract 迁入 report profile。
+
+当前批次统计：
+
+- `batch_1_kpi_pages`：66 行，PDF 第 63-68 页 KPI 表。
+- `batch_2_section_pages`：154 行，章节正文页。
+- `batch_3_index_omission_pages`：23 行，索引、从略和不适用说明页。
+- `batch_4_empty_routes`：68 行，无有效证据的 no-evidence guardrail。
+
+迁移顺序为 KPI 页、章节页、索引/从略页、empty routes。每批迁移必须跑 577 regression gate，硬字段不得回退；允许 `candidate_page_source` 从 contract 切换为 report profile。
+
 first-pass 质量评估命令：
 
 ```powershell

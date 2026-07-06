@@ -9,15 +9,30 @@
     "report_index_report_page": 70
   },
   "gri_index": {
-    "pdf_pages": [71, 72, 73, 74]
+    "pdf_pages": [
+      71,
+      72,
+      73,
+      74
+    ]
   },
   "kpi_tables": [
     {
       "name": "environment_kpi",
-      "pdf_pages": [63, 64],
-      "report_pages": [62, 63],
-      "quality_flags": ["complex_table"],
-      "year_columns": ["2024"],
+      "pdf_pages": [
+        63,
+        64
+      ],
+      "report_pages": [
+        62,
+        63
+      ],
+      "quality_flags": [
+        "complex_table"
+      ],
+      "year_columns": [
+        "2024"
+      ],
       "known_metric_terms": [
         "能源使用总量",
         "总取水量",
@@ -33,10 +48,22 @@
     },
     {
       "name": "social_kpi",
-      "pdf_pages": [65, 66, 67],
-      "report_pages": [64, 65, 66],
-      "quality_flags": ["complex_table"],
-      "year_columns": ["2024"],
+      "pdf_pages": [
+        65,
+        66,
+        67
+      ],
+      "report_pages": [
+        64,
+        65,
+        66
+      ],
+      "quality_flags": [
+        "complex_table"
+      ],
+      "year_columns": [
+        "2024"
+      ],
       "known_metric_terms": [
         "新进员工",
         "离职员工",
@@ -52,10 +79,18 @@
     },
     {
       "name": "governance_kpi",
-      "pdf_pages": [68],
-      "report_pages": [67],
-      "quality_flags": ["complex_table"],
-      "year_columns": ["2024"],
+      "pdf_pages": [
+        68
+      ],
+      "report_pages": [
+        67
+      ],
+      "quality_flags": [
+        "complex_table"
+      ],
+      "year_columns": [
+        "2024"
+      ],
       "known_metric_terms": [
         "贪污腐败事件数量",
         "员工因腐败被开除或受到处分的事件数量",
@@ -71,39 +106,1136 @@
       "report_page": 76,
       "requires_ocr": true,
       "requires_vlm": false,
-      "quality_flags": ["short_text", "image_body_not_extracted", "assurance_page_text_too_short"]
+      "quality_flags": [
+        "short_text",
+        "image_body_not_extracted",
+        "assurance_page_text_too_short"
+      ]
     }
   ],
   "requirement_routes": {
     "GRI 302-1-e": {
-      "candidate_pdf_pages": [63],
-      "kpi_table_pages": [63],
-      "metric_terms": ["能源使用总量", "总能耗"]
+      "candidate_pdf_pages": [
+        63
+      ],
+      "kpi_table_pages": [
+        63
+      ],
+      "metric_terms": [
+        "能源使用总量",
+        "总能耗"
+      ]
     },
     "GRI 305-3-a": {
-      "candidate_pdf_pages": [20, 63],
-      "kpi_table_pages": [63],
-      "metric_terms": ["范围三", "Scope 3"]
+      "candidate_pdf_pages": [
+        20,
+        63
+      ],
+      "kpi_table_pages": [
+        63
+      ],
+      "metric_terms": [
+        "范围三",
+        "Scope 3"
+      ]
     },
     "GRI 305-5-a": {
-      "candidate_pdf_pages": [63],
-      "kpi_table_pages": [63],
-      "metric_terms": ["节能措施促成的碳减排总量"]
+      "candidate_pdf_pages": [
+        63
+      ],
+      "kpi_table_pages": [
+        63
+      ],
+      "metric_terms": [
+        "节能措施促成的碳减排总量"
+      ]
     },
     "GRI 308-1-a": {
-      "candidate_pdf_pages": [67],
-      "kpi_table_pages": [67],
-      "metric_terms": ["使用环境评价维度筛选的新供应商百分比"]
+      "candidate_pdf_pages": [
+        67
+      ],
+      "kpi_table_pages": [
+        67
+      ],
+      "metric_terms": [
+        "使用环境评价维度筛选的新供应商百分比"
+      ]
     },
     "GRI 414-1-a": {
-      "candidate_pdf_pages": [67],
-      "kpi_table_pages": [67],
-      "metric_terms": ["使用社会评价维度筛选的新供应商百分比"]
+      "candidate_pdf_pages": [
+        67
+      ],
+      "kpi_table_pages": [
+        67
+      ],
+      "metric_terms": [
+        "使用社会评价维度筛选的新供应商百分比"
+      ]
     },
     "GRI 418-1-b": {
-      "candidate_pdf_pages": [60, 61, 68],
-      "kpi_table_pages": [68],
-      "metric_terms": ["客户隐私", "数据丢失", "信息安全事件"]
+      "candidate_pdf_pages": [
+        60,
+        61,
+        68
+      ],
+      "kpi_table_pages": [
+        68
+      ],
+      "metric_terms": [
+        "客户隐私",
+        "数据丢失",
+        "信息安全事件"
+      ]
+    },
+    "GRI 302-1-a": {
+      "candidate_pdf_pages": [
+        63
+      ],
+      "kpi_table_pages": [
+        63
+      ],
+      "metric_terms": [
+        "不可再生能源燃料",
+        "燃料消耗",
+        "能源"
+      ]
+    },
+    "GRI 302-1-c": {
+      "candidate_pdf_pages": [
+        63
+      ],
+      "kpi_table_pages": [
+        63
+      ],
+      "metric_terms": [
+        "电力消耗",
+        "办公用电",
+        "绿色电力"
+      ]
+    },
+    "GRI 303-3-a-i": {
+      "candidate_pdf_pages": [
+        63
+      ],
+      "kpi_table_pages": [
+        63
+      ],
+      "metric_terms": [
+        "地表水总量",
+        "地表水"
+      ]
+    },
+    "GRI 303-3-a-ii": {
+      "candidate_pdf_pages": [
+        63
+      ],
+      "kpi_table_pages": [
+        63
+      ],
+      "metric_terms": [
+        "地下水总量",
+        "地下水"
+      ]
+    },
+    "GRI 303-3-a-v": {
+      "candidate_pdf_pages": [
+        63
+      ],
+      "kpi_table_pages": [
+        63
+      ],
+      "metric_terms": [
+        "第三方取水总量",
+        "第三方水"
+      ]
+    },
+    "GRI 303-3-c": {
+      "candidate_pdf_pages": [
+        63
+      ],
+      "kpi_table_pages": [
+        63
+      ],
+      "metric_terms": [
+        "第三方淡水",
+        "第三方其他水"
+      ]
+    },
+    "GRI 303-3-c-i": {
+      "candidate_pdf_pages": [
+        63
+      ],
+      "kpi_table_pages": [
+        63
+      ],
+      "metric_terms": [
+        "第三方淡水"
+      ]
+    },
+    "GRI 303-3-c-ii": {
+      "candidate_pdf_pages": [
+        63
+      ],
+      "kpi_table_pages": [
+        63
+      ],
+      "metric_terms": [
+        "第三方其他水"
+      ]
+    },
+    "GRI 303-4-b": {
+      "candidate_pdf_pages": [
+        63
+      ],
+      "kpi_table_pages": [
+        63
+      ],
+      "metric_terms": [
+        "淡水排水量",
+        "其他水排水量"
+      ]
+    },
+    "GRI 303-4-b-i": {
+      "candidate_pdf_pages": [
+        63
+      ],
+      "kpi_table_pages": [
+        63
+      ],
+      "metric_terms": [
+        "淡水排水量"
+      ]
+    },
+    "GRI 303-4-b-ii": {
+      "candidate_pdf_pages": [
+        63
+      ],
+      "kpi_table_pages": [
+        63
+      ],
+      "metric_terms": [
+        "其他水排水量"
+      ]
+    },
+    "GRI 306-3-a": {
+      "candidate_pdf_pages": [
+        64
+      ],
+      "kpi_table_pages": [
+        64
+      ],
+      "metric_terms": [
+        "危险废物总重",
+        "非危险废物总重"
+      ]
+    },
+    "GRI 306-4-a": {
+      "candidate_pdf_pages": [
+        64
+      ],
+      "kpi_table_pages": [
+        64
+      ],
+      "metric_terms": [
+        "废弃物回收总量",
+        "废弃物回收率"
+      ]
+    },
+    "GRI 306-4-b": {
+      "candidate_pdf_pages": [
+        64
+      ],
+      "kpi_table_pages": [
+        64
+      ],
+      "metric_terms": [
+        "危险废物回收总量",
+        "危险废物回收率"
+      ]
+    },
+    "GRI 306-4-c": {
+      "candidate_pdf_pages": [
+        64
+      ],
+      "kpi_table_pages": [
+        64
+      ],
+      "metric_terms": [
+        "非危险废物回收总量",
+        "非危险废物回收率"
+      ]
+    },
+    "GRI 308-2-a": {
+      "candidate_pdf_pages": [
+        67
+      ],
+      "kpi_table_pages": [
+        67
+      ],
+      "metric_terms": [
+        "开展环境影响评估的供应商数量"
+      ]
+    },
+    "GRI 308-2-b": {
+      "candidate_pdf_pages": [
+        67
+      ],
+      "kpi_table_pages": [
+        67
+      ],
+      "metric_terms": [
+        "具有重大实际或潜在负面环境影响的供应商数量"
+      ]
+    },
+    "GRI 308-2-d": {
+      "candidate_pdf_pages": [
+        67
+      ],
+      "kpi_table_pages": [
+        67
+      ],
+      "metric_terms": [
+        "评估后一致同意改进",
+        "环境影响"
+      ]
+    },
+    "GRI 401-3-c": {
+      "candidate_pdf_pages": [
+        66
+      ],
+      "kpi_table_pages": [
+        66
+      ],
+      "metric_terms": [
+        "假期结束返岗",
+        "男性",
+        "女性"
+      ]
+    },
+    "GRI 401-3-d": {
+      "candidate_pdf_pages": [
+        66
+      ],
+      "kpi_table_pages": [
+        66
+      ],
+      "metric_terms": [
+        "返岗",
+        "12个月后仍在职",
+        "男性",
+        "女性"
+      ]
+    },
+    "GRI 401-3-e": {
+      "candidate_pdf_pages": [
+        66
+      ],
+      "kpi_table_pages": [
+        66
+      ],
+      "metric_terms": [
+        "返岗率",
+        "留任率"
+      ]
+    },
+    "GRI 403-8-a-i": {
+      "candidate_pdf_pages": [
+        66
+      ],
+      "kpi_table_pages": [
+        66
+      ],
+      "metric_terms": [
+        "ISO 45001",
+        "认证工厂占比"
+      ]
+    },
+    "GRI 403-8-a-iii": {
+      "candidate_pdf_pages": [
+        66
+      ],
+      "kpi_table_pages": [
+        66
+      ],
+      "metric_terms": [
+        "ISO 45001",
+        "认证工厂占比"
+      ]
+    },
+    "GRI 403-9-a-i": {
+      "candidate_pdf_pages": [
+        67
+      ],
+      "kpi_table_pages": [
+        67
+      ],
+      "metric_terms": [
+        "员工因工伤死亡数量",
+        "死亡率"
+      ]
+    },
+    "GRI 403-9-a-ii": {
+      "candidate_pdf_pages": [
+        67
+      ],
+      "kpi_table_pages": [
+        67
+      ],
+      "metric_terms": [
+        "损失工时工伤数量",
+        "LTIR"
+      ]
+    },
+    "GRI 403-9-a-iii": {
+      "candidate_pdf_pages": [
+        67
+      ],
+      "kpi_table_pages": [
+        67
+      ],
+      "metric_terms": [
+        "可记录工伤数量",
+        "TRIR"
+      ]
+    },
+    "GRI 403-9-a-v": {
+      "candidate_pdf_pages": [
+        67
+      ],
+      "kpi_table_pages": [
+        67
+      ],
+      "metric_terms": [
+        "员工工作小时数",
+        "工作小时数"
+      ]
+    },
+    "GRI 403-9-b": {
+      "candidate_pdf_pages": [
+        67
+      ],
+      "kpi_table_pages": [
+        67
+      ],
+      "metric_terms": [
+        "外部供方",
+        "TRIR",
+        "工作小时数"
+      ]
+    },
+    "GRI 403-9-b-i": {
+      "candidate_pdf_pages": [
+        67
+      ],
+      "kpi_table_pages": [
+        67
+      ],
+      "metric_terms": [
+        "外部供方",
+        "工伤死亡数量"
+      ]
+    },
+    "GRI 403-9-b-ii": {
+      "candidate_pdf_pages": [
+        67
+      ],
+      "kpi_table_pages": [
+        67
+      ],
+      "metric_terms": [
+        "外部供方",
+        "LTIR",
+        "损失工时"
+      ]
+    },
+    "GRI 403-9-b-iii": {
+      "candidate_pdf_pages": [
+        67
+      ],
+      "kpi_table_pages": [
+        67
+      ],
+      "metric_terms": [
+        "外部供方",
+        "可记录工伤数量",
+        "TRIR"
+      ]
+    },
+    "GRI 403-9-b-v": {
+      "candidate_pdf_pages": [
+        67
+      ],
+      "kpi_table_pages": [
+        67
+      ],
+      "metric_terms": [
+        "外部供方",
+        "工作小时数"
+      ]
+    },
+    "GRI 403-9-e": {
+      "candidate_pdf_pages": [
+        67
+      ],
+      "kpi_table_pages": [
+        67
+      ],
+      "metric_terms": [
+        "百万工时",
+        "TRIR",
+        "LTIR"
+      ]
+    },
+    "GRI 403-10-a": {
+      "candidate_pdf_pages": [
+        67
+      ],
+      "kpi_table_pages": [
+        67
+      ],
+      "metric_terms": [
+        "职业病病例数量",
+        "工作相关健康问题"
+      ]
+    },
+    "GRI 403-10-a-i": {
+      "candidate_pdf_pages": [
+        67
+      ],
+      "kpi_table_pages": [
+        67
+      ],
+      "metric_terms": [
+        "工作相关健康问题死亡",
+        "死亡数"
+      ]
+    },
+    "GRI 403-10-a-ii": {
+      "candidate_pdf_pages": [
+        67
+      ],
+      "kpi_table_pages": [
+        67
+      ],
+      "metric_terms": [
+        "职业病病例数量"
+      ]
+    },
+    "GRI 403-10-b": {
+      "candidate_pdf_pages": [
+        67
+      ],
+      "kpi_table_pages": [
+        67
+      ],
+      "metric_terms": [
+        "外部供方",
+        "职业病病例数量"
+      ]
+    },
+    "GRI 403-10-b-i": {
+      "candidate_pdf_pages": [
+        67
+      ],
+      "kpi_table_pages": [
+        67
+      ],
+      "metric_terms": [
+        "外部供方",
+        "工作相关健康问题死亡"
+      ]
+    },
+    "GRI 403-10-b-ii": {
+      "candidate_pdf_pages": [
+        67
+      ],
+      "kpi_table_pages": [
+        67
+      ],
+      "metric_terms": [
+        "外部供方",
+        "职业病病例数量"
+      ]
+    },
+    "GRI 414-2-a": {
+      "candidate_pdf_pages": [
+        67
+      ],
+      "kpi_table_pages": [
+        67
+      ],
+      "metric_terms": [
+        "开展社会影响评估的供应商数量"
+      ]
+    },
+    "GRI 414-2-b": {
+      "candidate_pdf_pages": [
+        67
+      ],
+      "kpi_table_pages": [
+        67
+      ],
+      "metric_terms": [
+        "具有重大实际或潜在负面社会影响的供应商数量"
+      ]
+    },
+    "GRI 2-29-a": {
+      "candidate_pdf_pages": [
+        14,
+        15
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "利益相关方",
+        "关注议题",
+        "沟通渠道"
+      ]
+    },
+    "GRI 2-29-a-i": {
+      "candidate_pdf_pages": [
+        14,
+        15
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "利益相关方",
+        "关注议题",
+        "沟通渠道"
+      ]
+    },
+    "GRI 2-29-a-ii": {
+      "candidate_pdf_pages": [
+        14,
+        15
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "利益相关方",
+        "关注议题",
+        "沟通渠道"
+      ]
+    },
+    "GRI 2-29-a-iii": {
+      "candidate_pdf_pages": [
+        14,
+        15
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "利益相关方",
+        "关注议题",
+        "沟通渠道"
+      ]
+    },
+    "GRI 3-1-a": {
+      "candidate_pdf_pages": [
+        14,
+        15
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "利益相关方",
+        "关注议题",
+        "沟通渠道"
+      ]
+    },
+    "GRI 3-1-a-i": {
+      "candidate_pdf_pages": [
+        14,
+        15
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "利益相关方",
+        "关注议题",
+        "沟通渠道"
+      ]
+    },
+    "GRI 3-1-a-ii": {
+      "candidate_pdf_pages": [
+        14,
+        15
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "利益相关方",
+        "关注议题",
+        "沟通渠道"
+      ]
+    },
+    "GRI 3-1-b": {
+      "candidate_pdf_pages": [
+        14,
+        15
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "利益相关方",
+        "关注议题",
+        "沟通渠道"
+      ]
+    },
+    "GRI 403-2-a": {
+      "candidate_pdf_pages": [
+        39,
+        41
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "风险辨识",
+        "隐患排查",
+        "事故事件管理"
+      ]
+    },
+    "GRI 403-2-a-i": {
+      "candidate_pdf_pages": [
+        39,
+        41
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "风险辨识",
+        "能力矩阵",
+        "岗位资格培训"
+      ]
+    },
+    "GRI 403-2-a-ii": {
+      "candidate_pdf_pages": [
+        39,
+        41
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "隐患排查",
+        "全员隐患上报",
+        "闭环整改"
+      ]
+    },
+    "GRI 403-2-b": {
+      "candidate_pdf_pages": [
+        39,
+        41
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "事故事件管理",
+        "汇报",
+        "整改"
+      ]
+    },
+    "GRI 403-2-d": {
+      "candidate_pdf_pages": [
+        39,
+        41
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "隐患排查",
+        "事故调查",
+        "整改闭环"
+      ]
+    },
+    "GRI 403-9-c-i": {
+      "candidate_pdf_pages": [
+        40
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "主要工伤类型",
+        "安全风险"
+      ]
+    },
+    "GRI 403-9-c-iii": {
+      "candidate_pdf_pages": [
+        40
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "高风险",
+        "控制措施",
+        "安全风险"
+      ]
+    },
+    "GRI 403-10-c-iii": {
+      "candidate_pdf_pages": [
+        38
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "职业健康",
+        "技术专委会"
+      ]
+    },
+    "GRI 413-1-a": {
+      "candidate_pdf_pages": [
+        14,
+        42,
+        43,
+        44
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "利益相关方",
+        "社区",
+        "公益",
+        "乡村振兴",
+        "森林保护"
+      ]
+    },
+    "GRI 413-1-a-iv": {
+      "candidate_pdf_pages": [
+        14,
+        42,
+        43,
+        44
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "利益相关方",
+        "社区",
+        "公益",
+        "乡村振兴",
+        "森林保护"
+      ]
+    },
+    "GRI 413-1-a-v": {
+      "candidate_pdf_pages": [
+        14,
+        42,
+        43,
+        44
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "利益相关方",
+        "社区",
+        "公益",
+        "乡村振兴",
+        "森林保护"
+      ]
+    },
+    "GRI 2-27-a": {
+      "candidate_pdf_pages": [
+        72
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "报告期内未发生违法违规事件",
+        "违法违规事件"
+      ]
+    },
+    "GRI 2-27-a-i": {
+      "candidate_pdf_pages": [
+        72
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "报告期内未发生违法违规事件",
+        "违法违规事件"
+      ]
+    },
+    "GRI 2-27-a-ii": {
+      "candidate_pdf_pages": [
+        72
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "报告期内未发生违法违规事件",
+        "违法违规事件"
+      ]
+    },
+    "GRI 2-27-b": {
+      "candidate_pdf_pages": [
+        72
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "报告期内未发生违法违规事件",
+        "违法违规事件"
+      ]
+    },
+    "GRI 2-27-b-i": {
+      "candidate_pdf_pages": [
+        72
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "报告期内未发生违法违规事件",
+        "违法违规事件"
+      ]
+    },
+    "GRI 2-27-b-ii": {
+      "candidate_pdf_pages": [
+        72
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "报告期内未发生违法违规事件",
+        "违法违规事件"
+      ]
+    },
+    "GRI 2-27-c": {
+      "candidate_pdf_pages": [
+        72
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "报告期内未发生违法违规事件",
+        "违法违规事件"
+      ]
+    },
+    "GRI 204-1-a": {
+      "candidate_pdf_pages": [
+        73
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "因商业保密限制从略披露",
+        "从略披露"
+      ]
+    },
+    "GRI 204-1-b": {
+      "candidate_pdf_pages": [
+        73
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "因商业保密限制从略披露",
+        "从略披露"
+      ]
+    },
+    "GRI 204-1-c": {
+      "candidate_pdf_pages": [
+        73
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "因商业保密限制从略披露",
+        "从略披露"
+      ]
+    },
+    "GRI 207-4-a": {
+      "candidate_pdf_pages": [
+        73
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "因商业保密限制从略披露",
+        "从略披露"
+      ]
+    },
+    "GRI 207-4-b": {
+      "candidate_pdf_pages": [
+        73
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "因商业保密限制从略披露",
+        "从略披露"
+      ]
+    },
+    "GRI 207-4-b-i": {
+      "candidate_pdf_pages": [
+        73
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "因商业保密限制从略披露",
+        "从略披露"
+      ]
+    },
+    "GRI 207-4-b-ii": {
+      "candidate_pdf_pages": [
+        73
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "因商业保密限制从略披露",
+        "从略披露"
+      ]
+    },
+    "GRI 207-4-b-iii": {
+      "candidate_pdf_pages": [
+        73
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "因商业保密限制从略披露",
+        "从略披露"
+      ]
+    },
+    "GRI 207-4-b-iv": {
+      "candidate_pdf_pages": [
+        73
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "因商业保密限制从略披露",
+        "从略披露"
+      ]
+    },
+    "GRI 207-4-b-v": {
+      "candidate_pdf_pages": [
+        73
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "因商业保密限制从略披露",
+        "从略披露"
+      ]
+    },
+    "GRI 207-4-b-vi": {
+      "candidate_pdf_pages": [
+        73
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "因商业保密限制从略披露",
+        "从略披露"
+      ]
+    },
+    "GRI 207-4-b-vii": {
+      "candidate_pdf_pages": [
+        73
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "因商业保密限制从略披露",
+        "从略披露"
+      ]
+    },
+    "GRI 207-4-b-viii": {
+      "candidate_pdf_pages": [
+        73
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "因商业保密限制从略披露",
+        "从略披露"
+      ]
+    },
+    "GRI 207-4-b-ix": {
+      "candidate_pdf_pages": [
+        73
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "因商业保密限制从略披露",
+        "从略披露"
+      ]
+    },
+    "GRI 207-4-b-x": {
+      "candidate_pdf_pages": [
+        73
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "因商业保密限制从略披露",
+        "从略披露"
+      ]
+    },
+    "GRI 207-4-c": {
+      "candidate_pdf_pages": [
+        73
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "因商业保密限制从略披露",
+        "从略披露"
+      ]
     }
-  }
+  },
+  "sections": [
+    {
+      "name": "stakeholder_engagement",
+      "pdf_pages": [
+        14,
+        15
+      ],
+      "report_pages": [
+        13,
+        14
+      ],
+      "terms": [
+        "利益相关方",
+        "关注议题",
+        "沟通渠道"
+      ]
+    },
+    {
+      "name": "ohs_management",
+      "pdf_pages": [
+        38,
+        39,
+        40,
+        41
+      ],
+      "report_pages": [
+        37,
+        38,
+        39,
+        40
+      ],
+      "terms": [
+        "EHS",
+        "职业健康安全",
+        "隐患排查",
+        "事故管理"
+      ]
+    },
+    {
+      "name": "community_program",
+      "pdf_pages": [
+        14,
+        42,
+        43,
+        44
+      ],
+      "report_pages": [
+        13,
+        41,
+        42,
+        43
+      ],
+      "terms": [
+        "利益相关方",
+        "社区",
+        "公益",
+        "乡村振兴",
+        "森林保护"
+      ]
+    }
+  ],
+  "index_note_pages": [
+    {
+      "pdf_page": 71,
+      "report_page": 70,
+      "note_types": [
+        "omission_note",
+        "index_statement"
+      ]
+    },
+    {
+      "pdf_page": 72,
+      "report_page": 71,
+      "note_types": [
+        "omission_note",
+        "index_statement"
+      ]
+    },
+    {
+      "pdf_page": 73,
+      "report_page": 72,
+      "note_types": [
+        "omission_note"
+      ]
+    },
+    {
+      "pdf_page": 74,
+      "report_page": 73,
+      "note_types": [
+        "omission_note"
+      ]
+    }
+  ]
 }

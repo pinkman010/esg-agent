@@ -1,0 +1,1303 @@
+{
+  "rules": [
+    {
+      "compilation_requirement_id": "GRI 201-1-2.1",
+      "target_requirement_ids": [
+        "GRI 201-1-a",
+        "GRI 201-1-a-i",
+        "GRI 201-1-a-ii",
+        "GRI 201-1-a-iii",
+        "GRI 201-1-b"
+      ],
+      "facets": [
+        "requires_source_basis",
+        "requires_applicability_check"
+      ],
+      "missing_item_templates": [
+        "EVG&D source basis from audited financial/P&L statement or internally audited management accounts",
+        "applicability of EVG&D source basis"
+      ],
+      "guardrail_effects": [
+        "EVG&D data should not be marked disclosed when source basis is absent; applicability check only applies to if-applicable language"
+      ],
+      "mapping_status": "fixed_from_review",
+      "review_note": "Remove requires_gender_breakdown and its missing-item/guardrail. Keep requires_source_basis; if desired, retain requires_applicability_check only for the phrase 'if applicable'. Targets can remain 201-1-a/a-i/a-ii/a-iii/b because the EVG&D source basis applies to the reported EVG&D data."
+    },
+    {
+      "compilation_requirement_id": "GRI 201-2-2.2",
+      "target_requirement_ids": [
+        "GRI 201-2-a",
+        "GRI 201-2-a-iii",
+        "GRI 201-2-a-v"
+      ],
+      "facets": [
+        "requires_unavailable_data_plan",
+        "requires_applicability_check"
+      ],
+      "missing_item_templates": [
+        "plans and timeline when financial implication or cost calculation system is unavailable",
+        "applicability of no-system fallback"
+      ],
+      "guardrail_effects": [
+        "when no calculation system exists, require plans and timeline instead of a generic method guardrail"
+      ],
+      "mapping_status": "fixed_from_review",
+      "review_note": "Narrow targets to GRI 201-2-a, GRI 201-2-a-iii, and GRI 201-2-a-v. This rule is a conditional fallback when no calculation system exists; use requires_unavailable_data_plan plus an applicability condition, not a general requires_method_or_assumption guardrail."
+    },
+    {
+      "compilation_requirement_id": "GRI 201-4-2.5",
+      "target_requirement_ids": [
+        "GRI 201-4-a",
+        "GRI 201-4-a-i",
+        "GRI 201-4-a-ii",
+        "GRI 201-4-a-iii",
+        "GRI 201-4-a-iv",
+        "GRI 201-4-a-v",
+        "GRI 201-4-a-vi",
+        "GRI 201-4-a-vii",
+        "GRI 201-4-a-viii",
+        "GRI 201-4-b"
+      ],
+      "facets": [
+        "requires_monetary_amount",
+        "requires_accounting_basis"
+      ],
+      "missing_item_templates": [
+        "monetary value of government financial assistance",
+        "GAAP or consistent accounting basis"
+      ],
+      "guardrail_effects": [
+        "do not mark financial assistance disclosed when monetary value or accounting basis is missing"
+      ],
+      "mapping_status": "fixed_from_review",
+      "review_note": "Remove GRI 201-4-c from targets; the GAAP monetary-value rule applies to 201-4-a, a-i through a-viii, and 201-4-b. Remove requires_gender_breakdown and replace it with a monetary-amount/accounting-basis facet."
+    },
+    {
+      "compilation_requirement_id": "GRI 202-2-2.2",
+      "target_requirement_ids": [
+        "GRI 202-2-a"
+      ],
+      "facets": [
+        "requires_percentage",
+        "requires_full_time_employee_denominator"
+      ],
+      "missing_item_templates": [
+        "percentage calculated using full-time employee data"
+      ],
+      "guardrail_effects": [
+        "local senior management percentage must use full-time employee denominator"
+      ],
+      "mapping_status": "fixed_from_review",
+      "review_note": "Target only GRI 202-2-a. The full-time-employee denominator does not govern the definition leaves 202-2-b/c/d. Keep requires_percentage and a full-time-employee denominator/scope facet; remove requires_employee_category_breakdown."
+    },
+    {
+      "compilation_requirement_id": "GRI 207-4-2.1",
+      "target_requirement_ids": [
+        "GRI 207-4-a",
+        "GRI 207-4-b",
+        "GRI 207-4-b-i",
+        "GRI 207-4-b-ii",
+        "GRI 207-4-b-iii",
+        "GRI 207-4-b-iv",
+        "GRI 207-4-b-v",
+        "GRI 207-4-b-vi",
+        "GRI 207-4-b-vii",
+        "GRI 207-4-b-viii",
+        "GRI 207-4-b-ix",
+        "GRI 207-4-b-x",
+        "GRI 207-4-c"
+      ],
+      "facets": [
+        "requires_source_basis",
+        "requires_reporting_period_alignment",
+        "requires_fallback_period_context"
+      ],
+      "missing_item_templates": [
+        "audited consolidated financial statement/public record source basis",
+        "period covered by the most recent audited statements or permitted fallback period"
+      ],
+      "guardrail_effects": [
+        "country-by-country data period must align with audited consolidated statements or permitted fallback period"
+      ],
+      "mapping_status": "fixed_from_review",
+      "review_note": "Remove requires_gender_breakdown and requires_unavailable_data_plan. Replace with requires_source_basis plus reporting-period alignment/fallback-period context. The targets may remain disclosure-wide because the prescribed financial-statement period applies to all 207-4 data."
+    },
+    {
+      "compilation_requirement_id": "GRI 207-4-2.2.1",
+      "target_requirement_ids": [
+        "GRI 207-4-b-iv",
+        "GRI 207-4-b-vi",
+        "GRI 207-4-b-vii",
+        "GRI 207-4-b-viii"
+      ],
+      "facets": [
+        "requires_reconciliation",
+        "requires_difference_explanation"
+      ],
+      "missing_item_templates": [
+        "reconciliation to audited consolidated statements for selected fields",
+        "explanation for reconciliation differences"
+      ],
+      "guardrail_effects": [
+        "reconciliation guardrail applies only to selected financial fields, not unrelated country-by-country leaves"
+      ],
+      "mapping_status": "fixed_from_review",
+      "review_note": "Narrow targets to GRI 207-4-b-iv, b-vi, b-vii, and b-viii. Add requires_reconciliation and requires_difference_explanation; remove requires_gender_breakdown. Do not apply this reconciliation rule to unrelated country-by-country leaves."
+    },
+    {
+      "compilation_requirement_id": "GRI 207-4-2.2.2",
+      "target_requirement_ids": [
+        "GRI 207-4-b-ix"
+      ],
+      "facets": [
+        "requires_exclusion_scope",
+        "requires_reporting_period_alignment"
+      ],
+      "missing_item_templates": [
+        "exclude deferred corporate income tax and uncertain tax position provisions",
+        "current tax accrued for reported period"
+      ],
+      "guardrail_effects": [
+        "current tax accrued must exclude deferred tax and uncertain-tax-position provisions"
+      ],
+      "mapping_status": "fixed_from_review",
+      "review_note": "Target only GRI 207-4-b-ix. Remove requires_percentage. Keep an exclusion-scope/reporting-period facet: current tax accrued must exclude deferred tax and uncertain-tax-position provisions."
+    },
+    {
+      "compilation_requirement_id": "GRI 207-4-2.2.3",
+      "target_requirement_ids": [
+        "GRI 207-4-a",
+        "GRI 207-4-b",
+        "GRI 207-4-b-i",
+        "GRI 207-4-b-ii",
+        "GRI 207-4-b-iii",
+        "GRI 207-4-b-iv",
+        "GRI 207-4-b-v",
+        "GRI 207-4-b-vi",
+        "GRI 207-4-b-vii",
+        "GRI 207-4-b-viii",
+        "GRI 207-4-b-ix",
+        "GRI 207-4-b-x"
+      ],
+      "facets": [
+        "requires_separate_reporting",
+        "requires_tax_jurisdiction_boundary"
+      ],
+      "missing_item_templates": [
+        "stateless entity reported separately",
+        "tax jurisdiction boundary"
+      ],
+      "guardrail_effects": [
+        "stateless entities require separate reporting and should not be folded into ordinary jurisdiction rows"
+      ],
+      "mapping_status": "fixed_from_review",
+      "review_note": "Exclude GRI 207-4-c from targets; apply separate reporting to GRI 207-4-a and the 207-4-b data for a stateless entity. Replace requires_percentage with requires_separate_reporting / requires_tax_jurisdiction_boundary."
+    },
+    {
+      "compilation_requirement_id": "GRI 301-2-2.2.1",
+      "target_requirement_ids": [
+        "GRI 301-2-a"
+      ],
+      "facets": [
+        "requires_denominator_basis"
+      ],
+      "missing_item_templates": [
+        "total material weight or volume used as denominator consistent with 301-1"
+      ],
+      "guardrail_effects": [
+        "block recycled-input percentage when denominator basis is absent"
+      ],
+      "mapping_status": "fixed_from_review",
+      "review_note": "Target is correct, but replace requires_count_or_amount with requires_denominator_basis. Missing item should be 'total material weight or volume used as the denominator, consistent with 301-1'; guardrail should block a recycled-input percentage when that denominator basis is absent."
+    },
+    {
+      "compilation_requirement_id": "GRI 301-2-2.2.2",
+      "target_requirement_ids": [
+        "GRI 301-2-a"
+      ],
+      "facets": [
+        "requires_percentage",
+        "requires_formula"
+      ],
+      "missing_item_templates": [
+        "recycled input material percentage formula"
+      ],
+      "guardrail_effects": [
+        "recycled input disclosure requires formula-based percentage"
+      ],
+      "mapping_status": "approved",
+      "review_note": ""
+    },
+    {
+      "compilation_requirement_id": "GRI 301-3-2.4.1",
+      "target_requirement_ids": [
+        "GRI 301-3-a"
+      ],
+      "facets": [
+        "requires_exclusion_scope"
+      ],
+      "missing_item_templates": [
+        "exclude rejects and recalls of products"
+      ],
+      "guardrail_effects": [
+        "reclaimed product percentage should exclude rejects and recalls"
+      ],
+      "mapping_status": "fixed_from_review",
+      "review_note": "Target only GRI 301-3-a. The rejects/recalls exclusion affects the reclaimed-product percentage, not the separate data-collection-method leaf GRI 301-3-b."
+    },
+    {
+      "compilation_requirement_id": "GRI 301-3-2.4.2",
+      "target_requirement_ids": [
+        "GRI 301-3-a"
+      ],
+      "facets": [
+        "requires_percentage",
+        "requires_product_category_breakdown",
+        "requires_formula"
+      ],
+      "missing_item_templates": [
+        "percentage of reclaimed products and packaging by product category"
+      ],
+      "guardrail_effects": [
+        "formula governs reclaimed product and packaging percentage leaf only"
+      ],
+      "mapping_status": "fixed_from_review",
+      "review_note": "Target only GRI 301-3-a. The formula governs the percentage leaf; it does not itself satisfy or constrain GRI 301-3-b on how data were collected."
+    },
+    {
+      "compilation_requirement_id": "GRI 302-1-2.1.1",
+      "target_requirement_ids": [
+        "GRI 302-1-a",
+        "GRI 302-1-b",
+        "GRI 302-1-c",
+        "GRI 302-1-e"
+      ],
+      "facets": [
+        "requires_no_double_counting",
+        "requires_calculation_boundary"
+      ],
+      "missing_item_templates": [
+        "avoid double-counting self-generated energy"
+      ],
+      "guardrail_effects": [
+        "self-generated energy must be counted once under fuel consumption"
+      ],
+      "mapping_status": "fixed_from_review",
+      "review_note": "Narrow targets to GRI 302-1-a, b, c, and e. Replace requires_percentage with a no-double-counting/calculation-boundary facet. Do not apply this rule to energy sold, method disclosure, or conversion-factor source leaves."
+    },
+    {
+      "compilation_requirement_id": "GRI 302-1-2.1.2",
+      "target_requirement_ids": [
+        "GRI 302-1-a",
+        "GRI 302-1-b"
+      ],
+      "facets": [
+        "requires_energy_source_breakdown",
+        "requires_separate_reporting"
+      ],
+      "missing_item_templates": [
+        "separate non-renewable and renewable fuel consumption"
+      ],
+      "guardrail_effects": [
+        "fuel consumption must be split by non-renewable and renewable sources"
+      ],
+      "mapping_status": "fixed_from_review",
+      "review_note": "Target only GRI 302-1-a and GRI 302-1-b. Replace requires_percentage with requires_energy_source_breakdown / requires_separate_reporting for renewable versus non-renewable fuel."
+    },
+    {
+      "compilation_requirement_id": "GRI 302-1-2.1.3",
+      "target_requirement_ids": [
+        "GRI 302-1-a",
+        "GRI 302-1-b",
+        "GRI 302-1-c",
+        "GRI 302-1-e"
+      ],
+      "facets": [
+        "requires_organizational_boundary"
+      ],
+      "missing_item_templates": [
+        "entities owned or controlled by the organization"
+      ],
+      "guardrail_effects": [
+        "internal energy consumption must be limited to owned or controlled entities"
+      ],
+      "mapping_status": "fixed_from_review",
+      "review_note": "Narrow targets to GRI 302-1-a, b, c, and e. Replace requires_worker_boundary with requires_organizational_boundary (entities owned or controlled). Do not apply to energy sold or method/factor-source leaves."
+    },
+    {
+      "compilation_requirement_id": "GRI 302-1-2.1.4",
+      "target_requirement_ids": [
+        "GRI 302-1-e",
+        "GRI 302-1-f"
+      ],
+      "facets": [
+        "requires_formula",
+        "requires_unit"
+      ],
+      "missing_item_templates": [
+        "total internal energy formula in joules or multiples"
+      ],
+      "guardrail_effects": [
+        "total internal energy needs formula and unit basis"
+      ],
+      "mapping_status": "fixed_from_review",
+      "review_note": "Narrow targets to GRI 302-1-e and, if methodology sufficiency is being modeled, GRI 302-1-f. The total-energy formula does not govern the individual fuel, purchased-energy, sold-energy, or conversion-factor-source leaves."
+    },
+    {
+      "compilation_requirement_id": "GRI 302-2-2.3",
+      "target_requirement_ids": [
+        "GRI 302-2-a",
+        "GRI 302-2-b"
+      ],
+      "facets": [
+        "requires_exclusion_scope"
+      ],
+      "missing_item_templates": [
+        "exclude energy already reported in 302-1"
+      ],
+      "guardrail_effects": [
+        "external energy consumption must exclude internal energy reported under 302-1"
+      ],
+      "mapping_status": "fixed_from_review",
+      "review_note": "Narrow targets to GRI 302-2-a and GRI 302-2-b. The exclusion of energy already reported in 302-1 affects the outside-organization amount and its compilation method, not the conversion-factor source leaf."
+    },
+    {
+      "compilation_requirement_id": "GRI 302-3-2.5.1",
+      "target_requirement_ids": [
+        "GRI 302-3-a",
+        "GRI 302-3-b"
+      ],
+      "facets": [
+        "requires_ratio_numerator_denominator"
+      ],
+      "missing_item_templates": [
+        "absolute energy numerator and organization-specific denominator"
+      ],
+      "guardrail_effects": [
+        "energy intensity ratio requires numerator and denominator"
+      ],
+      "mapping_status": "fixed_from_review",
+      "review_note": "Narrow targets to GRI 302-3-a and GRI 302-3-b. The numerator/denominator formula does not directly govern the energy-type leaf or the within/outside boundary leaf."
+    },
+    {
+      "compilation_requirement_id": "GRI 302-3-2.5.2",
+      "target_requirement_ids": [
+        "GRI 302-3-a",
+        "GRI 302-3-d"
+      ],
+      "facets": [
+        "requires_separate_reporting",
+        "requires_boundary"
+      ],
+      "missing_item_templates": [
+        "separate internal and external energy intensity ratios"
+      ],
+      "guardrail_effects": [
+        "internal and external energy intensity ratios require separate reporting when both are reported"
+      ],
+      "mapping_status": "fixed_from_review",
+      "review_note": "Narrow targets to GRI 302-3-a and GRI 302-3-d. Add a separate-reporting/boundary facet; the rule does not directly govern the denominator metric or energy-type list."
+    },
+    {
+      "compilation_requirement_id": "GRI 302-4-2.7.1",
+      "target_requirement_ids": [
+        "GRI 302-4-a",
+        "GRI 302-4-d"
+      ],
+      "facets": [
+        "requires_exclusion_scope"
+      ],
+      "missing_item_templates": [
+        "exclude reductions from reduced production capacity or outsourcing"
+      ],
+      "guardrail_effects": [
+        "energy reduction cannot rely on reduced production capacity or outsourcing effects"
+      ],
+      "mapping_status": "fixed_from_review",
+      "review_note": "Narrow targets to GRI 302-4-a and GRI 302-4-d. The exclusion affects the reduction amount and its methodology, not the energy-type or baseline leaf."
+    },
+    {
+      "compilation_requirement_id": "GRI 302-4-2.7.2",
+      "target_requirement_ids": [
+        "GRI 302-4-a",
+        "GRI 302-4-d"
+      ],
+      "facets": [
+        "requires_method_or_assumption",
+        "requires_measurement_basis"
+      ],
+      "missing_item_templates": [
+        "whether reduction is estimated, modeled, or directly measured",
+        "method used for estimation or modeling"
+      ],
+      "guardrail_effects": [
+        "energy reduction evidence needs measurement basis and method when estimated or modeled"
+      ],
+      "mapping_status": "fixed_from_review",
+      "review_note": "Narrow targets to GRI 302-4-a and GRI 302-4-d. Remove requires_gender_breakdown. Keep requires_method_or_assumption and specify measurement basis: estimated, modeled, or directly measured."
+    },
+    {
+      "compilation_requirement_id": "GRI 303-3-2.1",
+      "target_requirement_ids": [
+        "GRI 303-3-b",
+        "GRI 303-3-b-i",
+        "GRI 303-3-b-ii",
+        "GRI 303-3-b-iii",
+        "GRI 303-3-b-iv",
+        "GRI 303-3-b-v",
+        "GRI 303-3-d"
+      ],
+      "facets": [
+        "requires_water_stress_methodology"
+      ],
+      "missing_item_templates": [
+        "public and credible water stress assessment tool or methodology"
+      ],
+      "guardrail_effects": [
+        "water-stress withdrawal branch requires credible water-stress methodology"
+      ],
+      "mapping_status": "fixed_from_review",
+      "review_note": "Narrow targets to the water-stress withdrawal branch GRI 303-3-b and b-i through b-v, plus GRI 303-3-d for methodology context. Do not apply the water-stress assessment method to all-area totals or salinity breakdown leaves."
+    },
+    {
+      "compilation_requirement_id": "GRI 303-4-2.3",
+      "target_requirement_ids": [
+        "GRI 303-4-c",
+        "GRI 303-4-c-i",
+        "GRI 303-4-c-ii",
+        "GRI 303-4-e"
+      ],
+      "facets": [
+        "requires_water_stress_methodology"
+      ],
+      "missing_item_templates": [
+        "public and credible water stress assessment tool or methodology"
+      ],
+      "guardrail_effects": [
+        "water discharge to water-stressed areas requires credible methodology"
+      ],
+      "mapping_status": "fixed_from_review",
+      "review_note": "Narrow targets to GRI 303-4-c, c-i, c-ii, and GRI 303-4-e. The water-stress assessment method does not govern all discharge destinations, substance-of-concern leaves, or non-water-stress totals."
+    },
+    {
+      "compilation_requirement_id": "GRI 305-1-2.1.1",
+      "target_requirement_ids": [
+        "GRI 305-1-a",
+        "GRI 305-1-g"
+      ],
+      "facets": [
+        "requires_exclusion_scope"
+      ],
+      "missing_item_templates": [
+        "exclude GHG trades from gross Scope 1 emissions"
+      ],
+      "guardrail_effects": [
+        "Scope 1 gross emissions must exclude GHG trades"
+      ],
+      "mapping_status": "fixed_from_review",
+      "review_note": "Narrow targets to GRI 305-1-a and GRI 305-1-g. The GHG-trade exclusion affects the gross Scope 1 amount and its method, not base-year, factor-source, gas-list, or consolidation leaves."
+    },
+    {
+      "compilation_requirement_id": "GRI 305-1-2.1.2",
+      "target_requirement_ids": [
+        "GRI 305-1-a",
+        "GRI 305-1-d"
+      ],
+      "facets": [
+        "requires_separate_reporting",
+        "requires_exclusion_scope"
+      ],
+      "missing_item_templates": [
+        "biogenic CO2 reported separately",
+        "specified biogenic non-CO2 and lifecycle emissions excluded"
+      ],
+      "guardrail_effects": [
+        "gross Scope 1 evidence must not mix biogenic emissions into direct emissions"
+      ],
+      "mapping_status": "fixed_from_review",
+      "review_note": "Narrow targets to GRI 305-1-a and the checklist leaf containing biogenic CO2 (currently GRI 305-1-d). Replace requires_percentage with requires_separate_reporting; retain requires_exclusion_scope for non-CO2 biogenic gases and non-combustion/biodegradation lifecycle emissions."
+    },
+    {
+      "compilation_requirement_id": "GRI 305-2-2.3.1",
+      "target_requirement_ids": [
+        "GRI 305-2-a",
+        "GRI 305-2-b",
+        "GRI 305-2-g"
+      ],
+      "facets": [
+        "requires_exclusion_scope"
+      ],
+      "missing_item_templates": [
+        "exclude GHG trades from gross Scope 2 emissions"
+      ],
+      "guardrail_effects": [
+        "Scope 2 gross emissions must exclude GHG trades"
+      ],
+      "mapping_status": "fixed_from_review",
+      "review_note": "Narrow targets to GRI 305-2-a, GRI 305-2-b, and GRI 305-2-g. The GHG-trade exclusion does not govern gas-list, base-year, factor-source, or consolidation leaves."
+    },
+    {
+      "compilation_requirement_id": "GRI 305-2-2.3.2",
+      "target_requirement_ids": [
+        "GRI 305-2-a",
+        "GRI 305-2-b",
+        "GRI 305-2-g"
+      ],
+      "facets": [
+        "requires_exclusion_scope"
+      ],
+      "missing_item_templates": [
+        "exclude Scope 3 emissions from Scope 2 disclosure"
+      ],
+      "guardrail_effects": [
+        "Scope 2 evidence must not include Scope 3 emissions"
+      ],
+      "mapping_status": "fixed_from_review",
+      "review_note": "Narrow targets to GRI 305-2-a, GRI 305-2-b, and GRI 305-2-g. The Scope 3 exclusion is part of the Scope 2 boundary/method, not a guardrail for every 305-2 leaf."
+    },
+    {
+      "compilation_requirement_id": "GRI 305-2-2.3.3",
+      "target_requirement_ids": [
+        "GRI 305-2-a",
+        "GRI 305-2-b",
+        "GRI 305-2-g"
+      ],
+      "facets": [
+        "requires_method_or_assumption",
+        "requires_applicability_check"
+      ],
+      "missing_item_templates": [
+        "location-based method when product or supplier-specific data is unavailable"
+      ],
+      "guardrail_effects": [
+        "Scope 2 method depends on availability of contractual/product-specific data"
+      ],
+      "mapping_status": "fixed_from_review",
+      "review_note": "Narrow targets to GRI 305-2-a, GRI 305-2-b, and GRI 305-2-g. Replace requires_percentage and requires_region_breakdown with requires_method_or_assumption plus an applicability condition for markets without contractual/product-specific data."
+    },
+    {
+      "compilation_requirement_id": "GRI 305-2-2.3.4",
+      "target_requirement_ids": [
+        "GRI 305-2-a",
+        "GRI 305-2-b",
+        "GRI 305-2-g"
+      ],
+      "facets": [
+        "requires_method_or_assumption",
+        "requires_applicability_check"
+      ],
+      "missing_item_templates": [
+        "location-based and market-based methods when contractual instruments exist"
+      ],
+      "guardrail_effects": [
+        "Scope 2 market-based method applies when contractual instruments are available"
+      ],
+      "mapping_status": "fixed_from_review",
+      "review_note": "Narrow targets to GRI 305-2-a, GRI 305-2-b, and GRI 305-2-g. Remove requires_percentage, requires_gender_breakdown, and requires_region_breakdown; use method plus applicability for markets with contractual instruments."
+    },
+    {
+      "compilation_requirement_id": "GRI 305-3-2.5.1",
+      "target_requirement_ids": [
+        "GRI 305-3-a"
+      ],
+      "facets": [
+        "requires_exclusion_scope"
+      ],
+      "missing_item_templates": [
+        "exclude GHG trades from gross Scope 3 emissions"
+      ],
+      "guardrail_effects": [
+        "Scope 3 gross emissions must exclude GHG trades"
+      ],
+      "mapping_status": "fixed_from_review",
+      "review_note": "Narrow target to GRI 305-3-a (and a methodology leaf only if the checklist later restores one). The GHG-trade exclusion does not govern gases, base year, factor source, or other unrelated leaves."
+    },
+    {
+      "compilation_requirement_id": "GRI 305-3-2.5.2",
+      "target_requirement_ids": [
+        "GRI 305-3-a",
+        "GRI 305-3-d"
+      ],
+      "facets": [
+        "requires_exclusion_scope"
+      ],
+      "missing_item_templates": [
+        "exclude Scope 2 emissions from Scope 3 disclosure"
+      ],
+      "guardrail_effects": [
+        "Scope 3 evidence must not include Scope 2 emissions"
+      ],
+      "mapping_status": "fixed_from_review",
+      "review_note": "Narrow targets to GRI 305-3-a and the categories/activities leaf GRI 305-3-d. Do not apply the Scope 2 exclusion to base-year or factor-source leaves."
+    },
+    {
+      "compilation_requirement_id": "GRI 305-4-2.7.1",
+      "target_requirement_ids": [
+        "GRI 305-4-a",
+        "GRI 305-4-b"
+      ],
+      "facets": [
+        "requires_ratio_numerator_denominator"
+      ],
+      "missing_item_templates": [
+        "absolute GHG emissions numerator and organization-specific denominator"
+      ],
+      "guardrail_effects": [
+        "GHG intensity ratio requires numerator and denominator"
+      ],
+      "mapping_status": "fixed_from_review",
+      "review_note": "Narrow targets to GRI 305-4-a and GRI 305-4-b. The ratio formula does not directly govern the list of Scope types included."
+    },
+    {
+      "compilation_requirement_id": "GRI 305-4-2.7.2",
+      "target_requirement_ids": [
+        "GRI 305-4-a",
+        "GRI 305-4-c"
+      ],
+      "facets": [
+        "requires_scope_breakdown",
+        "requires_separate_reporting"
+      ],
+      "missing_item_templates": [
+        "Scope 3 intensity separately from Scope 1 and Scope 2 intensity"
+      ],
+      "guardrail_effects": [
+        "Scope 3 intensity must be reported separately from Scope 1/2 when included"
+      ],
+      "mapping_status": "fixed_from_review",
+      "review_note": "Narrow targets to GRI 305-4-a and GRI 305-4-c. The separate Scope 3 ratio rule does not directly govern the denominator metric."
+    },
+    {
+      "compilation_requirement_id": "GRI 305-5-2.9.1",
+      "target_requirement_ids": [
+        "GRI 305-5-a",
+        "GRI 305-5-e"
+      ],
+      "facets": [
+        "requires_exclusion_scope"
+      ],
+      "missing_item_templates": [
+        "exclude reductions from reduced production capacity or outsourcing"
+      ],
+      "guardrail_effects": [
+        "GHG reduction cannot rely on reduced production capacity or outsourcing effects"
+      ],
+      "mapping_status": "fixed_from_review",
+      "review_note": "Narrow targets to GRI 305-5-a and GRI 305-5-e. The production-capacity/outsourcing exclusion affects the reduction amount and its methodology, not gas types or Scope labels."
+    },
+    {
+      "compilation_requirement_id": "GRI 305-5-2.9.2",
+      "target_requirement_ids": [
+        "GRI 305-5-a",
+        "GRI 305-5-e"
+      ],
+      "facets": [
+        "requires_method_or_assumption"
+      ],
+      "missing_item_templates": [
+        "inventory or project accounting method"
+      ],
+      "guardrail_effects": [
+        "GHG reduction amount requires inventory or project method basis"
+      ],
+      "mapping_status": "fixed_from_review",
+      "review_note": "Narrow targets to GRI 305-5-a and GRI 305-5-e. Inventory/project accounting method does not govern gas types or Scope labels."
+    },
+    {
+      "compilation_requirement_id": "GRI 305-5-2.9.3",
+      "target_requirement_ids": [
+        "GRI 305-5-a",
+        "GRI 305-5-e"
+      ],
+      "facets": [
+        "requires_method_or_assumption"
+      ],
+      "missing_item_templates": [
+        "primary effects plus significant secondary effects"
+      ],
+      "guardrail_effects": [
+        "GHG reduction total requires primary and significant secondary effects method"
+      ],
+      "mapping_status": "fixed_from_review",
+      "review_note": "Narrow targets to GRI 305-5-a and GRI 305-5-e. Primary and significant secondary effects affect the calculated reduction and methodology only."
+    },
+    {
+      "compilation_requirement_id": "GRI 305-5-2.9.4",
+      "target_requirement_ids": [
+        "GRI 305-5-a",
+        "GRI 305-5-d"
+      ],
+      "facets": [
+        "requires_scope_breakdown",
+        "requires_separate_reporting"
+      ],
+      "missing_item_templates": [
+        "reductions reported separately by Scope type"
+      ],
+      "guardrail_effects": [
+        "when multiple Scopes are reported, reductions must be split by Scope type"
+      ],
+      "mapping_status": "fixed_from_review",
+      "review_note": "Narrow targets to GRI 305-5-a and GRI 305-5-d. Replace requires_percentage with requires_scope_breakdown / requires_separate_reporting; the rule requires separate reductions by Scope, not a percentage."
+    },
+    {
+      "compilation_requirement_id": "GRI 305-5-2.9.5",
+      "target_requirement_ids": [
+        "GRI 305-5-a",
+        "GRI 305-5-e"
+      ],
+      "facets": [
+        "requires_separate_reporting"
+      ],
+      "missing_item_templates": [
+        "offset-derived reductions reported separately"
+      ],
+      "guardrail_effects": [
+        "offset reductions must be separate from reduction initiatives"
+      ],
+      "mapping_status": "fixed_from_review",
+      "review_note": "Narrow targets to GRI 305-5-a and GRI 305-5-e. Replace requires_percentage with requires_separate_reporting for offset-derived reductions."
+    },
+    {
+      "compilation_requirement_id": "GRI 305-6-2.11.1",
+      "target_requirement_ids": [
+        "GRI 305-6-a"
+      ],
+      "facets": [
+        "requires_method_or_assumption"
+      ],
+      "missing_item_templates": [
+        "ODS production minus approved destruction and feedstock use"
+      ],
+      "guardrail_effects": [
+        "ODS production amount requires specified calculation basis"
+      ],
+      "mapping_status": "fixed_from_review",
+      "review_note": "Target only GRI 305-6-a. The production formula does not govern the substances-included or emission-factor-source leaves."
+    },
+    {
+      "compilation_requirement_id": "GRI 305-7-2.13.1",
+      "target_requirement_ids": [
+        "GRI 305-7-a",
+        "GRI 305-7-b"
+      ],
+      "facets": [
+        "requires_method_or_assumption",
+        "evidence_kind_direct_measurement"
+      ],
+      "missing_item_templates": [
+        "direct measurement of significant air emissions",
+        "emission-factor source may be not applicable when direct measurement is used"
+      ],
+      "guardrail_effects": [
+        "direct measurement can satisfy method; factor-source leaf may be not applicable"
+      ],
+      "mapping_status": "fixed_from_review",
+      "review_note": "Remove requires_gender_breakdown. Use requires_method_or_assumption with a direct-measurement evidence kind. If GRI 305-7-b remains targeted, the guardrail must state that emission-factor source may be not applicable when direct measurement is used."
+    },
+    {
+      "compilation_requirement_id": "GRI 305-7-2.13.2",
+      "target_requirement_ids": [
+        "GRI 305-7-a",
+        "GRI 305-7-b"
+      ],
+      "facets": [
+        "requires_method_or_assumption",
+        "evidence_kind_site_specific_data"
+      ],
+      "missing_item_templates": [
+        "calculation based on site-specific data"
+      ],
+      "guardrail_effects": [
+        "significant air emissions can use site-specific data calculation"
+      ],
+      "mapping_status": "approved",
+      "review_note": ""
+    },
+    {
+      "compilation_requirement_id": "GRI 305-7-2.13.3",
+      "target_requirement_ids": [
+        "GRI 305-7-a",
+        "GRI 305-7-b"
+      ],
+      "facets": [
+        "requires_factor_source",
+        "evidence_kind_published_factor"
+      ],
+      "missing_item_templates": [
+        "calculation based on published emission factors"
+      ],
+      "guardrail_effects": [
+        "significant air emissions can use published emission factors"
+      ],
+      "mapping_status": "approved",
+      "review_note": ""
+    },
+    {
+      "compilation_requirement_id": "GRI 305-7-2.13.4",
+      "target_requirement_ids": [
+        "GRI 305-7-a",
+        "GRI 305-7-b"
+      ],
+      "facets": [
+        "requires_method_or_assumption",
+        "requires_estimation_basis"
+      ],
+      "missing_item_templates": [
+        "basis of estimation when default figures are unavailable"
+      ],
+      "guardrail_effects": [
+        "estimated significant air emissions require estimation basis"
+      ],
+      "mapping_status": "fixed_from_review",
+      "review_note": "Replace requires_compilation_context with requires_method_or_assumption plus requires_estimation_basis. Missing item should be the basis of estimation when default figures are unavailable; the generic context guardrail is not actionable."
+    },
+    {
+      "compilation_requirement_id": "GRI 306-3-2.1.1",
+      "target_requirement_ids": [
+        "GRI 306-3-a"
+      ],
+      "facets": [
+        "requires_effluent_exclusion"
+      ],
+      "missing_item_templates": [
+        "exclude effluent unless national law requires inclusion in total waste"
+      ],
+      "guardrail_effects": [
+        "do not count effluent in total waste unless required by law"
+      ],
+      "mapping_status": "fixed_from_review",
+      "review_note": "Target only GRI 306-3-a. Replace the guardrail with 'do not count effluent in total waste unless national law requires it'; the source does not require a separate narrative explanation for GRI 306-3-b."
+    },
+    {
+      "compilation_requirement_id": "GRI 306-3-2.1.2",
+      "target_requirement_ids": [
+        "GRI 306-3-a"
+      ],
+      "facets": [
+        "requires_unit_conversion"
+      ],
+      "missing_item_templates": [
+        "1000 kilograms per metric ton or metric tons directly"
+      ],
+      "guardrail_effects": [
+        "waste weight conversion uses 1000 kg per metric ton when needed"
+      ],
+      "mapping_status": "fixed_from_review",
+      "review_note": "Target only GRI 306-3-a. Replace requires_compilation_context with requires_unit_conversion; accept metric tons directly or convert using 1,000 kg per metric ton."
+    },
+    {
+      "compilation_requirement_id": "GRI 306-4-2.2.1",
+      "target_requirement_ids": [
+        "GRI 306-4-a",
+        "GRI 306-4-b",
+        "GRI 306-4-b-i",
+        "GRI 306-4-b-ii",
+        "GRI 306-4-b-iii",
+        "GRI 306-4-c",
+        "GRI 306-4-c-i",
+        "GRI 306-4-c-ii",
+        "GRI 306-4-c-iii",
+        "GRI 306-4-d",
+        "GRI 306-4-d-i",
+        "GRI 306-4-d-ii"
+      ],
+      "facets": [
+        "requires_effluent_exclusion"
+      ],
+      "missing_item_templates": [
+        "exclude effluent unless national law requires inclusion in total waste"
+      ],
+      "guardrail_effects": [
+        "do not count effluent as diverted waste unless required by law"
+      ],
+      "mapping_status": "fixed_from_review",
+      "review_note": "Exclude GRI 306-4-e from targets; apply to all quantitative weight leaves GRI 306-4-a through d-ii. Guardrail should prevent totals that include effluent unless required by law, rather than require a standalone exclusion explanation."
+    },
+    {
+      "compilation_requirement_id": "GRI 306-4-2.2.2",
+      "target_requirement_ids": [
+        "GRI 306-4-a",
+        "GRI 306-4-b",
+        "GRI 306-4-b-i",
+        "GRI 306-4-b-ii",
+        "GRI 306-4-b-iii",
+        "GRI 306-4-c",
+        "GRI 306-4-c-i",
+        "GRI 306-4-c-ii",
+        "GRI 306-4-c-iii",
+        "GRI 306-4-d",
+        "GRI 306-4-d-i",
+        "GRI 306-4-d-ii"
+      ],
+      "facets": [
+        "requires_unit_conversion"
+      ],
+      "missing_item_templates": [
+        "1000 kilograms per metric ton or metric tons directly"
+      ],
+      "guardrail_effects": [
+        "diverted waste weight conversion uses 1000 kg per metric ton when needed"
+      ],
+      "mapping_status": "fixed_from_review",
+      "review_note": "Exclude GRI 306-4-e from targets; apply to all quantitative weight leaves. Replace requires_compilation_context with requires_unit_conversion using 1,000 kg per metric ton."
+    },
+    {
+      "compilation_requirement_id": "GRI 306-5-2.4.1",
+      "target_requirement_ids": [
+        "GRI 306-5-a",
+        "GRI 306-5-b",
+        "GRI 306-5-b-i",
+        "GRI 306-5-b-ii",
+        "GRI 306-5-b-iii",
+        "GRI 306-5-b-iv",
+        "GRI 306-5-c",
+        "GRI 306-5-c-i",
+        "GRI 306-5-c-ii",
+        "GRI 306-5-c-iii",
+        "GRI 306-5-c-iv",
+        "GRI 306-5-d",
+        "GRI 306-5-d-i",
+        "GRI 306-5-d-ii"
+      ],
+      "facets": [
+        "requires_effluent_exclusion"
+      ],
+      "missing_item_templates": [
+        "exclude effluent unless national law requires inclusion in total waste"
+      ],
+      "guardrail_effects": [
+        "do not count effluent as disposed waste unless required by law"
+      ],
+      "mapping_status": "fixed_from_review",
+      "review_note": "Exclude GRI 306-5-e from targets; apply to all quantitative weight leaves GRI 306-5-a through d-ii. Guardrail should prevent totals that include effluent unless required by law, not demand a separate explanation."
+    },
+    {
+      "compilation_requirement_id": "GRI 401-1-2.1",
+      "target_requirement_ids": [
+        "GRI 401-1-a",
+        "GRI 401-1-b"
+      ],
+      "facets": [
+        "requires_reporting_period_end_denominator"
+      ],
+      "missing_item_templates": [
+        "total employee numbers at reporting period end for hire and turnover rates"
+      ],
+      "guardrail_effects": [
+        "hire and turnover rates require period-end employee denominator"
+      ],
+      "mapping_status": "approved",
+      "review_note": ""
+    },
+    {
+      "compilation_requirement_id": "GRI 401-2-2.3",
+      "target_requirement_ids": [
+        "GRI 401-2-a",
+        "GRI 401-2-a-vii"
+      ],
+      "facets": [
+        "requires_exclusion_scope"
+      ],
+      "missing_item_templates": [
+        "exclude in-kind general welfare programs"
+      ],
+      "guardrail_effects": [
+        "general welfare facilities, meals, and similar programs should not be counted as listed benefits"
+      ],
+      "mapping_status": "fixed_from_review",
+      "review_note": "Narrow targets to GRI 401-2-a and GRI 401-2-a-vii. The in-kind-benefit exclusion does not govern the named benefit leaves or the definition of significant locations."
+    },
+    {
+      "compilation_requirement_id": "GRI 403-9-2.1.1",
+      "target_requirement_ids": [
+        "GRI 403-9-a-ii",
+        "GRI 403-9-b-ii",
+        "GRI 403-9-g"
+      ],
+      "facets": [
+        "requires_exclusion_scope"
+      ],
+      "missing_item_templates": [
+        "exclude fatalities from high-consequence injury count and rate"
+      ],
+      "guardrail_effects": [
+        "high-consequence injury metrics exclude fatalities"
+      ],
+      "mapping_status": "fixed_from_review",
+      "review_note": "Narrow targets to GRI 403-9-a-ii, GRI 403-9-b-ii, and GRI 403-9-g. This exclusion applies only to high-consequence injury number/rate calculations, not all injury, hazard, hour, or worker-exclusion leaves."
+    },
+    {
+      "compilation_requirement_id": "GRI 403-9-2.1.2",
+      "target_requirement_ids": [
+        "GRI 403-9-a-iii",
+        "GRI 403-9-b-iii",
+        "GRI 403-9-g"
+      ],
+      "facets": [
+        "requires_inclusion_scope"
+      ],
+      "missing_item_templates": [
+        "include fatalities in recordable injury count and rate"
+      ],
+      "guardrail_effects": [
+        "recordable injury metrics include fatalities from work-related injury"
+      ],
+      "mapping_status": "fixed_from_review",
+      "review_note": "Narrow targets to GRI 403-9-a-iii, GRI 403-9-b-iii, and GRI 403-9-g. Fatalities are included in recordable-injury calculations only; do not apply this rule to high-consequence, hours, hazards, or exclusion leaves."
+    },
+    {
+      "compilation_requirement_id": "GRI 403-9-2.1.3",
+      "target_requirement_ids": [
+        "GRI 403-9-a-i",
+        "GRI 403-9-a-ii",
+        "GRI 403-9-a-iii",
+        "GRI 403-9-a-iv",
+        "GRI 403-9-b-i",
+        "GRI 403-9-b-ii",
+        "GRI 403-9-b-iii",
+        "GRI 403-9-b-iv",
+        "GRI 403-9-g"
+      ],
+      "facets": [
+        "requires_commuting_incident_scope"
+      ],
+      "missing_item_templates": [
+        "commuting incidents included only when transport is organization-arranged"
+      ],
+      "guardrail_effects": [
+        "commuting incidents count only when organization-arranged transport is involved"
+      ],
+      "mapping_status": "fixed_from_review",
+      "review_note": "Narrow targets to GRI 403-9-a-i through a-iv, GRI 403-9-b-i through b-iv, and GRI 403-9-g. Replace generic compilation context with an injury-scope/commuting-incident boundary facet."
+    },
+    {
+      "compilation_requirement_id": "GRI 403-9-2.1.4",
+      "target_requirement_ids": [
+        "GRI 403-9-a-i",
+        "GRI 403-9-a-ii",
+        "GRI 403-9-a-iii",
+        "GRI 403-9-b-i",
+        "GRI 403-9-b-ii",
+        "GRI 403-9-b-iii",
+        "GRI 403-9-e",
+        "GRI 403-9-g"
+      ],
+      "facets": [
+        "requires_rate_basis"
+      ],
+      "missing_item_templates": [
+        "rates based on 200000 or 1000000 hours worked"
+      ],
+      "guardrail_effects": [
+        "injury rates require explicit hours-worked denominator basis"
+      ],
+      "mapping_status": "fixed_from_review",
+      "review_note": "Narrow targets to the rate-bearing leaves GRI 403-9-a-i/a-ii/a-iii, GRI 403-9-b-i/b-ii/b-iii, plus GRI 403-9-e and GRI 403-9-g. Do not apply the rate basis to hours, injury types, hazards, controls, or worker-exclusion leaves."
+    },
+    {
+      "compilation_requirement_id": "GRI 403-10-2.3",
+      "target_requirement_ids": [
+        "GRI 403-10-a-ii",
+        "GRI 403-10-b-ii",
+        "GRI 403-10-e"
+      ],
+      "facets": [
+        "requires_inclusion_scope"
+      ],
+      "missing_item_templates": [
+        "include fatalities in recordable work-related ill health cases"
+      ],
+      "guardrail_effects": [
+        "recordable ill-health case calculations include work-related ill-health fatalities"
+      ],
+      "mapping_status": "fixed_from_review",
+      "review_note": "Narrow targets to GRI 403-10-a-ii, GRI 403-10-b-ii, and GRI 403-10-e. The rule governs recordable ill-health case calculations, not fatality counts, illness types, hazards, controls, or worker exclusions."
+    },
+    {
+      "compilation_requirement_id": "GRI 406-1-2.1",
+      "target_requirement_ids": [
+        "GRI 406-1-a",
+        "GRI 406-1-b"
+      ],
+      "facets": [
+        "requires_discrimination_scope"
+      ],
+      "missing_item_templates": [
+        "specified discrimination grounds, internal/external stakeholders, operations, and reporting period"
+      ],
+      "guardrail_effects": [
+        "discrimination incident scope must align with protected grounds and stakeholder boundary"
+      ],
+      "mapping_status": "fixed_from_review",
+      "review_note": "Replace requires_percentage with an incident-scope facet covering the specified discrimination grounds, internal/external stakeholders, operations, and reporting period. Missing item and guardrail must test scope alignment, not a percentage or rate."
+    },
+    {
+      "compilation_requirement_id": "GRI 416-2-2.1.1",
+      "target_requirement_ids": [
+        "GRI 416-2-a",
+        "GRI 416-2-a-i",
+        "GRI 416-2-a-ii",
+        "GRI 416-2-a-iii",
+        "GRI 416-2-b"
+      ],
+      "facets": [
+        "requires_fault_exclusion"
+      ],
+      "missing_item_templates": [
+        "exclude incidents where organization was determined not at fault"
+      ],
+      "guardrail_effects": [
+        "zero product-safety non-compliance statement is valid only after no-fault exclusion"
+      ],
+      "mapping_status": "fixed_from_review",
+      "review_note": "Keep the targets, but replace the generic 'exclusions must be explained' guardrail with: incidents where the organization was determined not at fault must not be counted; a zero-event statement is valid only after this exclusion."
+    },
+    {
+      "compilation_requirement_id": "GRI 416-2-2.1.2",
+      "target_requirement_ids": [
+        "GRI 416-2-a",
+        "GRI 416-2-a-i",
+        "GRI 416-2-a-ii",
+        "GRI 416-2-a-iii",
+        "GRI 416-2-b"
+      ],
+      "facets": [
+        "requires_labeling_exclusion"
+      ],
+      "missing_item_templates": [
+        "exclude labeling-related non-compliance from 416-2 and route to 417-2"
+      ],
+      "guardrail_effects": [
+        "product safety non-compliance must not include labeling incidents"
+      ],
+      "mapping_status": "fixed_from_review",
+      "review_note": "Keep the targets, but make the guardrail specific: labeling-related non-compliance must be excluded from 416-2 and routed to 417-2. Do not require a generic exclusion narrative."
+    },
+    {
+      "compilation_requirement_id": "GRI 416-2-2.1.3",
+      "target_requirement_ids": [
+        "GRI 416-2-a",
+        "GRI 416-2-a-i",
+        "GRI 416-2-a-ii",
+        "GRI 416-2-a-iii",
+        "GRI 416-2-b"
+      ],
+      "facets": [
+        "requires_prior_period_attribution"
+      ],
+      "missing_item_templates": [
+        "identify current-period non-compliance related to prior-period events"
+      ],
+      "guardrail_effects": [
+        "zero product-safety non-compliance statement cannot omit prior-period event attribution"
+      ],
+      "mapping_status": "fixed_from_review",
+      "review_note": "Keep the disclosure-wide targets, but replace the generic applicability guardrail with an actionable temporal rule: when current-period non-compliance relates to prior-period events, identify it; a zero-event statement cannot ignore such incidents."
+    },
+    {
+      "compilation_requirement_id": "GRI 417-2-2.1.1",
+      "target_requirement_ids": [
+        "GRI 417-2-a",
+        "GRI 417-2-a-i",
+        "GRI 417-2-a-ii",
+        "GRI 417-2-a-iii",
+        "GRI 417-2-b"
+      ],
+      "facets": [
+        "requires_fault_exclusion"
+      ],
+      "missing_item_templates": [
+        "exclude incidents where organization was determined not at fault"
+      ],
+      "guardrail_effects": [
+        "zero labeling non-compliance statement is valid only after no-fault exclusion"
+      ],
+      "mapping_status": "fixed_from_review",
+      "review_note": "Keep the targets, but replace the generic guardrail with: incidents where the organization was determined not at fault must not be counted; a zero-event statement is valid only after this exclusion."
+    },
+    {
+      "compilation_requirement_id": "GRI 417-2-2.1.2",
+      "target_requirement_ids": [
+        "GRI 417-2-a",
+        "GRI 417-2-a-i",
+        "GRI 417-2-a-ii",
+        "GRI 417-2-a-iii",
+        "GRI 417-2-b"
+      ],
+      "facets": [
+        "requires_prior_period_attribution"
+      ],
+      "missing_item_templates": [
+        "identify current-period labeling non-compliance related to prior-period events"
+      ],
+      "guardrail_effects": [
+        "zero labeling non-compliance statement cannot omit prior-period event attribution"
+      ],
+      "mapping_status": "fixed_from_review",
+      "review_note": "Keep the disclosure-wide targets, but make the guardrail specific: identify current-period non-compliance incidents arising from prior-period events; a zero-event statement cannot omit them."
+    },
+    {
+      "compilation_requirement_id": "GRI 417-3-2.2.1",
+      "target_requirement_ids": [
+        "GRI 417-3-a",
+        "GRI 417-3-a-i",
+        "GRI 417-3-a-ii",
+        "GRI 417-3-a-iii",
+        "GRI 417-3-b"
+      ],
+      "facets": [
+        "requires_fault_exclusion"
+      ],
+      "missing_item_templates": [
+        "exclude incidents where organization was determined not at fault"
+      ],
+      "guardrail_effects": [
+        "zero marketing non-compliance statement is valid only after no-fault exclusion"
+      ],
+      "mapping_status": "fixed_from_review",
+      "review_note": "Keep the targets, but replace the generic guardrail with: incidents where the organization was determined not at fault must not be counted; a zero-event statement is valid only after this exclusion."
+    },
+    {
+      "compilation_requirement_id": "GRI 417-3-2.2.2",
+      "target_requirement_ids": [
+        "GRI 417-3-a",
+        "GRI 417-3-a-i",
+        "GRI 417-3-a-ii",
+        "GRI 417-3-a-iii",
+        "GRI 417-3-b"
+      ],
+      "facets": [
+        "requires_prior_period_attribution"
+      ],
+      "missing_item_templates": [
+        "identify current-period marketing non-compliance related to prior-period events"
+      ],
+      "guardrail_effects": [
+        "zero marketing non-compliance statement cannot omit prior-period event attribution"
+      ],
+      "mapping_status": "fixed_from_review",
+      "review_note": "Keep the disclosure-wide targets, but make the guardrail specific: identify current-period marketing-communication non-compliance arising from prior-period events; a zero-event statement cannot omit them."
+    },
+    {
+      "compilation_requirement_id": "GRI 418-1-2.1",
+      "target_requirement_ids": [
+        "GRI 418-1-a",
+        "GRI 418-1-a-i",
+        "GRI 418-1-a-ii",
+        "GRI 418-1-b"
+      ],
+      "facets": [
+        "requires_prior_period_attribution"
+      ],
+      "missing_item_templates": [
+        "substantial number of privacy breaches related to preceding years"
+      ],
+      "guardrail_effects": [
+        "privacy breach count must state substantial prior-year attribution when applicable; do not apply to zero-complaint statement leaf 418-1-c"
+      ],
+      "mapping_status": "fixed_from_review",
+      "review_note": "Remove GRI 418-1-c from targets; apply to GRI 418-1-a, a-i, a-ii, and b. Replace requires_count_or_amount with requires_prior_period_attribution / temporal context. Guardrail: if a substantial number of breaches relate to preceding years, that fact must be stated."
+    }
+  ]
+}

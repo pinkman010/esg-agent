@@ -22,12 +22,25 @@ class ReportKpiTableProfile(BaseModel):
     known_metric_terms: list[str] = Field(default_factory=list)
 
 
+class ReportSectionProfile(BaseModel):
+    name: str
+    pdf_pages: list[int]
+    report_pages: list[int] = Field(default_factory=list)
+    terms: list[str] = Field(default_factory=list)
+
+
 class AssurancePageProfile(BaseModel):
     pdf_page: int
     report_page: int | None = None
     requires_ocr: bool = False
     requires_vlm: bool = False
     quality_flags: list[str] = Field(default_factory=list)
+
+
+class IndexNotePageProfile(BaseModel):
+    pdf_page: int
+    report_page: int | None = None
+    note_types: list[str] = Field(default_factory=list)
 
 
 class ReportRequirementRoute(BaseModel):
@@ -45,6 +58,8 @@ class ReportProfile(BaseModel):
     page_numbering: PageNumbering
     gri_index: dict = Field(default_factory=dict)
     kpi_tables: list[ReportKpiTableProfile] = Field(default_factory=list)
+    sections: list[ReportSectionProfile] = Field(default_factory=list)
+    index_note_pages: list[IndexNotePageProfile] = Field(default_factory=list)
     assurance_pages: list[AssurancePageProfile] = Field(default_factory=list)
     requirement_routes: dict[str, ReportRequirementRoute] = Field(default_factory=dict)
 

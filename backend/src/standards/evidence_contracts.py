@@ -24,7 +24,6 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
     "GRI 302-1-a": RequirementEvidenceContract(
         requirement_id="GRI 302-1-a",
         allowed_pages=(63,),
-        candidate_pages=(63,),
         kpi_table_pages=(63,),
         facets=(RequirementFacet.REQUIRES_COUNT, RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION),
         evidence_kinds=(EvidenceKind.KPI_VALUE,),
@@ -34,7 +33,6 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
     "GRI 302-1-c": RequirementEvidenceContract(
         requirement_id="GRI 302-1-c",
         allowed_pages=(63,),
-        candidate_pages=(63,),
         kpi_table_pages=(63,),
         facets=(RequirementFacet.REQUIRES_COUNT, RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION),
         evidence_kinds=(EvidenceKind.KPI_VALUE,),
@@ -137,7 +135,6 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
     "GRI 303-3-a-i": RequirementEvidenceContract(
         requirement_id="GRI 303-3-a-i",
         allowed_pages=(63,),
-        candidate_pages=(63,),
         kpi_table_pages=(63,),
         facets=(RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION,),
         evidence_kinds=(EvidenceKind.KPI_VALUE,),
@@ -147,7 +144,6 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
     "GRI 303-3-a-ii": RequirementEvidenceContract(
         requirement_id="GRI 303-3-a-ii",
         allowed_pages=(63,),
-        candidate_pages=(63,),
         kpi_table_pages=(63,),
         facets=(RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION,),
         evidence_kinds=(EvidenceKind.KPI_VALUE,),
@@ -157,7 +153,6 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
     "GRI 303-3-a-v": RequirementEvidenceContract(
         requirement_id="GRI 303-3-a-v",
         allowed_pages=(63,),
-        candidate_pages=(63,),
         kpi_table_pages=(63,),
         facets=(RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION,),
         evidence_kinds=(EvidenceKind.KPI_VALUE,),
@@ -177,7 +172,6 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
     "GRI 303-3-c": RequirementEvidenceContract(
         requirement_id="GRI 303-3-c",
         allowed_pages=(63,),
-        candidate_pages=(63,),
         kpi_table_pages=(63,),
         facets=(RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION,),
         evidence_kinds=(EvidenceKind.KPI_VALUE,),
@@ -187,7 +181,6 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
     "GRI 303-3-c-i": RequirementEvidenceContract(
         requirement_id="GRI 303-3-c-i",
         allowed_pages=(63,),
-        candidate_pages=(63,),
         kpi_table_pages=(63,),
         facets=(RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION,),
         evidence_kinds=(EvidenceKind.KPI_VALUE,),
@@ -197,7 +190,6 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
     "GRI 303-3-c-ii": RequirementEvidenceContract(
         requirement_id="GRI 303-3-c-ii",
         allowed_pages=(63,),
-        candidate_pages=(63,),
         kpi_table_pages=(63,),
         facets=(RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION,),
         evidence_kinds=(EvidenceKind.KPI_VALUE,),
@@ -217,7 +209,6 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
     "GRI 303-4-b": RequirementEvidenceContract(
         requirement_id="GRI 303-4-b",
         allowed_pages=(63,),
-        candidate_pages=(63,),
         kpi_table_pages=(63,),
         facets=(RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION,),
         evidence_kinds=(EvidenceKind.KPI_VALUE,),
@@ -227,7 +218,6 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
     "GRI 303-4-b-i": RequirementEvidenceContract(
         requirement_id="GRI 303-4-b-i",
         allowed_pages=(63,),
-        candidate_pages=(63,),
         kpi_table_pages=(63,),
         facets=(RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION,),
         evidence_kinds=(EvidenceKind.KPI_VALUE,),
@@ -237,7 +227,6 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
     "GRI 303-4-b-ii": RequirementEvidenceContract(
         requirement_id="GRI 303-4-b-ii",
         allowed_pages=(63,),
-        candidate_pages=(63,),
         kpi_table_pages=(63,),
         facets=(RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION,),
         evidence_kinds=(EvidenceKind.KPI_VALUE,),
@@ -412,7 +401,6 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
     "GRI 306-3-a": RequirementEvidenceContract(
         requirement_id="GRI 306-3-a",
         allowed_pages=(64,),
-        candidate_pages=(64,),
         kpi_table_pages=(64,),
         facets=(RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION,),
         evidence_kinds=(EvidenceKind.KPI_VALUE,),
@@ -422,7 +410,6 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
     "GRI 306-4-a": RequirementEvidenceContract(
         requirement_id="GRI 306-4-a",
         allowed_pages=(64,),
-        candidate_pages=(64,),
         kpi_table_pages=(64,),
         facets=(RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION,),
         evidence_kinds=(EvidenceKind.KPI_VALUE,),
@@ -432,7 +419,6 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
     "GRI 306-4-b": RequirementEvidenceContract(
         requirement_id="GRI 306-4-b",
         allowed_pages=(64,),
-        candidate_pages=(64,),
         kpi_table_pages=(64,),
         facets=(RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION,),
         evidence_kinds=(EvidenceKind.KPI_VALUE,),
@@ -442,7 +428,6 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
     "GRI 306-4-c": RequirementEvidenceContract(
         requirement_id="GRI 306-4-c",
         allowed_pages=(64,),
-        candidate_pages=(64,),
         kpi_table_pages=(64,),
         facets=(RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION,),
         evidence_kinds=(EvidenceKind.KPI_VALUE,),
@@ -480,7 +465,6 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
     "GRI 308-2-a": RequirementEvidenceContract(
         requirement_id="GRI 308-2-a",
         allowed_pages=(67,),
-        candidate_pages=(67,),
         kpi_table_pages=(67,),
         facets=(RequirementFacet.REQUIRES_COUNT,),
         evidence_kinds=(EvidenceKind.KPI_VALUE,),
@@ -489,7 +473,6 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
     "GRI 308-2-b": RequirementEvidenceContract(
         requirement_id="GRI 308-2-b",
         allowed_pages=(67,),
-        candidate_pages=(67,),
         kpi_table_pages=(67,),
         facets=(RequirementFacet.REQUIRES_COUNT,),
         evidence_kinds=(EvidenceKind.KPI_VALUE,),
@@ -508,7 +491,6 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
     "GRI 308-2-d": RequirementEvidenceContract(
         requirement_id="GRI 308-2-d",
         allowed_pages=(67,),
-        candidate_pages=(67,),
         kpi_table_pages=(67,),
         facets=(RequirementFacet.REQUIRES_PERCENTAGE,),
         evidence_kinds=(EvidenceKind.KPI_VALUE,),
@@ -584,7 +566,6 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
         requirement_id="GRI 401-3-c",
         allowed_pages=(66,),
         forbidden_pages=(32,),
-        candidate_pages=(66,),
         kpi_table_pages=(66,),
         facets=(RequirementFacet.REQUIRES_COUNT, RequirementFacet.REQUIRES_GENDER_BREAKDOWN),
         evidence_kinds=(EvidenceKind.KPI_BREAKDOWN,),
@@ -594,7 +575,6 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
         requirement_id="GRI 401-3-d",
         allowed_pages=(66,),
         forbidden_pages=(32,),
-        candidate_pages=(66,),
         kpi_table_pages=(66,),
         facets=(RequirementFacet.REQUIRES_COUNT, RequirementFacet.REQUIRES_GENDER_BREAKDOWN),
         evidence_kinds=(EvidenceKind.KPI_BREAKDOWN,),
@@ -604,7 +584,6 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
         requirement_id="GRI 401-3-e",
         allowed_pages=(66,),
         forbidden_pages=(32,),
-        candidate_pages=(66,),
         kpi_table_pages=(66,),
         facets=(RequirementFacet.REQUIRES_PERCENTAGE, RequirementFacet.REQUIRES_GENDER_BREAKDOWN),
         evidence_kinds=(EvidenceKind.KPI_VALUE,),
@@ -667,7 +646,6 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
     "GRI 403-2-a": RequirementEvidenceContract(
         requirement_id="GRI 403-2-a",
         allowed_pages=(39, 41),
-        candidate_pages=(39, 41),
         facets=(RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION,),
         evidence_kinds=(EvidenceKind.MANAGEMENT_MECHANISM,),
         semantic_group=SemanticGroup.OHS_MANAGEMENT,
@@ -676,7 +654,6 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
     "GRI 403-2-a-i": RequirementEvidenceContract(
         requirement_id="GRI 403-2-a-i",
         allowed_pages=(39, 41),
-        candidate_pages=(39, 41),
         facets=(RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION,),
         evidence_kinds=(EvidenceKind.MANAGEMENT_MECHANISM,),
         semantic_group=SemanticGroup.OHS_MANAGEMENT,
@@ -685,7 +662,6 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
     "GRI 403-2-a-ii": RequirementEvidenceContract(
         requirement_id="GRI 403-2-a-ii",
         allowed_pages=(39, 41),
-        candidate_pages=(39, 41),
         facets=(RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION,),
         evidence_kinds=(EvidenceKind.MANAGEMENT_MECHANISM,),
         semantic_group=SemanticGroup.OHS_MANAGEMENT,
@@ -694,7 +670,6 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
     "GRI 403-2-b": RequirementEvidenceContract(
         requirement_id="GRI 403-2-b",
         allowed_pages=(39, 41),
-        candidate_pages=(39, 41),
         facets=(RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION,),
         evidence_kinds=(EvidenceKind.MANAGEMENT_MECHANISM,),
         semantic_group=SemanticGroup.OHS_MANAGEMENT,
@@ -710,7 +685,6 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
     "GRI 403-2-d": RequirementEvidenceContract(
         requirement_id="GRI 403-2-d",
         allowed_pages=(39, 41),
-        candidate_pages=(39, 41),
         facets=(RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION,),
         evidence_kinds=(EvidenceKind.MANAGEMENT_MECHANISM,),
         semantic_group=SemanticGroup.OHS_MANAGEMENT,
@@ -798,7 +772,6 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
     "GRI 403-8-a-i": RequirementEvidenceContract(
         requirement_id="GRI 403-8-a-i",
         allowed_pages=(66,),
-        candidate_pages=(66,),
         kpi_table_pages=(66,),
         facets=(RequirementFacet.REQUIRES_PERCENTAGE, RequirementFacet.REQUIRES_WORKER_BOUNDARY),
         evidence_kinds=(EvidenceKind.KPI_VALUE,),
@@ -815,7 +788,6 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
     "GRI 403-8-a-iii": RequirementEvidenceContract(
         requirement_id="GRI 403-8-a-iii",
         allowed_pages=(66,),
-        candidate_pages=(66,),
         kpi_table_pages=(66,),
         facets=(RequirementFacet.REQUIRES_PERCENTAGE, RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION),
         evidence_kinds=(EvidenceKind.KPI_VALUE,),
@@ -849,7 +821,6 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
     "GRI 403-9-a-i": RequirementEvidenceContract(
         requirement_id="GRI 403-9-a-i",
         allowed_pages=(67,),
-        candidate_pages=(67,),
         kpi_table_pages=(67,),
         facets=(RequirementFacet.REQUIRES_COUNT,),
         evidence_kinds=(EvidenceKind.KPI_VALUE,),
@@ -858,7 +829,6 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
     "GRI 403-9-a-ii": RequirementEvidenceContract(
         requirement_id="GRI 403-9-a-ii",
         allowed_pages=(67,),
-        candidate_pages=(67,),
         kpi_table_pages=(67,),
         facets=(RequirementFacet.REQUIRES_COUNT, RequirementFacet.REQUIRES_IMPACT_TYPE),
         evidence_kinds=(EvidenceKind.KPI_VALUE,),
@@ -868,7 +838,6 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
     "GRI 403-9-a-iii": RequirementEvidenceContract(
         requirement_id="GRI 403-9-a-iii",
         allowed_pages=(67,),
-        candidate_pages=(67,),
         kpi_table_pages=(67,),
         facets=(RequirementFacet.REQUIRES_COUNT,),
         evidence_kinds=(EvidenceKind.KPI_VALUE,),
@@ -884,7 +853,6 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
     "GRI 403-9-a-v": RequirementEvidenceContract(
         requirement_id="GRI 403-9-a-v",
         allowed_pages=(67,),
-        candidate_pages=(67,),
         kpi_table_pages=(67,),
         facets=(RequirementFacet.REQUIRES_COUNT,),
         evidence_kinds=(EvidenceKind.KPI_VALUE,),
@@ -893,7 +861,6 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
     "GRI 403-9-b": RequirementEvidenceContract(
         requirement_id="GRI 403-9-b",
         allowed_pages=(67,),
-        candidate_pages=(67,),
         kpi_table_pages=(67,),
         facets=(RequirementFacet.REQUIRES_COUNT, RequirementFacet.REQUIRES_WORKER_BOUNDARY),
         evidence_kinds=(EvidenceKind.KPI_VALUE,),
@@ -903,7 +870,6 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
     "GRI 403-9-b-i": RequirementEvidenceContract(
         requirement_id="GRI 403-9-b-i",
         allowed_pages=(67,),
-        candidate_pages=(67,),
         kpi_table_pages=(67,),
         facets=(RequirementFacet.REQUIRES_COUNT, RequirementFacet.REQUIRES_WORKER_BOUNDARY),
         evidence_kinds=(EvidenceKind.KPI_VALUE,),
@@ -913,7 +879,6 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
     "GRI 403-9-b-ii": RequirementEvidenceContract(
         requirement_id="GRI 403-9-b-ii",
         allowed_pages=(67,),
-        candidate_pages=(67,),
         kpi_table_pages=(67,),
         facets=(
             RequirementFacet.REQUIRES_COUNT,
@@ -927,7 +892,6 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
     "GRI 403-9-b-iii": RequirementEvidenceContract(
         requirement_id="GRI 403-9-b-iii",
         allowed_pages=(67,),
-        candidate_pages=(67,),
         kpi_table_pages=(67,),
         facets=(RequirementFacet.REQUIRES_COUNT, RequirementFacet.REQUIRES_WORKER_BOUNDARY),
         evidence_kinds=(EvidenceKind.KPI_VALUE,),
@@ -944,7 +908,6 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
     "GRI 403-9-b-v": RequirementEvidenceContract(
         requirement_id="GRI 403-9-b-v",
         allowed_pages=(67,),
-        candidate_pages=(67,),
         kpi_table_pages=(67,),
         facets=(RequirementFacet.REQUIRES_COUNT, RequirementFacet.REQUIRES_WORKER_BOUNDARY),
         evidence_kinds=(EvidenceKind.KPI_VALUE,),
@@ -964,7 +927,6 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
     "GRI 403-9-c-i": RequirementEvidenceContract(
         requirement_id="GRI 403-9-c-i",
         allowed_pages=(40,),
-        candidate_pages=(40,),
         facets=(RequirementFacet.REQUIRES_IMPACT_TYPE,),
         evidence_kinds=(EvidenceKind.MANAGEMENT_MECHANISM,),
         semantic_group=SemanticGroup.OHS_MANAGEMENT,
@@ -980,7 +942,6 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
     "GRI 403-9-c-iii": RequirementEvidenceContract(
         requirement_id="GRI 403-9-c-iii",
         allowed_pages=(40,),
-        candidate_pages=(40,),
         facets=(RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION,),
         evidence_kinds=(EvidenceKind.MANAGEMENT_MECHANISM,),
         semantic_group=SemanticGroup.OHS_MANAGEMENT,
@@ -999,7 +960,6 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
     "GRI 403-9-e": RequirementEvidenceContract(
         requirement_id="GRI 403-9-e",
         allowed_pages=(67,),
-        candidate_pages=(67,),
         kpi_table_pages=(67,),
         facets=(RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION,),
         evidence_kinds=(EvidenceKind.METHODOLOGY,),
@@ -1022,7 +982,6 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
     "GRI 403-10-a": RequirementEvidenceContract(
         requirement_id="GRI 403-10-a",
         allowed_pages=(67,),
-        candidate_pages=(67,),
         kpi_table_pages=(67,),
         facets=(RequirementFacet.REQUIRES_COUNT, RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION),
         evidence_kinds=(EvidenceKind.KPI_VALUE,),
@@ -1032,7 +991,6 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
     "GRI 403-10-a-i": RequirementEvidenceContract(
         requirement_id="GRI 403-10-a-i",
         allowed_pages=(67,),
-        candidate_pages=(67,),
         kpi_table_pages=(67,),
         facets=(RequirementFacet.REQUIRES_COUNT,),
         evidence_kinds=(EvidenceKind.KPI_VALUE,),
@@ -1041,7 +999,6 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
     "GRI 403-10-a-ii": RequirementEvidenceContract(
         requirement_id="GRI 403-10-a-ii",
         allowed_pages=(67,),
-        candidate_pages=(67,),
         kpi_table_pages=(67,),
         facets=(RequirementFacet.REQUIRES_COUNT, RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION),
         evidence_kinds=(EvidenceKind.KPI_VALUE,),
@@ -1058,7 +1015,6 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
     "GRI 403-10-b": RequirementEvidenceContract(
         requirement_id="GRI 403-10-b",
         allowed_pages=(67,),
-        candidate_pages=(67,),
         kpi_table_pages=(67,),
         facets=(
             RequirementFacet.REQUIRES_COUNT,
@@ -1072,7 +1028,6 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
     "GRI 403-10-b-i": RequirementEvidenceContract(
         requirement_id="GRI 403-10-b-i",
         allowed_pages=(67,),
-        candidate_pages=(67,),
         kpi_table_pages=(67,),
         facets=(RequirementFacet.REQUIRES_COUNT, RequirementFacet.REQUIRES_WORKER_BOUNDARY),
         evidence_kinds=(EvidenceKind.KPI_VALUE,),
@@ -1082,7 +1037,6 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
     "GRI 403-10-b-ii": RequirementEvidenceContract(
         requirement_id="GRI 403-10-b-ii",
         allowed_pages=(67,),
-        candidate_pages=(67,),
         kpi_table_pages=(67,),
         facets=(
             RequirementFacet.REQUIRES_COUNT,
@@ -1130,7 +1084,6 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
     "GRI 403-10-c-iii": RequirementEvidenceContract(
         requirement_id="GRI 403-10-c-iii",
         allowed_pages=(38,),
-        candidate_pages=(38,),
         facets=(RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION,),
         evidence_kinds=(EvidenceKind.MANAGEMENT_MECHANISM,),
         semantic_group=SemanticGroup.OHS_MANAGEMENT,
@@ -1489,7 +1442,6 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
     "GRI 413-1-a": RequirementEvidenceContract(
         requirement_id="GRI 413-1-a",
         allowed_pages=(14, 42, 43, 44),
-        candidate_pages=(14, 42, 43, 44),
         facets=(RequirementFacet.REQUIRES_PERCENTAGE, RequirementFacet.REQUIRES_IMPACT_TYPE),
         evidence_kinds=(EvidenceKind.CASE, EvidenceKind.MANAGEMENT_MECHANISM),
         semantic_group=SemanticGroup.COMMUNITY_PROGRAM,
@@ -1519,7 +1471,6 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
     "GRI 413-1-a-iv": RequirementEvidenceContract(
         requirement_id="GRI 413-1-a-iv",
         allowed_pages=(14, 42),
-        candidate_pages=(14, 42),
         facets=(RequirementFacet.REQUIRES_PERCENTAGE,),
         evidence_kinds=(EvidenceKind.CASE, EvidenceKind.MANAGEMENT_MECHANISM),
         semantic_group=SemanticGroup.COMMUNITY_PROGRAM,
@@ -1528,7 +1479,6 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
     "GRI 413-1-a-v": RequirementEvidenceContract(
         requirement_id="GRI 413-1-a-v",
         allowed_pages=(14, 42, 43, 44),
-        candidate_pages=(14, 42, 43, 44),
         facets=(RequirementFacet.REQUIRES_PERCENTAGE, RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION),
         evidence_kinds=(EvidenceKind.CASE, EvidenceKind.MANAGEMENT_MECHANISM),
         semantic_group=SemanticGroup.COMMUNITY_PROGRAM,
@@ -1587,7 +1537,6 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
     "GRI 414-2-a": RequirementEvidenceContract(
         requirement_id="GRI 414-2-a",
         allowed_pages=(67,),
-        candidate_pages=(67,),
         kpi_table_pages=(67,),
         facets=(RequirementFacet.REQUIRES_COUNT,),
         evidence_kinds=(EvidenceKind.KPI_VALUE,),
@@ -1596,7 +1545,6 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
     "GRI 414-2-b": RequirementEvidenceContract(
         requirement_id="GRI 414-2-b",
         allowed_pages=(67,),
-        candidate_pages=(67,),
         kpi_table_pages=(67,),
         facets=(RequirementFacet.REQUIRES_COUNT,),
         evidence_kinds=(EvidenceKind.KPI_VALUE,),
