@@ -7,10 +7,27 @@ from pydantic import BaseModel, Field
 class PageNumbering(BaseModel):
     report_index_pdf_page: int
     report_index_report_page: int
+    total_pdf_pages: int | None = None
 
     @property
     def offset(self) -> int:
         return self.report_index_pdf_page - self.report_index_report_page
+
+    @property
+    def is_two_up(self) -> bool:
+        return self.total_pdf_pages is not None and self.report_index_report_page > self.total_pdf_pages
+
+    def report_page_for_pdf_page(self, pdf_page: int) -> int | None:
+        if self.is_two_up:
+            report_page = self.report_index_report_page + (pdf_page - self.report_index_pdf_page) * 2
+        else:
+            report_page = pdf_page - self.offset
+        return report_page if report_page > 0 else None
+
+    def pdf_page_for_report_page(self, report_page: int) -> int:
+        if self.is_two_up:
+            return self.report_index_pdf_page + (report_page - self.report_index_report_page) // 2
+        return report_page + self.offset
 
 
 class ReportKpiTableProfile(BaseModel):
@@ -68,11 +85,10 @@ class ReportProfile(BaseModel):
         return sorted({page for table in self.kpi_tables for page in table.pdf_pages})
 
     def report_page_for_pdf_page(self, pdf_page: int) -> int | None:
-        report_page = pdf_page - self.page_numbering.offset
-        return report_page if report_page > 0 else None
+        return self.page_numbering.report_page_for_pdf_page(pdf_page)
 
     def pdf_page_for_report_page(self, report_page: int) -> int:
-        return report_page + self.page_numbering.offset
+        return self.page_numbering.pdf_page_for_report_page(report_page)
 
     def is_kpi_page(self, pdf_page: int) -> bool:
         return pdf_page in set(self.kpi_pdf_pages)

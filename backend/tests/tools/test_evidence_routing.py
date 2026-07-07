@@ -123,3 +123,21 @@ def test_profile_owns_migrated_index_note_routes():
     assert route.kpi_table_pages == []
     assert route.source == "report_profile"
     assert "从略披露" in route.metric_terms
+
+
+def test_router_uses_report_profile_section_route_when_no_requirement_route():
+    profile = load_report_profile(Path("data/reports/profiles/goldwind_2024.json"))
+    router = EvidenceRouter(report_profile=profile)
+
+    task = make_task("GRI 206-1-a", "GRI 206-1").model_copy(
+        update={
+            "requirement_text": "legal actions for anti-competitive behavior",
+            "keywords": ["反竞争行为", "反垄断"],
+        }
+    )
+
+    route = router.route(task)
+
+    assert route.candidate_pdf_pages == list(range(18, 22))
+    assert route.source == "report_profile_section"
+    assert "诚信合规经营" in route.metric_terms

@@ -62,6 +62,10 @@ class EvidenceRouter:
                 reasons=[task.candidate_page_source or "candidate_pages"],
             )
 
+        section_route = self._section_route(task)
+        if section_route is not None:
+            return section_route
+
         return EvidenceRoute()
 
     def _valid_pages(self, pages: list[int]) -> list[int]:
@@ -73,3 +77,32 @@ class EvidenceRouter:
         if self.report_profile is None:
             return []
         return [self.report_profile.report_page_for_pdf_page(page) for page in pdf_pages]
+
+    def _section_route(self, task: DisclosureTask) -> EvidenceRoute | None:
+        if self.report_profile is None:
+            return None
+        haystack = " ".join([task.requirement_text, *task.keywords]).lower()
+        best_section = None
+        best_score = 0
+        for section in self.report_profile.sections:
+            score = 0
+            for term in section.terms:
+                term_lower = term.lower()
+                if term_lower and term_lower in haystack:
+                    score += 1
+            if score > best_score:
+                best_score = score
+                best_section = section
+        if best_section is None or best_score == 0:
+            return None
+        pages = self._valid_pages(best_section.pdf_pages)
+        if not pages:
+            return None
+        return EvidenceRoute(
+            candidate_pdf_pages=pages,
+            candidate_report_pages=self._report_pages(pages),
+            kpi_table_pages=[],
+            metric_terms=list(best_section.terms),
+            source="report_profile_section",
+            reasons=[f"profile_section:{self.report_profile.report_id}:{best_section.name}"],
+        )

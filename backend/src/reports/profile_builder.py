@@ -1,7 +1,13 @@
 import re
 
 from src.domain.models import DisclosureRequirement, PageExtraction
-from src.reports.profile import AssurancePageProfile, IndexNotePageProfile, PageNumbering, ReportProfile
+from src.reports.profile import (
+    AssurancePageProfile,
+    IndexNotePageProfile,
+    PageNumbering,
+    ReportProfile,
+    ReportSectionProfile,
+)
 
 
 def build_initial_profile(
@@ -19,6 +25,7 @@ def build_initial_profile(
     page_numbering = PageNumbering(
         report_index_pdf_page=report_index_pdf_page,
         report_index_report_page=report_index_report_page,
+        total_pdf_pages=total_pdf_pages,
     )
     disclosure_routes = _extract_gri_index_routes(
         pages=pages,
@@ -34,6 +41,7 @@ def build_initial_profile(
         total_pdf_pages=total_pdf_pages,
         page_numbering=page_numbering,
         gri_index={"pdf_pages": sorted(set(index_pages))},
+        sections=_sections(pages, page_numbering, total_pdf_pages),
         index_note_pages=_index_note_pages(pages, page_numbering),
         assurance_pages=_assurance_pages(pages, page_numbering),
         requirement_routes=_requirement_routes(disclosure_routes, requirements or []),
@@ -53,7 +61,7 @@ def _index_note_pages(pages: list[PageExtraction], page_numbering: PageNumbering
         note_pages.append(
             IndexNotePageProfile(
                 pdf_page=page.page_number,
-                report_page=page.page_number - page_numbering.offset,
+                report_page=page_numbering.report_page_for_pdf_page(page.page_number),
                 note_types=note_types,
             )
         )
@@ -82,7 +90,7 @@ def _extract_gri_index_routes(
 ) -> dict[str, list[int]]:
     routes: dict[str, set[int]] = {}
     index_page_set = set(index_pdf_pages)
-    two_up = _looks_like_two_up_layout(page_numbering, total_pdf_pages)
+    two_up = page_numbering.is_two_up
     for page in pages:
         if page.page_number not in index_page_set:
             continue
@@ -132,13 +140,9 @@ def _parse_report_page_token(raw: str) -> list[int]:
     return sorted(pages)
 
 
-def _looks_like_two_up_layout(page_numbering: PageNumbering, total_pdf_pages: int) -> bool:
-    return page_numbering.report_index_report_page > total_pdf_pages
-
-
 def _report_page_to_pdf_page(report_page: int, page_numbering: PageNumbering, *, two_up: bool) -> int:
-    if two_up and report_page >= 2:
-        return report_page // 2 + 2
+    if two_up:
+        return page_numbering.pdf_page_for_report_page(report_page)
     return report_page + page_numbering.offset
 
 
@@ -185,6 +189,70 @@ def _three_digit_topic(disclosure_id: str) -> str | None:
     return match.group("topic")
 
 
+def _sections(
+    pages: list[PageExtraction],
+    page_numbering: PageNumbering,
+    total_pdf_pages: int,
+) -> list[ReportSectionProfile]:
+    section_terms = {
+        "可持续发展管理": ["可持续发展管理", "利益相关方", "可持续发展战略", "实质性议题"],
+        "诚信合规经营": ["诚信合规经营", "合规", "风险合规", "反腐败", "反竞争行为", "反垄断", "商业道德"],
+        "绿色环保运营": ["绿色环保运营", "碳减排", "温室气体", "能源", "水资源", "废弃物", "生物多样性"],
+        "可持续产业链": ["可持续产业链", "供应链", "供应商", "社会责任审核", "供应商筛选"],
+        "公平健康工作环境": ["公平健康工作环境", "职业健康", "安全", "员工", "工伤", "职业病", "培训"],
+        "和谐社区关系": ["和谐社区关系", "社区", "公益", "志愿者", "教育"],
+    }
+    section_order = {name: index for index, name in enumerate(section_terms)}
+    starts: list[tuple[int, str]] = []
+    previous_section: str | None = None
+    previous_order = -1
+    for page in pages:
+        normalized = " ".join(page.text.split())
+        section_name = _section_start_name(normalized, list(section_terms))
+        if section_name is None or section_name == previous_section:
+            continue
+        section_index = section_order[section_name]
+        if section_index <= previous_order:
+            continue
+        starts.append((page.page_number, section_name))
+        previous_section = section_name
+        previous_order = section_index
+
+    if not starts:
+        return []
+
+    starts = sorted(starts)
+    sections: list[ReportSectionProfile] = []
+    for index, (start_page, section_name) in enumerate(starts):
+        next_start = starts[index + 1][0] if index + 1 < len(starts) else min(total_pdf_pages + 1, start_page + 5)
+        pdf_pages = list(range(start_page, max(start_page + 1, next_start)))
+        sections.append(
+            ReportSectionProfile(
+                name=section_name,
+                pdf_pages=pdf_pages,
+                report_pages=[
+                    report_page
+                    for page in pdf_pages
+                    if (report_page := _display_report_page_for_pdf_page(page, page_numbering)) is not None
+                ],
+                terms=section_terms[section_name],
+            )
+        )
+    return sections
+
+
+def _section_start_name(normalized_text: str, section_names: list[str]) -> str | None:
+    heading_window = normalized_text[:220]
+    hits = [section_name for section_name in section_names if section_name in heading_window]
+    if len(hits) != 1:
+        return None
+    return hits[0]
+
+
+def _display_report_page_for_pdf_page(pdf_page: int, page_numbering: PageNumbering) -> int | None:
+    return page_numbering.report_page_for_pdf_page(pdf_page)
+
+
 def _assurance_pages(pages: list[PageExtraction], page_numbering: PageNumbering) -> list[AssurancePageProfile]:
     assurance_pages: list[AssurancePageProfile] = []
     for page in pages:
@@ -194,7 +262,7 @@ def _assurance_pages(pages: list[PageExtraction], page_numbering: PageNumbering)
         assurance_pages.append(
             AssurancePageProfile(
                 pdf_page=page.page_number,
-                report_page=page.page_number - page_numbering.offset,
+                report_page=page_numbering.report_page_for_pdf_page(page.page_number),
                 requires_ocr=False,
                 requires_vlm=False,
                 quality_flags=[],

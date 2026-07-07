@@ -214,3 +214,33 @@ def test_profile_builder_extracts_goldwind_index_routes_for_adjacent_disclosures
     assert profile.requirement_routes["GRI 205-3-a"].candidate_pdf_pages == [21]
     assert profile.requirement_routes["GRI 414-2-a"].candidate_pdf_pages == [31, 32]
     assert profile.requirement_routes["GRI 305-1-a"].candidate_pdf_pages == [25]
+
+
+def test_profile_builder_extracts_goldwind_section_ranges():
+    pages = [
+        PageExtraction(report_id="goldwind", page_number=8, text="02 可持续发展管理 战略规划"),
+        PageExtraction(report_id="goldwind", page_number=19, text="诚信合规经营 公司治理 风险合规管理"),
+        PageExtraction(report_id="goldwind", page_number=25, text="绿色环保运营 碳减排与碳中和"),
+        PageExtraction(report_id="goldwind", page_number=31, text="可持续产业链 供应链可持续"),
+        PageExtraction(report_id="goldwind", page_number=38, text="公平健康工作环境 提升本质安全"),
+        PageExtraction(report_id="goldwind", page_number=42, text="和谐社区关系 社区沟通与发展"),
+    ]
+
+    profile = build_initial_profile(
+        report_id="goldwind_2024",
+        company_name="Goldwind",
+        report_year=2024,
+        pdf_file="goldwind.pdf",
+        total_pdf_pages=52,
+        pages=pages,
+        report_index_pdf_page=50,
+        report_index_report_page=96,
+    )
+
+    sections = {section.name: section for section in profile.sections}
+    assert sections["可持续发展管理"].pdf_pages == list(range(8, 19))
+    assert sections["诚信合规经营"].pdf_pages == list(range(19, 25))
+    assert sections["绿色环保运营"].pdf_pages == list(range(25, 31))
+    assert sections["可持续产业链"].pdf_pages == list(range(31, 38))
+    assert sections["公平健康工作环境"].pdf_pages == list(range(38, 42))
+    assert sections["和谐社区关系"].pdf_pages == list(range(42, 47))

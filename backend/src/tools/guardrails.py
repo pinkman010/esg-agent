@@ -65,6 +65,24 @@ def build_guarded_assessment(
             review_status=ReviewStatus.NEEDS_MANUAL_REVIEW,
         )
 
+    section_route_only = all(item.metadata.get("candidate_page_source") == "report_profile_section" for item in evidence)
+    if section_route_only and verdict is None:
+        return DisclosureAssessment(
+            assessment_id=f"assessment:{task.task_id}",
+            run_id=task.run_id,
+            report_id=task.report_id,
+            standard_id=task.standard_id,
+            standard_version=task.standard_version,
+            disclosure_id=task.disclosure_id,
+            requirement_id=task.requirement_id,
+            verdict=AssessmentVerdict.UNKNOWN,
+            rationale="Only section-level profile evidence was found; requirement-level evidence is required.",
+            evidence=evidence,
+            missing_items=missing_items or ["requirement-level routed evidence"],
+            model_called=model_called,
+            review_status=ReviewStatus.NEEDS_MANUAL_REVIEW,
+        )
+
     review_status = ReviewStatus.NOT_REQUIRED
     if verdict in {AssessmentVerdict.UNKNOWN, AssessmentVerdict.PARTIALLY_DISCLOSED}:
         review_status = ReviewStatus.NEEDS_MANUAL_REVIEW
