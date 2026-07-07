@@ -21,6 +21,7 @@ class RequirementFacet(StrEnum):
     REQUIRES_SECURITY_PERSONNEL = "requires_security_personnel"
     REQUIRES_INCIDENT_CLASSIFICATION = "requires_incident_classification"
     REQUIRES_COMPLAINT_SOURCE_BREAKDOWN = "requires_complaint_source_breakdown"
+    REQUIRES_NEW_SUPPLIER_SCOPE = "requires_new_supplier_scope"
 
 
 class EvidenceKind(StrEnum):
@@ -55,6 +56,7 @@ class SemanticGroup(StrEnum):
     COMMUNITY_PROGRAM = "community_program"
     PRODUCT_INFORMATION = "product_information"
     PRIVACY_MANAGEMENT = "privacy_management"
+    ANTI_CORRUPTION_RISK = "anti_corruption_risk"
 
 
 @dataclass(frozen=True)
@@ -285,6 +287,15 @@ def evaluate_ontology_verdict(
                 review_status=ReviewStatus.NEEDS_MANUAL_REVIEW,
                 rationale="KPI evidence discloses supplier impact assessment results, but it does not describe the significant impact types.",
                 missing_items=("重大负面影响类型",),
+            )
+
+    if semantic_group is SemanticGroup.ANTI_CORRUPTION_RISK:
+        if EvidenceKind.MANAGEMENT_MECHANISM in evidence_kinds or EvidenceKind.POLICY in evidence_kinds:
+            return OntologyVerdictResult(
+                verdict=AssessmentVerdict.PARTIALLY_DISCLOSED,
+                review_status=ReviewStatus.NEEDS_MANUAL_REVIEW,
+                rationale="Anti-corruption management evidence is directionally relevant, but it does not disclose the operation-level risk assessment coverage or identified significant corruption risks.",
+                missing_items=("运营点总数和比例", "重大腐败风险识别结果"),
             )
 
     if semantic_group is SemanticGroup.OHS_KPI:

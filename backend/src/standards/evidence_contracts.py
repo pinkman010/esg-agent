@@ -21,6 +21,20 @@ class RequirementEvidenceContract:
 
 
 _CONTRACTS: dict[str, RequirementEvidenceContract] = {
+    "GRI 205-1-a": RequirementEvidenceContract(
+        requirement_id="GRI 205-1-a",
+        facets=(RequirementFacet.REQUIRES_COUNT, RequirementFacet.REQUIRES_PERCENTAGE),
+        evidence_kinds=(EvidenceKind.MANAGEMENT_MECHANISM,),
+        semantic_group=SemanticGroup.ANTI_CORRUPTION_RISK,
+        missing_items=("接受腐败风险评估的运营点总数", "接受腐败风险评估的运营点百分比"),
+    ),
+    "GRI 205-1-b": RequirementEvidenceContract(
+        requirement_id="GRI 205-1-b",
+        facets=(RequirementFacet.REQUIRES_IMPACT_TYPE,),
+        evidence_kinds=(EvidenceKind.MANAGEMENT_MECHANISM,),
+        semantic_group=SemanticGroup.ANTI_CORRUPTION_RISK,
+        missing_items=("重大腐败风险类型", "风险涉及的业务环节或地点"),
+    ),
     "GRI 302-1-a": RequirementEvidenceContract(
         requirement_id="GRI 302-1-a",
         allowed_pages=(63,),
@@ -458,7 +472,7 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
         requirement_id="GRI 308-1-a",
         allowed_pages=(67,),
         kpi_table_pages=(67,),
-        facets=(RequirementFacet.REQUIRES_PERCENTAGE,),
+        facets=(RequirementFacet.REQUIRES_PERCENTAGE, RequirementFacet.REQUIRES_NEW_SUPPLIER_SCOPE),
         evidence_kinds=(EvidenceKind.KPI_VALUE,),
         semantic_group=SemanticGroup.SUPPLIER_ASSESSMENT,
     ),
@@ -822,9 +836,10 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
         requirement_id="GRI 403-9-a-i",
         allowed_pages=(67,),
         kpi_table_pages=(67,),
-        facets=(RequirementFacet.REQUIRES_COUNT,),
+        facets=(RequirementFacet.REQUIRES_COUNT, RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION),
         evidence_kinds=(EvidenceKind.KPI_VALUE,),
         semantic_group=SemanticGroup.OHS_KPI,
+        missing_items=("死亡率",),
     ),
     "GRI 403-9-a-ii": RequirementEvidenceContract(
         requirement_id="GRI 403-9-a-ii",
@@ -1530,7 +1545,7 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
         requirement_id="GRI 414-1-a",
         allowed_pages=(67,),
         kpi_table_pages=(67,),
-        facets=(RequirementFacet.REQUIRES_PERCENTAGE,),
+        facets=(RequirementFacet.REQUIRES_PERCENTAGE, RequirementFacet.REQUIRES_NEW_SUPPLIER_SCOPE),
         evidence_kinds=(EvidenceKind.KPI_VALUE,),
         semantic_group=SemanticGroup.SUPPLIER_ASSESSMENT,
     ),

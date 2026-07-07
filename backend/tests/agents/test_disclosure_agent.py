@@ -10,12 +10,14 @@ def make_task():
         task_id="task-1",
         run_id="run-1",
         report_id="report-1",
-        standard_id="GRI",
+        standard_id="GRI TEST",
         standard_version="2021",
-        disclosure_id="GRI 302",
-        requirement_id="GRI 302-1-a",
+        disclosure_id="GRI TEST",
+        requirement_id="GRI TEST-1-a",
         requirement_text="Disclose energy consumption.",
         keywords=["energy"],
+        candidate_pages=[4],
+        candidate_page_source="gri_report_index",
     )
 
 
@@ -42,7 +44,7 @@ def test_disclosure_agent_marks_missing_evidence_for_manual_review_and_recommend
 
     assert result.assessment.verdict is AssessmentVerdict.UNKNOWN
     assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
-    assert result.recommendations[0].requirement_id == "GRI 302-1-a"
+    assert result.recommendations[0].requirement_id == "GRI TEST-1-a"
 
 
 def test_disclosure_agent_applies_ontology_matrix_before_generic_disclosed(monkeypatch):
@@ -138,6 +140,290 @@ def test_disclosure_agent_merges_contract_missing_items_with_ontology_result(mon
     assert result.assessment.evidence[0].metadata["decision_source"] == "contract_guardrail+ontology_matrix"
     assert result.assessment.missing_items.count("终止关系原因说明") == 1
     assert "终止关系百分比" in result.assessment.missing_items
+
+
+def test_disclosure_agent_keeps_profile_route_evidence_when_contract_pages_are_from_another_report(monkeypatch):
+    def fake_contract(requirement_id):
+        if requirement_id != "GRI TEST-profile-route":
+            return None
+        return RequirementEvidenceContract(
+            requirement_id=requirement_id,
+            allowed_pages=(67,),
+            kpi_table_pages=(67,),
+            facets=(RequirementFacet.REQUIRES_PERCENTAGE,),
+            evidence_kinds=(EvidenceKind.KPI_VALUE,),
+            semantic_group=SemanticGroup.SUPPLIER_ASSESSMENT,
+        )
+
+    monkeypatch.setattr("src.agents.disclosure_agent.get_requirement_contract", fake_contract)
+    task = DisclosureTask(
+        task_id="task-profile-route",
+        run_id="run-1",
+        report_id="report-1",
+        standard_id="GRI TEST",
+        standard_version="2021",
+        disclosure_id="GRI TEST",
+        requirement_id="GRI TEST-profile-route",
+        requirement_text="percentage of new suppliers screened using social criteria.",
+        keywords=["供应商", "社会"],
+        candidate_pages=[31],
+        candidate_pdf_pages=[31],
+        candidate_page_source="report_profile",
+    )
+    chunk = DocumentChunk(
+        chunk_id="chunk-profile-route",
+        report_id="report-1",
+        text="使用社会评价维度筛选的新供应商百分比 100%",
+        source_page=31,
+        source_method=EvidenceSourceMethod.PDFPLUMBER,
+        source_file_hash="hash-1",
+    )
+
+    result = DisclosureAgent().analyze(task, [chunk], confirm_llm=False)
+
+    assert result.assessment.evidence[0].source_page == 31
+    assert result.assessment.verdict is AssessmentVerdict.DISCLOSED
+
+
+def test_supplier_assessment_without_new_supplier_scope_stays_partial(monkeypatch):
+    def fake_contract(requirement_id):
+        if requirement_id != "GRI TEST-supplier-screening":
+            return None
+        return RequirementEvidenceContract(
+            requirement_id=requirement_id,
+            facets=(RequirementFacet.REQUIRES_PERCENTAGE, RequirementFacet.REQUIRES_NEW_SUPPLIER_SCOPE),
+            evidence_kinds=(EvidenceKind.KPI_VALUE,),
+            semantic_group=SemanticGroup.SUPPLIER_ASSESSMENT,
+        )
+
+    monkeypatch.setattr("src.agents.disclosure_agent.get_requirement_contract", fake_contract)
+    task = DisclosureTask(
+        task_id="task-supplier-screening",
+        run_id="run-1",
+        report_id="report-1",
+        standard_id="GRI TEST",
+        standard_version="2021",
+        disclosure_id="GRI TEST",
+        requirement_id="GRI TEST-supplier-screening",
+        requirement_text="percentage of new suppliers screened using social criteria.",
+        keywords=["供应商", "社会责任审核"],
+        candidate_pages=[31],
+        candidate_pdf_pages=[31],
+        candidate_page_source="report_profile",
+    )
+    chunk = DocumentChunk(
+        chunk_id="chunk-supplier-screening",
+        report_id="report-1",
+        text="2024年，公司完成85家风电机组零部件供应商社会责任审核，主要零部件制造商社会责任审核率100%。",
+        source_page=31,
+        source_method=EvidenceSourceMethod.PDFPLUMBER,
+        source_file_hash="hash-1",
+    )
+
+    result = DisclosureAgent().analyze(task, [chunk], confirm_llm=False)
+
+    assert result.assessment.verdict is AssessmentVerdict.PARTIALLY_DISCLOSED
+    assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+    assert "新供应商筛选百分比" in result.assessment.missing_items
+
+
+def test_ohs_count_without_rate_stays_partial_when_rate_facet_is_required(monkeypatch):
+    def fake_contract(requirement_id):
+        if requirement_id != "GRI TEST-ohs-fatality":
+            return None
+        return RequirementEvidenceContract(
+            requirement_id=requirement_id,
+            facets=(RequirementFacet.REQUIRES_COUNT, RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION),
+            evidence_kinds=(EvidenceKind.KPI_VALUE,),
+            semantic_group=SemanticGroup.OHS_KPI,
+        )
+
+    monkeypatch.setattr("src.agents.disclosure_agent.get_requirement_contract", fake_contract)
+    task = DisclosureTask(
+        task_id="task-ohs-fatality",
+        run_id="run-1",
+        report_id="report-1",
+        standard_id="GRI TEST",
+        standard_version="2021",
+        disclosure_id="GRI TEST",
+        requirement_id="GRI TEST-ohs-fatality",
+        requirement_text="number and rate of fatalities as a result of work-related injury.",
+        keywords=["因工死亡人数"],
+        candidate_pages=[37],
+        candidate_pdf_pages=[37],
+        candidate_page_source="report_profile",
+    )
+    chunk = DocumentChunk(
+        chunk_id="chunk-ohs-fatality",
+        report_id="report-1",
+        text="2024年，员工因工死亡人数为1，重大安全事故数为0，安全培训总学时约为441630小时。",
+        source_page=37,
+        source_method=EvidenceSourceMethod.PDFPLUMBER,
+        source_file_hash="hash-1",
+    )
+
+    result = DisclosureAgent().analyze(task, [chunk], confirm_llm=False)
+
+    assert result.assessment.verdict is AssessmentVerdict.PARTIALLY_DISCLOSED
+    assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+    assert "完整口径或方法说明" in result.assessment.missing_items
+
+
+def test_customer_privacy_complaint_requirement_rejects_general_product_or_data_security_evidence(monkeypatch):
+    def fake_contract(requirement_id):
+        if requirement_id != "GRI TEST-privacy-complaints":
+            return None
+        return RequirementEvidenceContract(
+            requirement_id=requirement_id,
+            facets=(RequirementFacet.REQUIRES_COUNT,),
+            evidence_kinds=(EvidenceKind.EXPLICIT_ZERO_STATEMENT,),
+            semantic_group=SemanticGroup.ZERO_EVENT_COMPLIANCE,
+        )
+
+    monkeypatch.setattr("src.agents.disclosure_agent.get_requirement_contract", fake_contract)
+    task = DisclosureTask(
+        task_id="task-privacy-complaints",
+        run_id="run-1",
+        report_id="report-1",
+        standard_id="GRI TEST",
+        standard_version="2021",
+        disclosure_id="GRI TEST",
+        requirement_id="GRI TEST-privacy-complaints",
+        requirement_text="substantiated complaints concerning breaches of customer privacy.",
+        keywords=["客户隐私", "投诉"],
+        candidate_pages=[13],
+        candidate_pdf_pages=[13],
+        candidate_page_source="report_profile_section",
+    )
+    chunk = DocumentChunk(
+        chunk_id="chunk-privacy-complaints",
+        report_id="report-1",
+        text="产品质量与安全管理体系完善，报告期内未发现信息安全、数据及个人隐私泄露事件。",
+        source_page=13,
+        source_method=EvidenceSourceMethod.PDFPLUMBER,
+        source_file_hash="hash-1",
+    )
+
+    result = DisclosureAgent().analyze(task, [chunk], confirm_llm=False)
+
+    assert result.assessment.verdict is AssessmentVerdict.UNKNOWN
+    assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+    assert "客户隐私投诉数量" in result.assessment.missing_items
+
+
+def test_customer_privacy_complaint_requirement_accepts_direct_complaint_zero_statement(monkeypatch):
+    def fake_contract(requirement_id):
+        if requirement_id != "GRI TEST-privacy-complaints":
+            return None
+        return RequirementEvidenceContract(
+            requirement_id=requirement_id,
+            facets=(RequirementFacet.REQUIRES_COUNT,),
+            evidence_kinds=(EvidenceKind.EXPLICIT_ZERO_STATEMENT,),
+            semantic_group=SemanticGroup.ZERO_EVENT_COMPLIANCE,
+        )
+
+    monkeypatch.setattr("src.agents.disclosure_agent.get_requirement_contract", fake_contract)
+    task = DisclosureTask(
+        task_id="task-privacy-complaints",
+        run_id="run-1",
+        report_id="report-1",
+        standard_id="GRI TEST",
+        standard_version="2021",
+        disclosure_id="GRI TEST",
+        requirement_id="GRI TEST-privacy-complaints",
+        requirement_text="substantiated complaints concerning breaches of customer privacy.",
+        keywords=["客户隐私", "投诉"],
+        candidate_pages=[61],
+        candidate_pdf_pages=[61],
+        candidate_page_source="report_profile",
+    )
+    chunk = DocumentChunk(
+        chunk_id="chunk-privacy-complaints-direct",
+        report_id="report-1",
+        text="报告期内，公司未接到任何涉及侵犯客户隐私或数据丢失的投诉。",
+        source_page=61,
+        source_method=EvidenceSourceMethod.PDFPLUMBER,
+        source_file_hash="hash-1",
+    )
+
+    result = DisclosureAgent().analyze(task, [chunk], confirm_llm=False)
+
+    assert result.assessment.verdict is AssessmentVerdict.DISCLOSED
+    assert result.assessment.review_status is ReviewStatus.NOT_REQUIRED
+
+
+def test_profile_route_without_leaf_sufficiency_gate_is_capped_at_partial(monkeypatch):
+    monkeypatch.setattr("src.agents.disclosure_agent.get_requirement_contract", lambda requirement_id: None)
+    task = DisclosureTask(
+        task_id="task-profile-generic",
+        run_id="run-1",
+        report_id="report-1",
+        standard_id="GRI TEST",
+        standard_version="2021",
+        disclosure_id="GRI TEST",
+        requirement_id="GRI TEST-profile-generic",
+        requirement_text="financial assistance received from government.",
+        keywords=["政府", "政策", "补助"],
+        candidate_pages=[23],
+        candidate_pdf_pages=[23],
+        candidate_page_source="report_profile",
+    )
+    chunk = DocumentChunk(
+        chunk_id="chunk-profile-generic",
+        report_id="report-1",
+        text="绿色环保运营章节披露气候政策风险、绿色低碳转型和国家政策趋势。",
+        source_page=23,
+        source_method=EvidenceSourceMethod.PDFPLUMBER,
+        source_file_hash="hash-1",
+    )
+
+    result = DisclosureAgent().analyze(task, [chunk], confirm_llm=False)
+
+    assert result.assessment.verdict is AssessmentVerdict.PARTIALLY_DISCLOSED
+    assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+    assert "人工复核 profile route 证据充分性" in result.assessment.missing_items
+
+
+def test_profile_management_candidate_page_can_support_partial_when_keywords_miss(monkeypatch):
+    def fake_contract(requirement_id):
+        if requirement_id != "GRI TEST-anti-corruption":
+            return None
+        return RequirementEvidenceContract(
+            requirement_id=requirement_id,
+            facets=(RequirementFacet.REQUIRES_COUNT, RequirementFacet.REQUIRES_PERCENTAGE),
+            evidence_kinds=(EvidenceKind.MANAGEMENT_MECHANISM,),
+            semantic_group=SemanticGroup.ANTI_CORRUPTION_RISK,
+        )
+
+    monkeypatch.setattr("src.agents.disclosure_agent.get_requirement_contract", fake_contract)
+    task = DisclosureTask(
+        task_id="task-anti-corruption",
+        run_id="run-1",
+        report_id="report-1",
+        standard_id="GRI TEST",
+        standard_version="2021",
+        disclosure_id="GRI TEST",
+        requirement_id="GRI TEST-anti-corruption",
+        requirement_text="operations assessed for risks related to corruption.",
+        keywords=["operation coverage term that is absent"],
+        candidate_pages=[21],
+        candidate_pdf_pages=[21],
+        candidate_page_source="report_profile",
+    )
+    chunk = DocumentChunk(
+        chunk_id="chunk-anti-corruption",
+        report_id="report-1",
+        text="商业道德章节披露审计委员会领导审计监察部开展反腐败工作，并制定反舞弊管理制度。",
+        source_page=21,
+        source_method=EvidenceSourceMethod.PDFPLUMBER,
+        source_file_hash="hash-1",
+    )
+
+    result = DisclosureAgent().analyze(task, [chunk], confirm_llm=False)
+
+    assert result.assessment.verdict is AssessmentVerdict.PARTIALLY_DISCLOSED
+    assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+    assert result.assessment.evidence[0].metadata["profile_candidate_unmatched"] is True
 
 
 def test_disclosure_agent_uses_database_safe_recommendation_id_for_long_task_id():

@@ -215,6 +215,18 @@ def test_supplier_assessment_policy_only_cannot_disclose_quantity_or_percentage(
     assert "percentage" in result.missing_items
 
 
+def test_anti_corruption_risk_management_mechanism_stays_partial():
+    result = evaluate_ontology_verdict(
+        semantic_group=SemanticGroup.ANTI_CORRUPTION_RISK,
+        facets={RequirementFacet.REQUIRES_COUNT, RequirementFacet.REQUIRES_PERCENTAGE},
+        evidence_kinds={EvidenceKind.MANAGEMENT_MECHANISM},
+    )
+
+    assert result.verdict is AssessmentVerdict.PARTIALLY_DISCLOSED
+    assert result.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+    assert "运营点总数和比例" in result.missing_items
+
+
 def test_supplier_assessment_impact_count_does_not_satisfy_impact_type():
     result = evaluate_ontology_verdict(
         semantic_group=SemanticGroup.SUPPLIER_ASSESSMENT,
@@ -248,6 +260,18 @@ def test_ohs_kpi_discloses_direct_employee_count_or_hours():
 
     assert result.verdict is AssessmentVerdict.DISCLOSED
     assert result.review_status is ReviewStatus.NOT_REQUIRED
+
+
+def test_ohs_kpi_keeps_count_without_rate_partial_when_rate_is_required():
+    result = evaluate_ontology_verdict(
+        semantic_group=SemanticGroup.OHS_KPI,
+        facets={RequirementFacet.REQUIRES_COUNT, RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION},
+        evidence_kinds={EvidenceKind.KPI_VALUE},
+    )
+
+    assert result.verdict is AssessmentVerdict.PARTIALLY_DISCLOSED
+    assert result.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+    assert "完整口径或方法说明" in result.missing_items
 
 
 def test_ohs_kpi_discloses_rate_basis_when_methodology_evidence_matches():

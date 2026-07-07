@@ -5,7 +5,7 @@ from src.domain.enums import AssessmentVerdict, PageQualityFlag, ReviewStatus
 from src.domain.models import DisclosureAssessment, DisclosureTask, DocumentChunk, EvidenceItem, Recommendation
 from src.standards.compilation_guardrails import get_compilation_guardrails
 from src.standards.evidence_contracts import get_requirement_contract
-from src.standards.evidence_ontology import EvidenceKind, evaluate_ontology_verdict
+from src.standards.evidence_ontology import EvidenceKind, RequirementFacet, SemanticGroup, evaluate_ontology_verdict
 from src.standards.no_evidence_guardrails import get_no_evidence_guardrail
 from src.tools.evidence import build_kpi_evidence_preview, chunk_to_evidence
 from src.tools.guardrails import build_guarded_assessment
@@ -28,6 +28,7 @@ class DisclosureAgent:
     ) -> DisclosureAgentResult:
         evidence = self._supplement_requirement_specific_evidence(task, chunks, retrieve_evidence(task, chunks, limit=10))
         evidence = self._filter_invalid_evidence(task, evidence)
+        evidence = self._supplement_profile_management_evidence_after_filter(task, chunks, evidence)
         verdict, rationale, missing_items = self._classify_rule_based(task, evidence)
         assessment = build_guarded_assessment(
             task,
@@ -37,6 +38,7 @@ class DisclosureAgent:
             rationale=rationale,
             missing_items=missing_items,
         )
+        self._apply_profile_route_disclosed_gate(task, assessment)
         self._apply_compilation_guardrails(task, assessment)
         disclosed_not_required_overrides = {
             "GRI 2-7-c-ii",
@@ -81,11 +83,16 @@ class DisclosureAgent:
         evidence: list[EvidenceItem],
     ) -> list[EvidenceItem]:
         contract = get_requirement_contract(task.requirement_id)
-        allowed_pages = set(contract.allowed_pages) if contract is not None and contract.allowed_pages else None
+        is_profile_route = self._uses_report_profile_route(task)
+        allowed_pages = set(task.candidate_pages) if is_profile_route and task.candidate_pages else None
+        if allowed_pages is None:
+            allowed_pages = set(contract.allowed_pages) if contract is not None and contract.allowed_pages else None
         if not allowed_pages:
             allowed_pages = self._requirement_specific_allowed_pages().get(task.requirement_id)
         if not allowed_pages:
             return evidence
+        if not evidence and self._uses_report_profile_route(task) and self._should_use_profile_management_candidate(contract):
+            return self._profile_candidate_evidence(task, chunks, allowed_pages)
         candidate_pages = set(task.candidate_pages or [])
         if not candidate_pages:
             return evidence
@@ -108,6 +115,33 @@ class DisclosureAgent:
             supplemented.append(chunk_to_evidence(task, chunk, retrieval_metadata=retrieval_metadata))
             existing_pages.add(chunk.source_page)
         return sorted(supplemented, key=lambda item: item.source_page)
+
+    def _should_use_profile_management_candidate(self, contract) -> bool:
+        return bool(contract is not None and EvidenceKind.MANAGEMENT_MECHANISM in contract.evidence_kinds)
+
+    def _profile_candidate_evidence(
+        self,
+        task: DisclosureTask,
+        chunks: list[DocumentChunk],
+        allowed_pages: set[int],
+    ) -> list[EvidenceItem]:
+        candidate_pages = set(task.candidate_pages or [])
+        if not candidate_pages:
+            return []
+        retrieval_metadata = {
+            "retrieval_strategy": "index_page_bounded",
+            "candidate_pages": task.candidate_pages,
+            "candidate_pdf_pages": task.candidate_pdf_pages,
+            "candidate_report_pages": task.candidate_report_pages,
+            "candidate_page_source": task.candidate_page_source,
+            "index_page": task.index_page,
+            "profile_candidate_unmatched": True,
+        }
+        return [
+            chunk_to_evidence(task, chunk, retrieval_metadata=retrieval_metadata)
+            for chunk in chunks
+            if chunk.source_page in allowed_pages and chunk.source_page in candidate_pages
+        ]
 
     def _filter_invalid_evidence(self, task: DisclosureTask, evidence: list[EvidenceItem]) -> list[EvidenceItem]:
         evidence = [item for item in evidence if item.metadata.get("retrieval_strategy") != "global_fallback"]
@@ -133,6 +167,24 @@ class DisclosureAgent:
             return [item for item in evidence if self._has_2_2_c_iii_sufficient_evidence(item.source_text)]
         return evidence
 
+    def _supplement_profile_management_evidence_after_filter(
+        self,
+        task: DisclosureTask,
+        chunks: list[DocumentChunk],
+        evidence: list[EvidenceItem],
+    ) -> list[EvidenceItem]:
+        if evidence:
+            return evidence
+        if not self._uses_report_profile_route(task):
+            return evidence
+        contract = get_requirement_contract(task.requirement_id)
+        if not self._should_use_profile_management_candidate(contract):
+            return evidence
+        allowed_pages = set(task.candidate_pages or [])
+        if not allowed_pages:
+            return evidence
+        return self._profile_candidate_evidence(task, chunks, allowed_pages)
+
     def _filter_requirement_specific_pages(
         self,
         task: DisclosureTask,
@@ -147,7 +199,7 @@ class DisclosureAgent:
             if contract.verdict is AssessmentVerdict.UNKNOWN and not contract.allowed_pages:
                 return []
             filtered = [item for item in evidence if item.source_page not in contract.forbidden_pages]
-            if contract.allowed_pages and task.candidate_pages:
+            if contract.allowed_pages and task.candidate_pages and not self._uses_report_profile_route(task):
                 return [item for item in filtered if item.source_page in contract.allowed_pages]
             evidence = filtered
 
@@ -334,8 +386,10 @@ class DisclosureAgent:
         contract = get_requirement_contract(task.requirement_id)
         for item in evidence:
             is_contract_kpi_table_page = contract is not None and item.source_page in contract.kpi_table_pages
+            is_profile_kpi_table_page = item.source_page in set(task.kpi_table_pages)
             is_complex_table_page = (
                 is_contract_kpi_table_page
+                or is_profile_kpi_table_page
                 or
                 (task.disclosure_id == "GRI 2-7" and item.source_page == 65)
                 or (
@@ -423,6 +477,125 @@ class DisclosureAgent:
         has_difference_explanation = any(term in text_lower for term in difference_terms)
         return has_consolidation_method and has_difference_explanation
 
+    def _uses_report_profile_route(self, task: DisclosureTask) -> bool:
+        return bool(task.candidate_page_source and task.candidate_page_source.startswith("report_profile"))
+
+    def _apply_textual_sufficiency_guardrails(self, *, task: DisclosureTask, contract, evidence_text: str, ontology_result):
+        evidence_text_lower = evidence_text.lower()
+        requirement_text_lower = task.requirement_text.lower()
+        if (
+            contract.semantic_group is SemanticGroup.SUPPLIER_ASSESSMENT
+            and RequirementFacet.REQUIRES_PERCENTAGE in contract.facets
+            and RequirementFacet.REQUIRES_NEW_SUPPLIER_SCOPE in contract.facets
+            and not self._has_new_supplier_screening_percentage_evidence(evidence_text)
+            and ("供应商" in evidence_text or "supplier" in evidence_text_lower)
+        ):
+            return type(ontology_result)(
+                verdict=AssessmentVerdict.PARTIALLY_DISCLOSED,
+                review_status=ReviewStatus.NEEDS_MANUAL_REVIEW,
+                rationale="Supplier assessment evidence is directionally relevant, but it does not confirm the new-supplier screening percentage required by the leaf requirement.",
+                missing_items=("新供应商筛选百分比",),
+            )
+        if (
+            contract.semantic_group is SemanticGroup.ZERO_EVENT_COMPLIANCE
+            and RequirementFacet.REQUIRES_COUNT in contract.facets
+            and self._requires_customer_privacy_complaint_scope(task)
+            and not self._has_customer_privacy_complaint_evidence(evidence_text)
+        ):
+            return type(ontology_result)(
+                verdict=AssessmentVerdict.UNKNOWN,
+                review_status=ReviewStatus.NEEDS_MANUAL_REVIEW,
+                rationale="General product, data security, or privacy management evidence does not directly disclose substantiated customer privacy complaints.",
+                missing_items=("客户隐私投诉数量", "投诉来源分类"),
+            )
+        if (
+            contract.semantic_group is SemanticGroup.OHS_KPI
+            and RequirementFacet.REQUIRES_COUNT in contract.facets
+            and RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION in contract.facets
+            and self._has_required_ohs_rate_evidence(task, evidence_text)
+        ):
+            return type(ontology_result)(
+                verdict=AssessmentVerdict.DISCLOSED,
+                review_status=ReviewStatus.NOT_REQUIRED,
+                rationale="OHS KPI evidence directly discloses both the required count and matching rate.",
+                missing_items=(),
+            )
+        return ontology_result
+
+    def _requires_customer_privacy_complaint_scope(self, task: DisclosureTask) -> bool:
+        requirement_text_lower = task.requirement_text.lower()
+        if task.disclosure_id.startswith("GRI 416") or task.disclosure_id.startswith("GRI 417"):
+            return False
+        if task.disclosure_id == "GRI 418-1":
+            return task.requirement_id in {"GRI 418-1-a", "GRI 418-1-b", "GRI 418-1-c"}
+        return (
+            "customer privacy" in requirement_text_lower
+            or "客户隐私投诉" in task.requirement_text
+            or "侵犯客户隐私" in task.requirement_text
+        )
+
+    def _has_customer_privacy_complaint_evidence(self, evidence_text: str) -> bool:
+        evidence_text_lower = evidence_text.lower()
+        has_complaint = "投诉" in evidence_text or "complaint" in evidence_text_lower
+        has_customer_privacy = (
+            "客户隐私" in evidence_text
+            or "侵犯客户隐私" in evidence_text
+            or "customer privacy" in evidence_text_lower
+        )
+        has_data_loss_complaint = "数据丢失" in evidence_text and has_complaint
+        return has_complaint and (has_customer_privacy or has_data_loss_complaint)
+
+    def _has_required_ohs_rate_evidence(self, task: DisclosureTask, evidence_text: str) -> bool:
+        evidence_text_lower = evidence_text.lower()
+        if task.requirement_id.endswith("-a-i") or "fatalit" in task.requirement_text.lower() or "死亡" in task.requirement_text:
+            return "死亡率" in evidence_text or "fatality rate" in evidence_text_lower
+        return any(term in evidence_text_lower for term in ("trir", "ltir", "百万工时", "per million hours"))
+
+    def _has_new_supplier_screening_percentage_evidence(self, evidence_text: str) -> bool:
+        evidence_text_lower = evidence_text.lower()
+        direct_patterns = (
+            r"新供应商.{0,40}(筛选|评价|评估|审核).{0,40}(百分比|比例|%|％)",
+            r"(筛选|评价|评估|审核).{0,40}新供应商.{0,40}(百分比|比例|%|％)",
+            r"new suppliers?.{0,80}(screened|screening).{0,80}(percentage|%)",
+        )
+        return any(re.search(pattern, evidence_text_lower) for pattern in direct_patterns)
+
+    def _apply_profile_route_disclosed_gate(self, task: DisclosureTask, assessment: DisclosureAssessment) -> None:
+        if assessment.verdict is not AssessmentVerdict.DISCLOSED:
+            return
+        if not self._uses_report_profile_route(task):
+            return
+        if self._has_strong_profile_disclosed_support(task, assessment):
+            return
+        assessment.verdict = AssessmentVerdict.PARTIALLY_DISCLOSED
+        assessment.review_status = ReviewStatus.NEEDS_MANUAL_REVIEW
+        assessment.rationale = (
+            "Report profile routing found directionally relevant evidence, but the evidence has not passed a leaf-level "
+            "sufficiency gate for full disclosure."
+        )
+        for item in ("leaf-level direct evidence", "人工复核 profile route 证据充分性"):
+            if item not in assessment.missing_items:
+                assessment.missing_items.append(item)
+
+    def _has_strong_profile_disclosed_support(self, task: DisclosureTask, assessment: DisclosureAssessment) -> bool:
+        contract = get_requirement_contract(task.requirement_id)
+        evidence_text = "\n".join(item.source_text for item in assessment.evidence)
+        if contract is None:
+            return False
+        if contract.semantic_group is SemanticGroup.SUPPLIER_ASSESSMENT:
+            if RequirementFacet.REQUIRES_NEW_SUPPLIER_SCOPE in contract.facets:
+                return self._has_new_supplier_screening_percentage_evidence(evidence_text)
+            return any(item.metadata.get("ontology_review_status") == ReviewStatus.NOT_REQUIRED.value for item in assessment.evidence)
+        if contract.semantic_group is SemanticGroup.ZERO_EVENT_COMPLIANCE and self._requires_customer_privacy_complaint_scope(task):
+            return self._has_customer_privacy_complaint_evidence(evidence_text)
+        if (
+            contract.semantic_group is SemanticGroup.OHS_KPI
+            and RequirementFacet.REQUIRES_COUNT in contract.facets
+            and RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION in contract.facets
+        ):
+            return self._has_required_ohs_rate_evidence(task, evidence_text)
+        return any(item.metadata.get("ontology_review_status") == ReviewStatus.NOT_REQUIRED.value for item in assessment.evidence)
+
     def _classify_rule_based(
         self,
         task: DisclosureTask,
@@ -479,6 +652,12 @@ class DisclosureAgent:
                 semantic_group=contract.semantic_group,
                 facets=contract.facets,
                 evidence_kinds=contract.evidence_kinds,
+            )
+            ontology_result = self._apply_textual_sufficiency_guardrails(
+                task=task,
+                contract=contract,
+                evidence_text=evidence_text,
+                ontology_result=ontology_result,
             )
             decision_source = "contract_guardrail+ontology_matrix" if contract.missing_items else "ontology_matrix"
             for item in evidence:

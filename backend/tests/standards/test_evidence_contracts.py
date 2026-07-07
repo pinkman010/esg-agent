@@ -47,6 +47,8 @@ def test_supplier_environmental_and_social_contracts_share_semantic_group():
     assert contract_414.semantic_group is SemanticGroup.SUPPLIER_ASSESSMENT
     assert RequirementFacet.REQUIRES_PERCENTAGE in contract_308.facets
     assert RequirementFacet.REQUIRES_PERCENTAGE in contract_414.facets
+    assert RequirementFacet.REQUIRES_NEW_SUPPLIER_SCOPE in contract_308.facets
+    assert RequirementFacet.REQUIRES_NEW_SUPPLIER_SCOPE in contract_414.facets
 
 
 def test_kpi_profile_owned_requirement_contract_keeps_semantic_metadata_without_candidate_page():
@@ -61,13 +63,13 @@ def test_kpi_profile_owned_requirement_contract_keeps_semantic_metadata_without_
 
 def test_supplier_assessment_contracts_have_shared_ontology_metadata():
     cases = {
-        "GRI 308-1-a": {RequirementFacet.REQUIRES_PERCENTAGE},
+        "GRI 308-1-a": {RequirementFacet.REQUIRES_PERCENTAGE, RequirementFacet.REQUIRES_NEW_SUPPLIER_SCOPE},
         "GRI 308-2-a": {RequirementFacet.REQUIRES_COUNT},
         "GRI 308-2-b": {RequirementFacet.REQUIRES_COUNT},
         "GRI 308-2-c": {RequirementFacet.REQUIRES_IMPACT_TYPE},
         "GRI 308-2-d": {RequirementFacet.REQUIRES_PERCENTAGE},
         "GRI 308-2-e": {RequirementFacet.REQUIRES_PERCENTAGE, RequirementFacet.REQUIRES_REASON_WHY},
-        "GRI 414-1-a": {RequirementFacet.REQUIRES_PERCENTAGE},
+        "GRI 414-1-a": {RequirementFacet.REQUIRES_PERCENTAGE, RequirementFacet.REQUIRES_NEW_SUPPLIER_SCOPE},
         "GRI 414-2-a": {RequirementFacet.REQUIRES_COUNT},
         "GRI 414-2-b": {RequirementFacet.REQUIRES_COUNT},
         "GRI 414-2-c": {RequirementFacet.REQUIRES_IMPACT_TYPE},
@@ -99,7 +101,10 @@ def test_ohs_injury_and_ill_health_contracts_share_semantic_group():
 def test_ohs_kpi_contracts_have_pilot_ontology_metadata():
     cases = {
         "GRI 403-9-a": ({RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION}, {EvidenceKind.KPI_VALUE}),
-        "GRI 403-9-a-i": ({RequirementFacet.REQUIRES_COUNT}, {EvidenceKind.KPI_VALUE}),
+        "GRI 403-9-a-i": (
+            {RequirementFacet.REQUIRES_COUNT, RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION},
+            {EvidenceKind.KPI_VALUE},
+        ),
         "GRI 403-9-a-ii": ({RequirementFacet.REQUIRES_COUNT, RequirementFacet.REQUIRES_IMPACT_TYPE}, {EvidenceKind.KPI_VALUE}),
         "GRI 403-9-a-iii": ({RequirementFacet.REQUIRES_COUNT}, {EvidenceKind.KPI_VALUE}),
         "GRI 403-9-a-v": ({RequirementFacet.REQUIRES_COUNT}, {EvidenceKind.KPI_VALUE}),
