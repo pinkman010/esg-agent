@@ -91,7 +91,7 @@ def _keyword_matches(
                 for match in row_matches[:limit]
             ]
 
-    keywords = [keyword.lower() for keyword in task.keywords]
+    keywords = [keyword.lower() for keyword in [*task.keywords, *kpi_metric_terms] if keyword]
     matches: list[EvidenceItem] = []
     for chunk in chunks:
         text = chunk.text.lower()

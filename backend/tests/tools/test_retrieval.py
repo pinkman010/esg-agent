@@ -289,3 +289,39 @@ def test_retrieve_evidence_falls_back_globally_when_candidate_pages_do_not_match
 
     assert evidence[0].source_page == 22
     assert evidence[0].metadata["retrieval_strategy"] == "global_fallback"
+
+
+def test_retrieve_evidence_matches_management_mechanism_terms_on_profile_route():
+    task = DisclosureTask(
+        task_id="task-205-1-a",
+        run_id="run-1",
+        report_id="goldwind",
+        standard_id="GRI",
+        standard_version="2016",
+        disclosure_id="GRI 205-1",
+        requirement_id="GRI 205-1-a",
+        requirement_text="operations assessed for risks related to corruption",
+        keywords=["operations", "assessed", "risks", "corruption"],
+        candidate_pages=[21],
+        candidate_pdf_pages=[21],
+        candidate_report_pages=[38],
+        candidate_page_source="report_profile",
+        kpi_metric_terms=["反腐败", "审计", "商业道德", "舞弊"],
+    )
+    chunks = [
+        DocumentChunk(
+            chunk_id="p21",
+            report_id="goldwind",
+            text="审计委员会领导审计监察部开展反腐败制度建设，按业务单位特点和风险程度制定审计策略，并在审计中关注商业道德问题。",
+            source_page=21,
+            source_method=EvidenceSourceMethod.PDFPLUMBER,
+            source_file_hash="hash",
+        )
+    ]
+
+    evidence = retrieve_evidence(task, chunks)
+
+    assert len(evidence) == 1
+    assert evidence[0].source_page == 21
+    assert evidence[0].metadata["retrieval_strategy"] == "index_page_bounded"
+    assert "反腐败" in evidence[0].evidence_preview
