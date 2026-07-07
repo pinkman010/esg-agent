@@ -1,0 +1,47 @@
+[
+  {
+    "requirement_id": "GRI 205-1-a",
+    "issue_type": "unknown_leakage",
+    "correct_pdf_pages": [21],
+    "evidence_kind": "management_mechanism",
+    "route_failure_reason": "wrong_source_page",
+    "suggested_profile_route": [21],
+    "review_note": "反腐败风险评估应回到实质披露页，不能停留在 GRI 索引或无关页。"
+  },
+  {
+    "requirement_id": "GRI 205-1-b",
+    "issue_type": "unknown_leakage",
+    "correct_pdf_pages": [21],
+    "evidence_kind": "management_mechanism",
+    "route_failure_reason": "wrong_source_page",
+    "suggested_profile_route": [21],
+    "review_note": "腐败风险类型或管理机制需要实质披露页。"
+  },
+  {
+    "requirement_id": "GRI 414-1-a",
+    "issue_type": "unknown_leakage",
+    "correct_pdf_pages": [31, 32],
+    "evidence_kind": "kpi_value",
+    "route_failure_reason": "candidate_pages_present_keyword_miss",
+    "suggested_profile_route": [31, 32],
+    "review_note": "供应商社会评价筛选比例应由 KPI 行标签匹配。"
+  },
+  {
+    "requirement_id": "GRI 403-9-a-i",
+    "issue_type": "unknown_leakage",
+    "correct_pdf_pages": [47],
+    "evidence_kind": "kpi_value",
+    "route_failure_reason": "candidate_pages_present_keyword_miss",
+    "suggested_profile_route": [47],
+    "review_note": "工伤死亡数量和死亡率应由 KPI 行标签匹配。"
+  },
+  {
+    "requirement_id": "GRI 418-1-a",
+    "issue_type": "false_disclosed",
+    "correct_pdf_pages": [],
+    "evidence_kind": "explicit_zero_statement",
+    "route_failure_reason": "wrong_source_page",
+    "suggested_profile_route": [],
+    "review_note": "Goldwind first-pass 曾将无关证据升为 disclosed，零投诉声明需要正确 source page 和分类边界。"
+  }
+]

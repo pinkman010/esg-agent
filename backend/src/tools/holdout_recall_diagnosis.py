@@ -22,6 +22,25 @@ DIAGNOSIS_COLUMNS = [
 ]
 
 
+def load_manual_gold(path: Path) -> dict[str, dict[str, Any]]:
+    raw = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(raw, list):
+        raise ValueError("manual gold must be a list of case objects")
+
+    cases: dict[str, dict[str, Any]] = {}
+    for item in raw:
+        requirement_id = str(item.get("requirement_id", "")).strip()
+        if not requirement_id:
+            raise ValueError("manual gold case missing requirement_id")
+        if requirement_id in cases:
+            raise ValueError(f"duplicate manual gold case: {requirement_id}")
+        pages = item.get("correct_pdf_pages", [])
+        if not isinstance(pages, list) or not all(isinstance(page, int) for page in pages):
+            raise ValueError(f"correct_pdf_pages must be integer list for {requirement_id}")
+        cases[requirement_id] = dict(item)
+    return cases
+
+
 def build_recall_diagnosis_rows(
     first_pass_csv: Path,
     manual_gold: dict[str, dict[str, Any]],

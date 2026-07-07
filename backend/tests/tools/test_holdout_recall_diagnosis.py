@@ -1,6 +1,33 @@
+import json
 from pathlib import Path
 
-from src.tools.holdout_recall_diagnosis import build_recall_diagnosis_rows
+from src.tools.holdout_recall_diagnosis import build_recall_diagnosis_rows, load_manual_gold
+
+
+def test_load_manual_gold_indexes_cases_by_requirement_id(tmp_path: Path):
+    source = tmp_path / "gold.json"
+    source.write_text(
+        json.dumps(
+            [
+                {
+                    "requirement_id": "GRI 414-1-a",
+                    "issue_type": "unknown_leakage",
+                    "correct_pdf_pages": [31, 32],
+                    "evidence_kind": "kpi_value",
+                    "route_failure_reason": "candidate_pages_present_keyword_miss",
+                    "suggested_profile_route": [31, 32],
+                    "review_note": "PDF 第 31-32 页包含供应商社会评价 KPI。",
+                }
+            ],
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    gold = load_manual_gold(source)
+
+    assert gold["GRI 414-1-a"]["correct_pdf_pages"] == [31, 32]
+    assert gold["GRI 414-1-a"]["evidence_kind"] == "kpi_value"
 
 
 def test_recall_diagnosis_classifies_route_missing(tmp_path: Path):
