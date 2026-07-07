@@ -141,3 +141,36 @@ def test_router_uses_report_profile_section_route_when_no_requirement_route():
     assert route.candidate_pdf_pages == list(range(18, 22))
     assert route.source == "report_profile_section"
     assert "诚信合规经营" in route.metric_terms
+
+
+def test_requirement_route_has_priority_over_section_route_for_goldwind_profile():
+    profile = load_report_profile(Path("data/reports/profiles/goldwind_2024.json"))
+    router = EvidenceRouter(report_profile=profile)
+    task = make_task("GRI 414-1-a", "GRI 414-1").model_copy(
+        update={
+            "requirement_text": "new suppliers screened using social criteria",
+            "keywords": ["供应商", "社会评价", "筛选"],
+        }
+    )
+
+    route = router.route(task)
+
+    assert route.source == "report_profile"
+    assert route.candidate_pdf_pages == [31, 32]
+
+
+def test_section_route_only_provides_candidates_for_unrouted_topic():
+    profile = load_report_profile(Path("data/reports/profiles/goldwind_2024.json"))
+    router = EvidenceRouter(report_profile=profile)
+    task = make_task("GRI 999-1-a", "GRI 999-1").model_copy(
+        update={
+            "requirement_text": "community engagement and public welfare program",
+            "keywords": ["社区", "公益"],
+        }
+    )
+
+    route = router.route(task)
+
+    assert route.source == "report_profile_section"
+    assert route.candidate_pdf_pages == [41, 42, 43, 44, 45]
+    assert "和谐社区关系" in route.metric_terms
