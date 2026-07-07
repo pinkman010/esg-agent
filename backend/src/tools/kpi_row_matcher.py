@@ -50,16 +50,18 @@ def _match_metric_line(text: str, term: str, year_columns: list[str]) -> tuple[s
     index = text.find(term)
     if index < 0:
         return None
-    window = text[index : index + 180]
+    window = text[index : index + 220]
     year = next((candidate for candidate in year_columns if candidate in text[:index] or candidate in window), None)
     after_term = window[len(term) :].strip()
     tokens = after_term.split()
     unit = tokens[0] if tokens else None
     value = None
-    for token in tokens[1:]:
+    for token in tokens[1:4]:
         if re.fullmatch(r"-?\d[\d,]*(?:\.\d+)?%?", token):
             value = token
             break
+    if value is None:
+        return None
     return unit, value, year
 
 
