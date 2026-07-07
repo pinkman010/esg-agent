@@ -43,6 +43,44 @@ def test_retrieve_evidence_returns_keyword_matched_chunks_with_traceability():
     assert evidence[0].source_file_hash == "hash-1"
 
 
+def test_retrieve_evidence_excludes_profile_index_pages_from_global_no_index():
+    task = DisclosureTask(
+        task_id="task-goldwind-205",
+        run_id="run-1",
+        report_id="report-1",
+        standard_id="GRI",
+        standard_version="2021",
+        disclosure_id="GRI 205-1",
+        requirement_id="GRI 205-1-a",
+        requirement_text="Disclose corruption risk assessment coverage.",
+        keywords=["corruption", "腐败"],
+        excluded_pdf_pages=[50, 51],
+    )
+    chunks = [
+        DocumentChunk(
+            chunk_id="chunk-index",
+            report_id="report-1",
+            text="GRI 205：反腐败 2016 205-1 腐败风险评估 P38",
+            source_page=50,
+            source_method=EvidenceSourceMethod.PDFPLUMBER,
+            source_file_hash="hash-1",
+        ),
+        DocumentChunk(
+            chunk_id="chunk-body",
+            report_id="report-1",
+            text="The company describes corruption risk assessment controls.",
+            source_page=38,
+            source_method=EvidenceSourceMethod.PDFPLUMBER,
+            source_file_hash="hash-1",
+        ),
+    ]
+
+    evidence = retrieve_evidence(task, chunks)
+
+    assert [item.source_page for item in evidence] == [38]
+    assert evidence[0].metadata["retrieval_strategy"] == "global_no_index"
+
+
 def test_chunk_to_evidence_uses_database_safe_id_for_realistic_long_inputs():
     task = DisclosureTask(
         task_id="run-7170e39a373d48ad9d435912ae53bf0d:GRI 302-1-a",

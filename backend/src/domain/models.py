@@ -83,6 +83,7 @@ class DisclosureTask(BaseModel):
     index_page: int | None = None
     report_index_pdf_page: int | None = None
     report_index_report_page: int | None = None
+    excluded_pdf_pages: list[int] = Field(default_factory=list)
     kpi_table_pages: list[int] = Field(default_factory=list)
     kpi_metric_terms: list[str] = Field(default_factory=list)
     kpi_year_columns: list[str] = Field(default_factory=list)

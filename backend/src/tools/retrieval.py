@@ -5,6 +5,7 @@ from src.tools.kpi_row_matcher import match_kpi_rows
 
 
 def retrieve_evidence(task: DisclosureTask, chunks: list[DocumentChunk], limit: int = 5) -> list[EvidenceItem]:
+    excluded_page_set = set(task.excluded_pdf_pages)
     if task.candidate_pages:
         candidate_page_set = set(task.candidate_pages)
         retrieval_metadata = {
@@ -39,9 +40,16 @@ def retrieve_evidence(task: DisclosureTask, chunks: list[DocumentChunk], limit: 
                 "candidate_page_source": task.candidate_page_source,
                 "index_page": task.index_page,
             },
+            excluded_page_set=excluded_page_set,
         )
 
-    return _keyword_matches(task, chunks, limit, {"retrieval_strategy": "global_no_index"})
+    return _keyword_matches(
+        task,
+        chunks,
+        limit,
+        {"retrieval_strategy": "global_no_index"},
+        excluded_page_set=excluded_page_set,
+    )
 
 
 def _keyword_matches(
@@ -49,7 +57,10 @@ def _keyword_matches(
     chunks: list[DocumentChunk],
     limit: int,
     retrieval_metadata: dict,
+    excluded_page_set: set[int] | None = None,
 ) -> list[EvidenceItem]:
+    if excluded_page_set:
+        chunks = [chunk for chunk in chunks if chunk.source_page not in excluded_page_set]
     kpi_metric_terms = list(retrieval_metadata.get("kpi_metric_terms") or [])
     kpi_table_pages = set(retrieval_metadata.get("kpi_table_pages") or [])
     if kpi_metric_terms and kpi_table_pages:

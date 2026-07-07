@@ -104,6 +104,25 @@ def test_global_fallback_evidence_forces_manual_review():
     assert "bounded report evidence" in assessment.missing_items
 
 
+def test_global_no_index_evidence_forces_unknown_and_manual_review():
+    evidence = EvidenceItem(
+        evidence_id="evidence-1",
+        run_id="run-1",
+        report_id="report-1",
+        source_text="A keyword appears without profile or bounded candidate routing.",
+        source_page=10,
+        source_file_hash="hash-1",
+        source_method=EvidenceSourceMethod.PDFPLUMBER,
+        metadata={"retrieval_strategy": "global_no_index"},
+    )
+
+    assessment = build_guarded_assessment(make_task(), evidence=[evidence], model_called=False)
+
+    assert assessment.verdict is AssessmentVerdict.UNKNOWN
+    assert assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+    assert "routed or bounded report evidence" in assessment.missing_items
+
+
 def test_complex_table_evidence_forces_manual_review():
     evidence = EvidenceItem(
         evidence_id="evidence-1",

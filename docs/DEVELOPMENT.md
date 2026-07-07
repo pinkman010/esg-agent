@@ -233,6 +233,7 @@ pnpm generate:api
 - 首批 KPI 行级匹配只覆盖 PDF 第 63-68 页，支持 `kpi_row_label`、`kpi_row_value`、`kpi_row_unit`、`kpi_year_column` metadata，并优先用 KPI 行片段生成 `evidence_preview`。
 - 577 profile routing 回归产物：`tmp/review/current_577_review_after_profile_routing.csv`、`tmp/review/current_577_review_after_profile_routing_audit.json`、`tmp/review/current_577_review_profile_routing_diff.csv`、`tmp/review/current_577_review_profile_routing_diff_summary.json`。本次 gate 结论为 audit 通过，577 requirement 不变，无新增 `disclosed`，无 verdict / review_status / source page / evidence_type / quality_flags / OCR-VLM 字段变化；仅 6 条 `candidate_page_source` 从 contract 切换为 profile。
 - Holdout 当前只实现接口和指标字段，不执行跨报告 holdout。正式 holdout 需要先确定新报告资产、人工复核样本和禁止新增 per-ID contract 的验收边界。
+- Goldwind 2024 holdout 已执行首轮 remediation：生成 `backend/data/reports/profiles/goldwind_2024.json`、`tmp/review/holdout_goldwind_2024_first_pass.csv`、`tmp/review/holdout_goldwind_2024_reviewed.csv`、`tmp/review/holdout_goldwind_2024_quality_summary.json` 和 `tmp/review/holdout_goldwind_2024_audit.json`。本次不启用 OCR；profile 已识别双页拼版 GRI 索引并生成 337 条 requirement route，`profile_route_hit_count=40`、`global_fallback_count=0`、`false_disclosed_count=0`，first-pass 与 reviewed CSV 均通过 `review_csv_audit`。本轮同时将 `global_no_index` 后备证据降为 `unknown + needs_manual_review`，避免无候选页全局命中直接支撑 `disclosed`；Envision 577 回归 audit 通过，577 requirement 数量和 verdict/review 分布不变。
 
 ### 2026-07-04
 

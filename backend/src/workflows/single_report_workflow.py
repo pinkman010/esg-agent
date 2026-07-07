@@ -126,6 +126,7 @@ class SingleReportWorkflow:
         raw = json.loads(self.requirement_pack_path.read_text(encoding="utf-8"))
         report_index = build_report_index(pages, raw.get("requirements", []))
         enriched_tasks: list[DisclosureTask] = []
+        profile_excluded_pages = self._profile_excluded_pdf_pages()
         for task in tasks:
             disclosure_id = task.disclosure_id.removeprefix("GRI ").strip()
             entry = report_index.get(disclosure_id)
@@ -141,6 +142,7 @@ class SingleReportWorkflow:
                             "kpi_table_pages": route.kpi_table_pages,
                             "kpi_metric_terms": route.metric_terms,
                             "kpi_year_columns": self._kpi_year_columns(route.kpi_table_pages),
+                            "excluded_pdf_pages": profile_excluded_pages,
                             "report_index_pdf_page": self.report_profile.page_numbering.report_index_pdf_page
                             if self.report_profile
                             else None,
@@ -161,9 +163,10 @@ class SingleReportWorkflow:
                     update = {
                         "candidate_pages": candidate_pages,
                         "candidate_pdf_pages": candidate_pages,
-                        "candidate_report_pages": candidate_report_pages,
-                        "candidate_page_source": "requirement_contract",
-                    }
+                                "candidate_report_pages": candidate_report_pages,
+                                "candidate_page_source": "requirement_contract",
+                                "excluded_pdf_pages": profile_excluded_pages,
+                            }
                     if fallback_index_pair is not None:
                         index_pdf_page, index_report_page = fallback_index_pair
                         candidate_report_pages = self._candidate_report_pages(candidate_pages, index_pdf_page, index_report_page)
@@ -180,7 +183,19 @@ class SingleReportWorkflow:
                         )
                     )
                     continue
-                enriched_tasks.append(task)
+                enriched_tasks.append(
+                    task.model_copy(
+                        update={
+                            "excluded_pdf_pages": profile_excluded_pages,
+                            "report_index_pdf_page": self.report_profile.page_numbering.report_index_pdf_page
+                            if self.report_profile
+                            else task.report_index_pdf_page,
+                            "report_index_report_page": self.report_profile.page_numbering.report_index_report_page
+                            if self.report_profile
+                            else task.report_index_report_page,
+                        }
+                    )
+                )
                 continue
             candidate_pages = self._supplement_candidate_pages(task, pages, entry.candidate_pages)
             page_count = max((page.page_number for page in pages), default=0)
@@ -199,10 +214,17 @@ class SingleReportWorkflow:
                         "index_page": entry.index_page,
                         "report_index_pdf_page": entry.report_index_pdf_page,
                         "report_index_report_page": entry.report_index_report_page,
+                        "excluded_pdf_pages": profile_excluded_pages,
                     }
                 )
             )
         return enriched_tasks
+
+    def _profile_excluded_pdf_pages(self) -> list[int]:
+        if self.report_profile is None:
+            return []
+        raw_pages = self.report_profile.gri_index.get("pdf_pages", [])
+        return sorted({page for page in raw_pages if isinstance(page, int) and page > 0})
 
     def _attach_evidence_page_fields(self, evidence_items, task: DisclosureTask) -> None:
         if task.report_index_pdf_page is None or task.report_index_report_page is None:

@@ -1,0 +1,5883 @@
+{
+  "report_id": "goldwind_2024",
+  "company_name": "Goldwind",
+  "report_year": 2024,
+  "pdf_file": "Goldwind 2024-zh.pdf",
+  "total_pdf_pages": 52,
+  "page_numbering": {
+    "report_index_pdf_page": 50,
+    "report_index_report_page": 96
+  },
+  "gri_index": {
+    "pdf_pages": [
+      50,
+      51
+    ]
+  },
+  "kpi_tables": [],
+  "sections": [],
+  "index_note_pages": [
+    {
+      "pdf_page": 50,
+      "report_page": 96,
+      "note_types": [
+        "index_statement"
+      ]
+    }
+  ],
+  "assurance_pages": [
+    {
+      "pdf_page": 47,
+      "report_page": 93,
+      "requires_ocr": false,
+      "requires_vlm": false,
+      "quality_flags": []
+    },
+    {
+      "pdf_page": 48,
+      "report_page": 94,
+      "requires_ocr": false,
+      "requires_vlm": false,
+      "quality_flags": []
+    }
+  ],
+  "requirement_routes": {
+    "GRI 2-1-a": {
+      "candidate_pdf_pages": [
+        6,
+        7
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "legal",
+        "name",
+        "法定名称",
+        "公司名称",
+        "有限公司",
+        "Co., Ltd.",
+        "远景能源有限公司",
+        "Envision Energy Co., Ltd."
+      ]
+    },
+    "GRI 2-1-b": {
+      "candidate_pdf_pages": [
+        6,
+        7
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "nature",
+        "ownership",
+        "legal",
+        "form",
+        "所有权性质",
+        "法律形式",
+        "legal form"
+      ]
+    },
+    "GRI 2-1-c": {
+      "candidate_pdf_pages": [
+        6,
+        7
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "location",
+        "headquarters",
+        "总部",
+        "上海总部",
+        "总部大楼",
+        "所在地",
+        "地址"
+      ]
+    },
+    "GRI 2-1-d": {
+      "candidate_pdf_pages": [
+        6,
+        7
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "countries",
+        "operation",
+        "运营国家",
+        "运营地区",
+        "国家",
+        "地区",
+        "全球市场",
+        "海外订单",
+        "全球项目",
+        "亚太"
+      ]
+    },
+    "GRI 2-2-a": {
+      "candidate_pdf_pages": [
+        3
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "list",
+        "entities",
+        "included",
+        "sustainability",
+        "reporting",
+        "报告边界",
+        "实际运营场所",
+        "统计口径",
+        "合并范围",
+        "纳入报告"
+      ]
+    },
+    "GRI 2-2-b": {
+      "candidate_pdf_pages": [
+        3
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "organization",
+        "has",
+        "audited",
+        "consolidated",
+        "financial",
+        "statements",
+        "information",
+        "filed"
+      ]
+    },
+    "GRI 2-2-c": {
+      "candidate_pdf_pages": [
+        3
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "organization",
+        "consists",
+        "multiple",
+        "entities",
+        "explain",
+        "approach",
+        "used",
+        "consolidating",
+        "报告边界",
+        "实际运营场所",
+        "多实体",
+        "合并方法",
+        "合并口径"
+      ]
+    },
+    "GRI 2-2-c-i": {
+      "candidate_pdf_pages": [
+        3
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "approach",
+        "involves",
+        "adjustments",
+        "information",
+        "minority",
+        "interests"
+      ]
+    },
+    "GRI 2-2-c-ii": {
+      "candidate_pdf_pages": [
+        3
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "approach",
+        "takes",
+        "account",
+        "mergers",
+        "acquisitions",
+        "disposal",
+        "entities",
+        "parts",
+        "合并口径",
+        "并购",
+        "收购",
+        "实体处置"
+      ]
+    },
+    "GRI 2-2-c-iii": {
+      "candidate_pdf_pages": [
+        3
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "approach",
+        "differs",
+        "across",
+        "disclosures",
+        "standard",
+        "material",
+        "topics"
+      ]
+    },
+    "GRI 2-3-a": {
+      "candidate_pdf_pages": [
+        3
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "specify",
+        "reporting",
+        "period",
+        "frequency",
+        "sustainability",
+        "报告期",
+        "报告周期",
+        "报告频率"
+      ]
+    },
+    "GRI 2-3-b": {
+      "candidate_pdf_pages": [
+        3
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "specify",
+        "reporting",
+        "period",
+        "financial",
+        "does",
+        "not",
+        "align",
+        "sustainability"
+      ]
+    },
+    "GRI 2-3-c": {
+      "candidate_pdf_pages": [
+        3
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "publication",
+        "date",
+        "reported",
+        "information"
+      ]
+    },
+    "GRI 2-3-d": {
+      "candidate_pdf_pages": [
+        3
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "specify",
+        "contact",
+        "point",
+        "questions",
+        "about",
+        "reported",
+        "information",
+        "联系方式",
+        "联系邮箱",
+        "获取及回应本报告",
+        "f_esg_office"
+      ]
+    },
+    "GRI 2-4-a": {
+      "candidate_pdf_pages": [
+        3
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "restatements",
+        "information",
+        "made",
+        "previous",
+        "reporting",
+        "periods",
+        "explain",
+        "信息重述",
+        "无信息重述"
+      ]
+    },
+    "GRI 2-4-a-i": {
+      "candidate_pdf_pages": [
+        3
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "reasons",
+        "restatements",
+        "信息重述",
+        "无信息重述",
+        "重述原因"
+      ]
+    },
+    "GRI 2-4-a-ii": {
+      "candidate_pdf_pages": [
+        3
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "effect",
+        "restatements",
+        "信息重述",
+        "无信息重述",
+        "重述影响"
+      ]
+    },
+    "GRI 2-5-a": {
+      "candidate_pdf_pages": [
+        47,
+        48
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "describe",
+        "policy",
+        "practice",
+        "seeking",
+        "external",
+        "assurance",
+        "highest",
+        "governance",
+        "鉴证报告",
+        "独立有限鉴证",
+        "有限保证",
+        "外部鉴证"
+      ]
+    },
+    "GRI 2-5-b": {
+      "candidate_pdf_pages": [
+        47,
+        48
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "organization",
+        "sustainability",
+        "reporting",
+        "has",
+        "been",
+        "externally",
+        "assured",
+        "鉴证报告",
+        "独立有限鉴证",
+        "有限保证",
+        "外部鉴证声明"
+      ]
+    },
+    "GRI 2-5-b-i": {
+      "candidate_pdf_pages": [
+        47,
+        48
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "provide",
+        "link",
+        "reference",
+        "external",
+        "assurance",
+        "statement",
+        "鉴证报告",
+        "独立有限鉴证",
+        "有限保证",
+        "外部鉴证声明"
+      ]
+    },
+    "GRI 2-5-b-ii": {
+      "candidate_pdf_pages": [
+        47,
+        48
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "describe",
+        "what",
+        "has",
+        "been",
+        "assured",
+        "basis",
+        "assurance",
+        "standards",
+        "鉴证报告",
+        "独立有限鉴证",
+        "有限保证",
+        "鉴证标准",
+        "编制基础",
+        "鉴证范围"
+      ]
+    },
+    "GRI 2-5-b-iii": {
+      "candidate_pdf_pages": [
+        47,
+        48
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "describe",
+        "relationship",
+        "between",
+        "organization",
+        "assurance",
+        "provider",
+        "鉴证报告",
+        "独立有限鉴证",
+        "有限保证",
+        "鉴证限制"
+      ]
+    },
+    "GRI 2-6-a": {
+      "candidate_pdf_pages": [
+        6,
+        31
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "sector",
+        "which",
+        "active"
+      ]
+    },
+    "GRI 2-6-b": {
+      "candidate_pdf_pages": [
+        6,
+        31
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "describe",
+        "value",
+        "chain",
+        "主要业务",
+        "业务包括",
+        "智能风电",
+        "智慧储能",
+        "绿氢",
+        "责任采购",
+        "产业共荣",
+        "全球企业",
+        "深化合作",
+        "供应商准入",
+        "供应商退出",
+        "供应商培训"
+      ]
+    },
+    "GRI 2-6-b-i": {
+      "candidate_pdf_pages": [
+        6,
+        31
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "organization",
+        "activities",
+        "products",
+        "services",
+        "markets",
+        "served",
+        "主要业务",
+        "业务包括",
+        "智能风电",
+        "智慧储能",
+        "绿氢",
+        "服务市场",
+        "全球企业",
+        "深化合作"
+      ]
+    },
+    "GRI 2-6-b-ii": {
+      "candidate_pdf_pages": [
+        6,
+        31
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "organization",
+        "supply",
+        "chain",
+        "责任采购",
+        "产业共荣",
+        "可持续供应链",
+        "供应商",
+        "价值链",
+        "供应商准入",
+        "尽职调查",
+        "供应商退出",
+        "供应商培训"
+      ]
+    },
+    "GRI 2-6-b-iii": {
+      "candidate_pdf_pages": [
+        6,
+        31
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "entities",
+        "downstream",
+        "organization",
+        "activities"
+      ]
+    },
+    "GRI 2-6-c": {
+      "candidate_pdf_pages": [
+        6,
+        31
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "other",
+        "relevant",
+        "business",
+        "relationships",
+        "ESG 合作网络",
+        "ESG合作网络",
+        "价值链",
+        "业务关系",
+        "供应商大会",
+        "SMI",
+        "CN100",
+        "全球企业",
+        "深化合作",
+        "UNGC",
+        "RE100",
+        "SBTi",
+        "CDP",
+        "IEA",
+        "WEF"
+      ]
+    },
+    "GRI 2-6-d": {
+      "candidate_pdf_pages": [
+        6,
+        31
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "describe",
+        "significant",
+        "changes",
+        "compared",
+        "previous",
+        "reporting",
+        "period",
+        "重大变化",
+        "业务关系变化",
+        "价值链变化",
+        "活动变化"
+      ]
+    },
+    "GRI 2-7-a": {
+      "candidate_pdf_pages": [
+        34,
+        45
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "total",
+        "number",
+        "employees",
+        "breakdown",
+        "gender",
+        "region"
+      ]
+    },
+    "GRI 2-7-b": {
+      "candidate_pdf_pages": [
+        34,
+        45
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "total",
+        "number"
+      ]
+    },
+    "GRI 2-7-b-i": {
+      "candidate_pdf_pages": [
+        34,
+        45
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "permanent",
+        "employees",
+        "breakdown",
+        "gender",
+        "region"
+      ]
+    },
+    "GRI 2-7-b-ii": {
+      "candidate_pdf_pages": [
+        34,
+        45
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "temporary",
+        "employees",
+        "breakdown",
+        "gender",
+        "region"
+      ]
+    },
+    "GRI 2-7-b-iii": {
+      "candidate_pdf_pages": [
+        34,
+        45
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "non-guaranteed",
+        "hours",
+        "employees",
+        "breakdown",
+        "gender",
+        "region"
+      ]
+    },
+    "GRI 2-7-b-iv": {
+      "candidate_pdf_pages": [
+        34,
+        45
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "full-time",
+        "employees",
+        "breakdown",
+        "gender",
+        "region"
+      ]
+    },
+    "GRI 2-7-b-v": {
+      "candidate_pdf_pages": [
+        34,
+        45
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "part-time",
+        "employees",
+        "breakdown",
+        "gender",
+        "region"
+      ]
+    },
+    "GRI 2-7-c": {
+      "candidate_pdf_pages": [
+        34,
+        45
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "describe",
+        "methodologies",
+        "assumptions",
+        "used",
+        "compile",
+        "data",
+        "numbers",
+        "reported",
+        "人员结构",
+        "员工组成",
+        "截至报告期末",
+        "head count",
+        "FTE",
+        "编制方法"
+      ]
+    },
+    "GRI 2-7-c-i": {
+      "candidate_pdf_pages": [
+        34,
+        45
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "head",
+        "count",
+        "full-time",
+        "equivalent",
+        "fte",
+        "using",
+        "another",
+        "methodology"
+      ]
+    },
+    "GRI 2-7-c-ii": {
+      "candidate_pdf_pages": [
+        34,
+        45
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "end",
+        "reporting",
+        "period",
+        "average",
+        "across",
+        "using",
+        "another",
+        "methodology",
+        "人员结构",
+        "员工组成",
+        "截至报告期末"
+      ]
+    },
+    "GRI 2-7-d": {
+      "candidate_pdf_pages": [
+        34,
+        45
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "contextual",
+        "information",
+        "necessary",
+        "understand",
+        "data",
+        "reported",
+        "under",
+        "员工总数",
+        "合同类型",
+        "地区分布",
+        "必要背景"
+      ]
+    },
+    "GRI 2-7-e": {
+      "candidate_pdf_pages": [
+        34,
+        45
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "describe",
+        "significant",
+        "fluctuations",
+        "number",
+        "employees",
+        "during",
+        "reporting",
+        "period",
+        "重大波动",
+        "员工人数变化",
+        "员工流失率"
+      ]
+    },
+    "GRI 2-8-a": {
+      "candidate_pdf_pages": [
+        31,
+        32
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "total",
+        "number",
+        "workers",
+        "who",
+        "not",
+        "employees",
+        "whose",
+        "work",
+        "非雇员工作者",
+        "非员工",
+        "工作者总数",
+        "合同关系"
+      ]
+    },
+    "GRI 2-8-a-i": {
+      "candidate_pdf_pages": [
+        31,
+        32
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "most",
+        "common",
+        "types",
+        "worker",
+        "contractual",
+        "relationship",
+        "organization"
+      ]
+    },
+    "GRI 2-8-a-ii": {
+      "candidate_pdf_pages": [
+        31,
+        32
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "type",
+        "work",
+        "they",
+        "perform",
+        "非雇员工作者",
+        "工作类型",
+        "合同关系"
+      ]
+    },
+    "GRI 2-8-b": {
+      "candidate_pdf_pages": [
+        31,
+        32
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "describe",
+        "methodologies",
+        "assumptions",
+        "used",
+        "compile",
+        "data",
+        "number",
+        "workers",
+        "非雇员工作者",
+        "编制方法",
+        "head count",
+        "FTE"
+      ]
+    },
+    "GRI 2-8-b-i": {
+      "candidate_pdf_pages": [
+        31,
+        32
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "head",
+        "count",
+        "full-time",
+        "equivalent",
+        "fte",
+        "using",
+        "another",
+        "methodology"
+      ]
+    },
+    "GRI 2-8-b-ii": {
+      "candidate_pdf_pages": [
+        31,
+        32
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "end",
+        "reporting",
+        "period",
+        "average",
+        "across",
+        "using",
+        "another",
+        "methodology",
+        "非雇员工作者",
+        "报告期末",
+        "平均值",
+        "统计方法"
+      ]
+    },
+    "GRI 2-8-c": {
+      "candidate_pdf_pages": [
+        31,
+        32
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "describe",
+        "significant",
+        "fluctuations",
+        "number",
+        "workers",
+        "who",
+        "not",
+        "employees"
+      ]
+    },
+    "GRI 2-9-a": {
+      "candidate_pdf_pages": [
+        9,
+        19
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "describe",
+        "governance",
+        "structure",
+        "committees",
+        "highest",
+        "body",
+        "ESG治理架构",
+        "ESG 治理架构",
+        "ESG委员会",
+        "ESG办公室",
+        "ESG议题执行小组",
+        "治理架构"
+      ]
+    },
+    "GRI 2-9-b": {
+      "candidate_pdf_pages": [
+        9,
+        19
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "list",
+        "committees",
+        "highest",
+        "governance",
+        "body",
+        "that",
+        "responsible",
+        "decision",
+        "ESG治理架构",
+        "ESG 治理架构",
+        "ESG委员会",
+        "ESG办公室",
+        "ESG议题执行小组",
+        "治理架构"
+      ]
+    },
+    "GRI 2-9-c": {
+      "candidate_pdf_pages": [
+        9,
+        19
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "describe",
+        "composition",
+        "highest",
+        "governance",
+        "body",
+        "committees"
+      ]
+    },
+    "GRI 2-9-c-i": {
+      "candidate_pdf_pages": [
+        9,
+        19
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "executive",
+        "non-executive",
+        "members"
+      ]
+    },
+    "GRI 2-9-c-ii": {
+      "candidate_pdf_pages": [
+        9,
+        19
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "independence"
+      ]
+    },
+    "GRI 2-9-c-iii": {
+      "candidate_pdf_pages": [
+        9,
+        19
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "tenure",
+        "members",
+        "governance",
+        "body"
+      ]
+    },
+    "GRI 2-9-c-iv": {
+      "candidate_pdf_pages": [
+        9,
+        19
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "number",
+        "other",
+        "significant",
+        "positions",
+        "commitments",
+        "held",
+        "each",
+        "member"
+      ]
+    },
+    "GRI 2-9-c-v": {
+      "candidate_pdf_pages": [
+        9,
+        19
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "gender"
+      ]
+    },
+    "GRI 2-9-c-vi": {
+      "candidate_pdf_pages": [
+        9,
+        19
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "under-represented",
+        "social",
+        "groups"
+      ]
+    },
+    "GRI 2-9-c-vii": {
+      "candidate_pdf_pages": [
+        9,
+        19
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "competencies",
+        "relevant",
+        "impacts",
+        "organization"
+      ]
+    },
+    "GRI 2-9-c-viii": {
+      "candidate_pdf_pages": [
+        9,
+        19
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "stakeholder",
+        "representation"
+      ]
+    },
+    "GRI 2-10-a": {
+      "candidate_pdf_pages": [
+        19
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "describe",
+        "nomination",
+        "selection",
+        "processes",
+        "highest",
+        "governance",
+        "body",
+        "committees",
+        "从略披露",
+        "因商业保密限制从略披露",
+        "提名和遴选"
+      ]
+    },
+    "GRI 2-10-b": {
+      "candidate_pdf_pages": [
+        19
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "describe",
+        "criteria",
+        "used",
+        "nominating",
+        "selecting",
+        "highest",
+        "governance",
+        "body",
+        "从略披露",
+        "因商业保密限制从略披露",
+        "提名和遴选"
+      ]
+    },
+    "GRI 2-10-b-i": {
+      "candidate_pdf_pages": [
+        19
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "views",
+        "stakeholders",
+        "shareholders",
+        "从略披露",
+        "因商业保密限制从略披露",
+        "提名和遴选"
+      ]
+    },
+    "GRI 2-10-b-ii": {
+      "candidate_pdf_pages": [
+        19
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "diversity",
+        "从略披露",
+        "因商业保密限制从略披露",
+        "提名和遴选"
+      ]
+    },
+    "GRI 2-10-b-iii": {
+      "candidate_pdf_pages": [
+        19
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "independence",
+        "从略披露",
+        "因商业保密限制从略披露",
+        "提名和遴选"
+      ]
+    },
+    "GRI 2-10-b-iv": {
+      "candidate_pdf_pages": [
+        19
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "competencies",
+        "relevant",
+        "impacts",
+        "organization",
+        "从略披露",
+        "因商业保密限制从略披露",
+        "提名和遴选"
+      ]
+    },
+    "GRI 2-11-a": {
+      "candidate_pdf_pages": [
+        9,
+        19
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "chair",
+        "highest",
+        "governance",
+        "body",
+        "also",
+        "senior",
+        "executive",
+        "organization"
+      ]
+    },
+    "GRI 2-11-b": {
+      "candidate_pdf_pages": [
+        9,
+        19
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "chair",
+        "also",
+        "senior",
+        "executive",
+        "explain",
+        "function",
+        "within",
+        "organization"
+      ]
+    },
+    "GRI 2-12-a": {
+      "candidate_pdf_pages": [
+        9,
+        19
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "describe",
+        "role",
+        "highest",
+        "governance",
+        "body",
+        "senior",
+        "executives",
+        "developing",
+        "ESG治理架构",
+        "ESG委员会",
+        "ESG办公室",
+        "战略审批",
+        "政策监督"
+      ]
+    },
+    "GRI 2-12-b": {
+      "candidate_pdf_pages": [
+        9,
+        19
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "describe",
+        "role",
+        "highest",
+        "governance",
+        "body",
+        "overseeing",
+        "organization",
+        "due",
+        "ESG治理架构",
+        "ESG委员会",
+        "利益相关方",
+        "识别ESG风险",
+        "季度汇报"
+      ]
+    },
+    "GRI 2-12-b-i": {
+      "candidate_pdf_pages": [
+        9,
+        19
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "highest",
+        "governance",
+        "body",
+        "engages",
+        "stakeholders",
+        "support",
+        "these",
+        "processes",
+        "ESG治理架构",
+        "利益相关方",
+        "ESG诉求"
+      ]
+    },
+    "GRI 2-12-b-ii": {
+      "candidate_pdf_pages": [
+        9,
+        19
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "highest",
+        "governance",
+        "body",
+        "considers",
+        "outcomes",
+        "these",
+        "processes",
+        "ESG委员会",
+        "季度汇报",
+        "目标进展"
+      ]
+    },
+    "GRI 2-12-c": {
+      "candidate_pdf_pages": [
+        9,
+        19
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "describe",
+        "role",
+        "highest",
+        "governance",
+        "body",
+        "reviewing",
+        "effectiveness",
+        "organization",
+        "ESG委员会",
+        "季度汇报",
+        "年度ESG报告",
+        "效果评估"
+      ]
+    },
+    "GRI 2-13-a": {
+      "candidate_pdf_pages": [
+        9,
+        19
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "describe",
+        "highest",
+        "governance",
+        "body",
+        "delegates",
+        "responsibility",
+        "managing",
+        "organization",
+        "ESG治理架构",
+        "ESG委员会",
+        "ESG办公室",
+        "责任授权"
+      ]
+    },
+    "GRI 2-13-a-i": {
+      "candidate_pdf_pages": [
+        9,
+        19
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "has",
+        "appointed",
+        "any",
+        "senior",
+        "executives",
+        "responsibility",
+        "management",
+        "impacts",
+        "ESG委员会",
+        "ESG办公室",
+        "CSO",
+        "季度汇报",
+        "高级管理人员"
+      ]
+    },
+    "GRI 2-13-a-ii": {
+      "candidate_pdf_pages": [
+        9,
+        19
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "has",
+        "delegated",
+        "responsibility",
+        "management",
+        "impacts",
+        "other",
+        "employees",
+        "ESG议题执行小组",
+        "月度拉通",
+        "执行层"
+      ]
+    },
+    "GRI 2-13-b": {
+      "candidate_pdf_pages": [
+        9,
+        19
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "describe",
+        "process",
+        "frequency",
+        "senior",
+        "executives",
+        "other",
+        "employees",
+        "back",
+        "ESG办公室",
+        "ESG委员会",
+        "季度汇报",
+        "年度汇报",
+        "月度拉通"
+      ]
+    },
+    "GRI 2-14-a": {
+      "candidate_pdf_pages": [
+        9,
+        19
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "highest",
+        "governance",
+        "body",
+        "responsible",
+        "reviewing",
+        "approving",
+        "reported",
+        "information"
+      ]
+    },
+    "GRI 2-14-b": {
+      "candidate_pdf_pages": [
+        9,
+        19
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "highest",
+        "governance",
+        "body",
+        "not",
+        "responsible",
+        "reviewing",
+        "approving",
+        "reported"
+      ]
+    },
+    "GRI 2-15-a": {
+      "candidate_pdf_pages": [
+        19,
+        20,
+        21
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "describe",
+        "processes",
+        "highest",
+        "governance",
+        "body",
+        "ensure",
+        "that",
+        "conflicts"
+      ]
+    },
+    "GRI 2-15-b": {
+      "candidate_pdf_pages": [
+        19,
+        20,
+        21
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "conflicts",
+        "interest",
+        "disclosed",
+        "stakeholders",
+        "minimum",
+        "relating"
+      ]
+    },
+    "GRI 2-15-b-i": {
+      "candidate_pdf_pages": [
+        19,
+        20,
+        21
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "cross-board",
+        "membership"
+      ]
+    },
+    "GRI 2-15-b-ii": {
+      "candidate_pdf_pages": [
+        19,
+        20,
+        21
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "cross-shareholding",
+        "suppliers",
+        "other",
+        "stakeholders"
+      ]
+    },
+    "GRI 2-15-b-iii": {
+      "candidate_pdf_pages": [
+        19,
+        20,
+        21
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "existence",
+        "controlling",
+        "shareholders"
+      ]
+    },
+    "GRI 2-15-b-iv": {
+      "candidate_pdf_pages": [
+        19,
+        20,
+        21
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "related",
+        "parties",
+        "relationships",
+        "transactions",
+        "outstanding",
+        "balances"
+      ]
+    },
+    "GRI 2-16-a": {
+      "candidate_pdf_pages": [
+        9,
+        10,
+        11
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "describe",
+        "critical",
+        "concerns",
+        "communicated",
+        "highest",
+        "governance",
+        "body"
+      ]
+    },
+    "GRI 2-16-b": {
+      "candidate_pdf_pages": [
+        9,
+        10,
+        11
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "total",
+        "number",
+        "nature",
+        "critical",
+        "concerns",
+        "that",
+        "were",
+        "communicated"
+      ]
+    },
+    "GRI 2-17-a": {
+      "candidate_pdf_pages": [
+        3,
+        19
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "measures",
+        "taken",
+        "advance",
+        "collective",
+        "knowledge",
+        "skills",
+        "experience",
+        "highest"
+      ]
+    },
+    "GRI 2-22-a": {
+      "candidate_pdf_pages": [
+        9,
+        10
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "statement",
+        "highest",
+        "governance",
+        "body",
+        "most",
+        "senior",
+        "executive",
+        "organization",
+        "董事长致辞",
+        "CSO 致辞",
+        "可持续发展战略",
+        "零碳目标",
+        "三新战略"
+      ]
+    },
+    "GRI 2-23-a": {
+      "candidate_pdf_pages": [
+        3,
+        9
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "describe",
+        "policy",
+        "commitments",
+        "responsible",
+        "business",
+        "conduct",
+        "政策承诺",
+        "UNGC",
+        "世界人权宣言",
+        "ILO",
+        "供应商行为准则",
+        "合规制度"
+      ]
+    },
+    "GRI 2-23-a-i": {
+      "candidate_pdf_pages": [
+        3,
+        9
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "authoritative",
+        "intergovernmental",
+        "instruments",
+        "that",
+        "commitments",
+        "reference",
+        "政策承诺",
+        "UNGC",
+        "十项原则",
+        "世界人权宣言",
+        "ILO"
+      ]
+    },
+    "GRI 2-23-a-ii": {
+      "candidate_pdf_pages": [
+        3,
+        9
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "commitments",
+        "stipulate",
+        "conducting",
+        "due",
+        "diligence",
+        "尽职调查",
+        "供应商尽调",
+        "第三方反腐败尽调"
+      ]
+    },
+    "GRI 2-23-a-iii": {
+      "candidate_pdf_pages": [
+        3,
+        9
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "commitments",
+        "stipulate",
+        "applying",
+        "precautionary",
+        "principle",
+        "预防原则"
+      ]
+    },
+    "GRI 2-23-a-iv": {
+      "candidate_pdf_pages": [
+        3,
+        9
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "commitments",
+        "stipulate",
+        "respecting",
+        "human",
+        "rights",
+        "劳工与人权",
+        "人权保护政策",
+        "供应商行为准则"
+      ]
+    },
+    "GRI 2-23-b": {
+      "candidate_pdf_pages": [
+        3,
+        9
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "describe",
+        "specific",
+        "policy",
+        "commitment",
+        "respect",
+        "human",
+        "rights",
+        "政策承诺",
+        "UNGC",
+        "世界人权宣言",
+        "供应商行为准则"
+      ]
+    },
+    "GRI 2-23-b-i": {
+      "candidate_pdf_pages": [
+        3,
+        9
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "internationally",
+        "recognized",
+        "human",
+        "rights",
+        "that",
+        "commitment",
+        "covers",
+        "政策承诺",
+        "UNGC",
+        "世界人权宣言",
+        "供应商行为准则"
+      ]
+    },
+    "GRI 2-23-b-ii": {
+      "candidate_pdf_pages": [
+        3,
+        9
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "categories",
+        "stakeholders",
+        "at-risk",
+        "vulnerable",
+        "groups",
+        "that",
+        "organization",
+        "gives",
+        "政策承诺",
+        "UNGC",
+        "世界人权宣言",
+        "供应商行为准则"
+      ]
+    },
+    "GRI 2-23-c": {
+      "candidate_pdf_pages": [
+        3,
+        9
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "provide",
+        "links",
+        "policy",
+        "commitments",
+        "publicly",
+        "available",
+        "not",
+        "explain",
+        "政策链接",
+        "公开链接"
+      ]
+    },
+    "GRI 2-23-d": {
+      "candidate_pdf_pages": [
+        3,
+        9
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "level",
+        "which",
+        "each",
+        "policy",
+        "commitments",
+        "was",
+        "approved",
+        "within",
+        "审批层级",
+        "最高治理机构批准"
+      ]
+    },
+    "GRI 2-23-e": {
+      "candidate_pdf_pages": [
+        3,
+        9
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "extent",
+        "which",
+        "policy",
+        "commitments",
+        "apply",
+        "organization",
+        "activities",
+        "business",
+        "运营环节",
+        "员工政策",
+        "供应商网络"
+      ]
+    },
+    "GRI 2-23-f": {
+      "candidate_pdf_pages": [
+        3,
+        9
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "describe",
+        "policy",
+        "commitments",
+        "communicated",
+        "workers",
+        "business",
+        "partners",
+        "other",
+        "人权培训",
+        "供应商培训与赋能",
+        "合规文化培训"
+      ]
+    },
+    "GRI 2-24-a": {
+      "candidate_pdf_pages": [
+        3,
+        9
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "describe",
+        "embeds",
+        "each",
+        "policy",
+        "commitments",
+        "responsible",
+        "business",
+        "conduct",
+        "融合政策承诺",
+        "ESG战略",
+        "ESG治理架构",
+        "供应商行为准则",
+        "合规制度"
+      ]
+    },
+    "GRI 2-24-a-i": {
+      "candidate_pdf_pages": [
+        3,
+        9
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "allocates",
+        "responsibility",
+        "implement",
+        "commitments",
+        "across",
+        "different",
+        "levels",
+        "within",
+        "融合政策承诺",
+        "ESG战略",
+        "供应商风险管理"
+      ]
+    },
+    "GRI 2-24-a-ii": {
+      "candidate_pdf_pages": [
+        3,
+        9
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "integrates",
+        "commitments",
+        "organizational",
+        "strategies",
+        "operational",
+        "policies",
+        "procedures",
+        "融合政策承诺",
+        "供应商行为准则",
+        "合规制度"
+      ]
+    },
+    "GRI 2-24-a-iii": {
+      "candidate_pdf_pages": [
+        3,
+        9
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "implements",
+        "commitments",
+        "through",
+        "business",
+        "relationships",
+        "融合政策承诺",
+        "供应商培训",
+        "合规培训"
+      ]
+    },
+    "GRI 2-24-a-iv": {
+      "candidate_pdf_pages": [
+        3,
+        9
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "training",
+        "that",
+        "organization",
+        "provides",
+        "implementing",
+        "commitments",
+        "融合政策承诺",
+        "监控",
+        "整改闭环"
+      ]
+    },
+    "GRI 2-25-a": {
+      "candidate_pdf_pages": [
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        42,
+        43
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "describe",
+        "commitments",
+        "provide",
+        "cooperate",
+        "remediation",
+        "negative",
+        "impacts",
+        "that",
+        "补救负面影响",
+        "人权侵害投诉机制",
+        "供应商整改",
+        "举报调查处理"
+      ]
+    },
+    "GRI 2-25-b": {
+      "candidate_pdf_pages": [
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        42,
+        43
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "describe",
+        "approach",
+        "identify",
+        "address",
+        "grievances",
+        "grievance",
+        "mechanisms",
+        "that",
+        "阳光热线",
+        "投诉机制",
+        "举报电话",
+        "举报邮箱"
+      ]
+    },
+    "GRI 2-25-c": {
+      "candidate_pdf_pages": [
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        42,
+        43
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "describe",
+        "other",
+        "processes",
+        "which",
+        "organization",
+        "provides",
+        "cooperates",
+        "remediation",
+        "整改闭环",
+        "合规风险排查",
+        "举报调查处理"
+      ]
+    },
+    "GRI 2-25-d": {
+      "candidate_pdf_pages": [
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        42,
+        43
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "describe",
+        "stakeholders",
+        "who",
+        "intended",
+        "users",
+        "grievance",
+        "mechanisms",
+        "involved",
+        "使用者参与",
+        "机制设计"
+      ]
+    },
+    "GRI 2-25-e": {
+      "candidate_pdf_pages": [
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        42,
+        43
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "describe",
+        "organization",
+        "tracks",
+        "effectiveness",
+        "grievance",
+        "mechanisms",
+        "other",
+        "remediation",
+        "投诉处理率",
+        "舞弊案件调查完结率",
+        "整改闭环率"
+      ]
+    },
+    "GRI 2-26-a": {
+      "candidate_pdf_pages": [
+        9,
+        10,
+        21
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "describe",
+        "mechanisms",
+        "individuals",
+        "阳光热线",
+        "举报电话",
+        "举报邮箱",
+        "挑战者代表"
+      ]
+    },
+    "GRI 2-26-a-i": {
+      "candidate_pdf_pages": [
+        9,
+        10,
+        21
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "seek",
+        "advice",
+        "implementing",
+        "organization",
+        "policies",
+        "practices",
+        "responsible",
+        "business",
+        "寻求建议",
+        "合规建议"
+      ]
+    },
+    "GRI 2-26-a-ii": {
+      "candidate_pdf_pages": [
+        9,
+        10,
+        21
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "raise",
+        "concerns",
+        "about",
+        "organization",
+        "business",
+        "conduct",
+        "举报电话",
+        "举报邮箱",
+        "阳光热线",
+        "举报人保护"
+      ]
+    },
+    "GRI 2-27-a": {
+      "candidate_pdf_pages": [
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        42,
+        43
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "total",
+        "number",
+        "significant",
+        "instances",
+        "non-compliance",
+        "laws",
+        "regulations",
+        "during",
+        "未发生违法违规事件",
+        "遵守法律法规"
+      ]
+    },
+    "GRI 2-27-a-i": {
+      "candidate_pdf_pages": [
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        42,
+        43
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "instances",
+        "which",
+        "fines",
+        "were",
+        "incurred",
+        "未发生违法违规事件",
+        "罚款"
+      ]
+    },
+    "GRI 2-27-a-ii": {
+      "candidate_pdf_pages": [
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        42,
+        43
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "instances",
+        "which",
+        "non-monetary",
+        "sanctions",
+        "were",
+        "incurred",
+        "未发生违法违规事件",
+        "非经济处罚"
+      ]
+    },
+    "GRI 2-27-b": {
+      "candidate_pdf_pages": [
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        42,
+        43
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "total",
+        "number",
+        "monetary",
+        "value",
+        "fines",
+        "instances",
+        "non",
+        "compliance",
+        "未发生违法违规事件",
+        "以前报告期"
+      ]
+    },
+    "GRI 2-27-b-i": {
+      "candidate_pdf_pages": [
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        42,
+        43
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "fines",
+        "instances",
+        "non-compliance",
+        "laws",
+        "regulations",
+        "that",
+        "occurred",
+        "current",
+        "未发生违法违规事件",
+        "以前报告期罚款"
+      ]
+    },
+    "GRI 2-27-b-ii": {
+      "candidate_pdf_pages": [
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        42,
+        43
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "fines",
+        "instances",
+        "non-compliance",
+        "laws",
+        "regulations",
+        "that",
+        "occurred",
+        "previous",
+        "未发生违法违规事件",
+        "以前报告期非经济处罚"
+      ]
+    },
+    "GRI 2-27-c": {
+      "candidate_pdf_pages": [
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        42,
+        43
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "describe",
+        "significant",
+        "instances",
+        "non-compliance",
+        "未发生违法违规事件",
+        "重大违法违规事件"
+      ]
+    },
+    "GRI 2-27-d": {
+      "candidate_pdf_pages": [
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        42,
+        43
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "describe",
+        "has",
+        "determined",
+        "significant",
+        "instances",
+        "non-compliance",
+        "重大违法违规界定"
+      ]
+    },
+    "GRI 2-28-a": {
+      "candidate_pdf_pages": [
+        12
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "industry",
+        "associations",
+        "other",
+        "membership",
+        "national",
+        "international",
+        "advocacy",
+        "organizations",
+        "UNGC",
+        "RE100",
+        "SBTi",
+        "CDP",
+        "IEA",
+        "WEF",
+        "协会的成员资格"
+      ]
+    },
+    "GRI 2-29-a": {
+      "candidate_pdf_pages": [
+        11
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "describe",
+        "approach",
+        "engaging",
+        "stakeholders",
+        "利益相关方沟通",
+        "关注议题",
+        "沟通渠道",
+        "重要性评估"
+      ]
+    },
+    "GRI 2-29-a-i": {
+      "candidate_pdf_pages": [
+        11
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "categories",
+        "stakeholders",
+        "engages",
+        "they",
+        "identified",
+        "利益相关方沟通",
+        "关注议题",
+        "沟通渠道"
+      ]
+    },
+    "GRI 2-29-a-ii": {
+      "candidate_pdf_pages": [
+        11
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "purpose",
+        "stakeholder",
+        "engagement",
+        "利益相关方沟通",
+        "沟通频率",
+        "沟通渠道"
+      ]
+    },
+    "GRI 2-29-a-iii": {
+      "candidate_pdf_pages": [
+        11
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "organization",
+        "seeks",
+        "ensure",
+        "meaningful",
+        "engagement",
+        "stakeholders",
+        "利益相关方沟通",
+        "重要性评估",
+        "利益相关方调研"
+      ]
+    },
+    "GRI 2-30-a": {
+      "candidate_pdf_pages": [
+        34,
+        35
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "percentage",
+        "total",
+        "employees",
+        "covered",
+        "collective",
+        "bargaining",
+        "agreements",
+        "从略披露",
+        "因商业保密限制从略披露",
+        "集体谈判协议"
+      ]
+    },
+    "GRI 2-30-b": {
+      "candidate_pdf_pages": [
+        34,
+        35
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "employees",
+        "not",
+        "covered",
+        "collective",
+        "bargaining",
+        "agreements",
+        "organization",
+        "determines",
+        "从略披露",
+        "因商业保密限制从略披露",
+        "集体谈判协议"
+      ]
+    },
+    "GRI 3-1-a": {
+      "candidate_pdf_pages": [
+        11
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "describe",
+        "process",
+        "has",
+        "followed",
+        "determine",
+        "material",
+        "topics",
+        "重要性评估",
+        "重要性矩阵",
+        "利益相关方调研"
+      ]
+    },
+    "GRI 3-1-a-i": {
+      "candidate_pdf_pages": [
+        11
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "has",
+        "identified",
+        "actual",
+        "potential",
+        "negative",
+        "positive",
+        "impacts",
+        "economy",
+        "重要性评估",
+        "利益相关方调研",
+        "问卷"
+      ]
+    },
+    "GRI 3-1-a-ii": {
+      "candidate_pdf_pages": [
+        11
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "has",
+        "prioritized",
+        "impacts",
+        "reporting",
+        "based",
+        "significance",
+        "重要性评估",
+        "部门访谈",
+        "重要性矩阵"
+      ]
+    },
+    "GRI 3-1-b": {
+      "candidate_pdf_pages": [
+        11
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "specify",
+        "stakeholders",
+        "experts",
+        "whose",
+        "views",
+        "have",
+        "informed",
+        "process",
+        "重要性评估",
+        "重要性矩阵",
+        "重大议题"
+      ]
+    },
+    "GRI 3-2-a": {
+      "candidate_pdf_pages": [
+        11
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "list",
+        "material",
+        "topics"
+      ]
+    },
+    "GRI 3-2-b": {
+      "candidate_pdf_pages": [
+        11
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "changes",
+        "list",
+        "material",
+        "topics",
+        "compared",
+        "previous",
+        "reporting",
+        "period"
+      ]
+    },
+    "GRI 201-1-a": {
+      "candidate_pdf_pages": [
+        45
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "direct",
+        "economic",
+        "value",
+        "generated",
+        "distributed",
+        "evg",
+        "accruals",
+        "basis",
+        "从略披露",
+        "因商业保密限制从略披露",
+        "直接产生和分配的经济价值"
+      ]
+    },
+    "GRI 201-1-a-i": {
+      "candidate_pdf_pages": [
+        45
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "direct",
+        "economic",
+        "value",
+        "generated",
+        "revenues",
+        "从略披露",
+        "因商业保密限制从略披露",
+        "直接产生和分配的经济价值"
+      ]
+    },
+    "GRI 201-1-a-ii": {
+      "candidate_pdf_pages": [
+        45
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "economic",
+        "value",
+        "distributed",
+        "operating",
+        "costs",
+        "employee",
+        "wages",
+        "benefits",
+        "从略披露",
+        "因商业保密限制从略披露",
+        "直接产生和分配的经济价值"
+      ]
+    },
+    "GRI 201-1-a-iii": {
+      "candidate_pdf_pages": [
+        45
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "economic",
+        "value",
+        "retained",
+        "direct",
+        "generated",
+        "less",
+        "distributed",
+        "从略披露",
+        "因商业保密限制从略披露",
+        "直接产生和分配的经济价值"
+      ]
+    },
+    "GRI 201-1-b": {
+      "candidate_pdf_pages": [
+        45
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "where",
+        "significant",
+        "evg",
+        "separately",
+        "country",
+        "regional",
+        "market",
+        "levels",
+        "从略披露",
+        "因商业保密限制从略披露",
+        "直接产生和分配的经济价值"
+      ]
+    },
+    "GRI 201-2-a": {
+      "candidate_pdf_pages": [
+        23,
+        24
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "risks",
+        "opportunities",
+        "posed",
+        "climate",
+        "change",
+        "that",
+        "have",
+        "potential",
+        "气候风险",
+        "气候机遇",
+        "财务影响",
+        "风险管理流程",
+        "应对措施"
+      ]
+    },
+    "GRI 201-2-a-i": {
+      "candidate_pdf_pages": [
+        23,
+        24
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "description",
+        "risk",
+        "opportunity",
+        "classification",
+        "either",
+        "physical",
+        "regulatory",
+        "other",
+        "气候风险",
+        "气候机遇",
+        "实体风险",
+        "转型风险",
+        "市场风险",
+        "法律风险"
+      ]
+    },
+    "GRI 201-2-a-ii": {
+      "candidate_pdf_pages": [
+        23,
+        24
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "description",
+        "impact",
+        "associated",
+        "risk",
+        "opportunity",
+        "气候风险",
+        "气候机遇",
+        "影响分析",
+        "维修成本",
+        "订单损失",
+        "低成本资金"
+      ]
+    },
+    "GRI 201-2-a-iii": {
+      "candidate_pdf_pages": [
+        23,
+        24
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "financial",
+        "implications",
+        "risk",
+        "opportunity",
+        "before",
+        "action",
+        "taken",
+        "财务影响",
+        "维修成本",
+        "订单损失",
+        "绿色投融资",
+        "新能源政策激励"
+      ]
+    },
+    "GRI 201-2-a-iv": {
+      "candidate_pdf_pages": [
+        23,
+        24
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "methods",
+        "used",
+        "manage",
+        "risk",
+        "opportunity",
+        "应对措施",
+        "风险管理流程",
+        "识别",
+        "分析",
+        "审查"
+      ]
+    },
+    "GRI 201-2-a-v": {
+      "candidate_pdf_pages": [
+        23,
+        24
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "costs",
+        "actions",
+        "taken",
+        "manage",
+        "risk",
+        "opportunity",
+        "行动成本",
+        "采取行动的成本",
+        "成本"
+      ]
+    },
+    "GRI 203-1-a": {
+      "candidate_pdf_pages": [
+        42,
+        43
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "extent",
+        "development",
+        "significant",
+        "infrastructure",
+        "investments",
+        "services",
+        "supported",
+        "携手社区",
+        "贡献社会",
+        "乡村振兴",
+        "基础设施投资",
+        "支持性服务"
+      ]
+    },
+    "GRI 203-1-b": {
+      "candidate_pdf_pages": [
+        42,
+        43
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "current",
+        "expected",
+        "impacts",
+        "communities",
+        "local",
+        "economies",
+        "positive",
+        "negative",
+        "携手社区",
+        "贡献社会",
+        "当地经济",
+        "社区影响"
+      ]
+    },
+    "GRI 203-1-c": {
+      "candidate_pdf_pages": [
+        42,
+        43
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "these",
+        "investments",
+        "services",
+        "commercial",
+        "in-kind",
+        "pro",
+        "bono",
+        "engagements",
+        "携手社区",
+        "公益",
+        "捐赠",
+        "研究基金",
+        "商业合作"
+      ]
+    },
+    "GRI 203-2-a": {
+      "candidate_pdf_pages": [
+        42,
+        43
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "examples",
+        "significant",
+        "identified",
+        "indirect",
+        "economic",
+        "impacts",
+        "organization",
+        "positive",
+        "间接经济影响",
+        "乡村振兴",
+        "绿色能源项目",
+        "产业升级",
+        "社区公益"
+      ]
+    },
+    "GRI 203-2-b": {
+      "candidate_pdf_pages": [
+        42,
+        43
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "significance",
+        "indirect",
+        "economic",
+        "impacts",
+        "context",
+        "external",
+        "benchmarks",
+        "stakeholder",
+        "间接经济影响",
+        "UN SDGs",
+        "一带一路",
+        "G20",
+        "利益相关方优先事项"
+      ]
+    },
+    "GRI 205-2-a": {
+      "candidate_pdf_pages": [
+        21
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "total",
+        "number",
+        "percentage",
+        "governance",
+        "body",
+        "members",
+        "that",
+        "organization",
+        "反腐败政策",
+        "治理机构成员",
+        "传达"
+      ]
+    },
+    "GRI 205-2-b": {
+      "candidate_pdf_pages": [
+        21
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "total",
+        "number",
+        "percentage",
+        "employees",
+        "that",
+        "organization",
+        "anti-corruption",
+        "policies",
+        "合规培训",
+        "利益冲突申报",
+        "反腐败和贿赂培训次数",
+        "累计小时数"
+      ]
+    },
+    "GRI 205-2-c": {
+      "candidate_pdf_pages": [
+        21
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "total",
+        "number",
+        "percentage",
+        "business",
+        "partners",
+        "that",
+        "organization",
+        "anti",
+        "供应商阳光协议",
+        "第三方反腐败尽调",
+        "供应商行为准则",
+        "可持续采购章程"
+      ]
+    },
+    "GRI 205-2-d": {
+      "candidate_pdf_pages": [
+        21
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "total",
+        "number",
+        "percentage",
+        "governance",
+        "body",
+        "members",
+        "that",
+        "have",
+        "治理机构成员",
+        "反腐败培训"
+      ]
+    },
+    "GRI 205-2-e": {
+      "candidate_pdf_pages": [
+        21
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "total",
+        "number",
+        "percentage",
+        "employees",
+        "that",
+        "have",
+        "received",
+        "training",
+        "员工合规培训",
+        "纪律合规文化月",
+        "反腐败和贿赂培训次数",
+        "累计小时数"
+      ]
+    },
+    "GRI 205-3-a": {
+      "candidate_pdf_pages": [
+        21
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "total",
+        "number",
+        "nature",
+        "confirmed",
+        "incidents",
+        "corruption",
+        "贪污腐败事件数量",
+        "舞弊案件",
+        "商业道德管理"
+      ]
+    },
+    "GRI 205-3-b": {
+      "candidate_pdf_pages": [
+        21
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "total",
+        "number",
+        "confirmed",
+        "incidents",
+        "which",
+        "employees",
+        "were",
+        "dismissed",
+        "员工因腐败被开除或受到处分的事件数量"
+      ]
+    },
+    "GRI 205-3-c": {
+      "candidate_pdf_pages": [
+        21
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "total",
+        "number",
+        "confirmed",
+        "incidents",
+        "when",
+        "contracts",
+        "business",
+        "partners",
+        "腐败",
+        "合同终止",
+        "不续约"
+      ]
+    },
+    "GRI 205-3-d": {
+      "candidate_pdf_pages": [
+        21
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "public",
+        "legal",
+        "cases",
+        "regarding",
+        "corruption",
+        "brought",
+        "against",
+        "organization",
+        "腐败",
+        "公开法律案件",
+        "法律案件结果"
+      ]
+    },
+    "GRI 302-1-a": {
+      "candidate_pdf_pages": [
+        26
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "total",
+        "fuel",
+        "consumption",
+        "within",
+        "organization",
+        "non-renewable",
+        "sources",
+        "joules",
+        "不可再生能源燃料消耗量",
+        "不可再生能源消耗总量",
+        "汽油",
+        "柴油",
+        "天然气"
+      ]
+    },
+    "GRI 302-1-b": {
+      "candidate_pdf_pages": [
+        26
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "total",
+        "fuel",
+        "consumption",
+        "within",
+        "organization",
+        "renewable",
+        "sources",
+        "joules",
+        "可再生燃料消耗",
+        "可再生燃料"
+      ]
+    },
+    "GRI 302-1-c": {
+      "candidate_pdf_pages": [
+        26
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "joules",
+        "watt-hours",
+        "multiples",
+        "total",
+        "electricity",
+        "consumptioni",
+        "heating",
+        "consumptionii",
+        "电力消耗总量",
+        "办公用电总量",
+        "绿色电力使用总量"
+      ]
+    },
+    "GRI 302-1-d": {
+      "candidate_pdf_pages": [
+        26
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "joules",
+        "watt-hours",
+        "multiples",
+        "total",
+        "electricity",
+        "soldi",
+        "heating",
+        "soldii",
+        "售出的电力",
+        "售出的热力",
+        "售出的制冷",
+        "售出的蒸汽"
+      ]
+    },
+    "GRI 302-1-e": {
+      "candidate_pdf_pages": [
+        26
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "total",
+        "energy",
+        "consumption",
+        "within",
+        "organization",
+        "joules",
+        "multiples",
+        "能源使用总量",
+        "总能耗",
+        "组织内部总能耗"
+      ]
+    },
+    "GRI 302-1-f": {
+      "candidate_pdf_pages": [
+        26
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "standards",
+        "methodologies",
+        "assumptions",
+        "calculation",
+        "tools",
+        "used",
+        "能源数据标准",
+        "计算方法",
+        "假设",
+        "换算因子"
+      ]
+    },
+    "GRI 302-1-g": {
+      "candidate_pdf_pages": [
+        26
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "source",
+        "conversion",
+        "factors",
+        "used",
+        "能源数据标准",
+        "方法",
+        "假设",
+        "计算工具",
+        "换算因子来源"
+      ]
+    },
+    "GRI 302-3-a": {
+      "candidate_pdf_pages": [
+        26
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "energy",
+        "intensity",
+        "ratio",
+        "organization",
+        "能源强度",
+        "强度比率"
+      ]
+    },
+    "GRI 302-3-b": {
+      "candidate_pdf_pages": [
+        26
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "organization-specific",
+        "metric",
+        "denominator",
+        "chosen",
+        "calculate",
+        "ratio",
+        "能源强度",
+        "分母"
+      ]
+    },
+    "GRI 302-3-c": {
+      "candidate_pdf_pages": [
+        26
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "types",
+        "energy",
+        "included",
+        "intensity",
+        "ratio",
+        "fuel",
+        "electricity",
+        "heating",
+        "能源强度",
+        "包含能源类型"
+      ]
+    },
+    "GRI 302-3-d": {
+      "candidate_pdf_pages": [
+        26
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "ratio",
+        "uses",
+        "energy",
+        "consumption",
+        "within",
+        "organization",
+        "outside",
+        "both",
+        "能源强度",
+        "组织内外边界"
+      ]
+    },
+    "GRI 302-4-a": {
+      "candidate_pdf_pages": [
+        26
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "amount",
+        "reductions",
+        "energy",
+        "consumption",
+        "achieved",
+        "direct",
+        "result",
+        "conservation",
+        "节能改造",
+        "节约用电",
+        "节能措施促成节电量",
+        "减少能源消耗"
+      ]
+    },
+    "GRI 302-4-b": {
+      "candidate_pdf_pages": [
+        26
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "types",
+        "energy",
+        "included",
+        "reductions",
+        "fuel",
+        "electricity",
+        "heating",
+        "cooling",
+        "节电量",
+        "减少能源消耗",
+        "能源类型"
+      ]
+    },
+    "GRI 302-4-c": {
+      "candidate_pdf_pages": [
+        26
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "basis",
+        "calculating",
+        "reductions",
+        "energy",
+        "consumption",
+        "such",
+        "base",
+        "year",
+        "节能量",
+        "基准年",
+        "基准"
+      ]
+    },
+    "GRI 302-4-d": {
+      "candidate_pdf_pages": [
+        26
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "standards",
+        "methodologies",
+        "assumptions",
+        "calculation",
+        "tools",
+        "used",
+        "节能量",
+        "计算方法",
+        "假设",
+        "工具"
+      ]
+    },
+    "GRI 302-5-a": {
+      "candidate_pdf_pages": [
+        14,
+        15,
+        16,
+        17,
+        31
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "reductions",
+        "energy",
+        "requirements",
+        "sold",
+        "products",
+        "services",
+        "achieved",
+        "during",
+        "售出产品和服务",
+        "能源需求降低量"
+      ]
+    },
+    "GRI 302-5-b": {
+      "candidate_pdf_pages": [
+        14,
+        15,
+        16,
+        17,
+        31
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "basis",
+        "calculating",
+        "reductions",
+        "energy",
+        "consumption",
+        "such",
+        "base",
+        "year",
+        "售出产品和服务",
+        "能源需求降低量",
+        "基准"
+      ]
+    },
+    "GRI 302-5-c": {
+      "candidate_pdf_pages": [
+        14,
+        15,
+        16,
+        17,
+        31
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "standards",
+        "methodologies",
+        "assumptions",
+        "calculation",
+        "tools",
+        "used",
+        "售出产品和服务",
+        "能源需求降低量",
+        "计算方法"
+      ]
+    },
+    "GRI 303-3-a": {
+      "candidate_pdf_pages": [
+        26
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "total",
+        "water",
+        "withdrawal",
+        "areas",
+        "megaliters",
+        "breakdown",
+        "following",
+        "sources",
+        "总取水量",
+        "取水总量"
+      ]
+    },
+    "GRI 303-3-a-i": {
+      "candidate_pdf_pages": [
+        26
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "surface",
+        "water",
+        "地表水总量"
+      ]
+    },
+    "GRI 303-3-a-ii": {
+      "candidate_pdf_pages": [
+        26
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "groundwater",
+        "地下水总量"
+      ]
+    },
+    "GRI 303-3-a-iii": {
+      "candidate_pdf_pages": [
+        26
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "seawater",
+        "海水取水",
+        "海水总量"
+      ]
+    },
+    "GRI 303-3-a-iv": {
+      "candidate_pdf_pages": [
+        26
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "produced",
+        "water",
+        "采出水",
+        "采出水总量"
+      ]
+    },
+    "GRI 303-3-a-v": {
+      "candidate_pdf_pages": [
+        26
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "third-party",
+        "water",
+        "第三方取水总量"
+      ]
+    },
+    "GRI 303-3-b": {
+      "candidate_pdf_pages": [
+        26
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "total",
+        "water",
+        "withdrawal",
+        "areas",
+        "stress",
+        "megaliters",
+        "breakdown",
+        "following",
+        "高水风险区域取水",
+        "高风险区域运营地点",
+        "取水占比"
+      ]
+    },
+    "GRI 303-3-b-i": {
+      "candidate_pdf_pages": [
+        26
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "surface",
+        "water",
+        "高水风险区域地表水"
+      ]
+    },
+    "GRI 303-3-b-ii": {
+      "candidate_pdf_pages": [
+        26
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "groundwater",
+        "高水风险区域地下水"
+      ]
+    },
+    "GRI 303-3-b-iii": {
+      "candidate_pdf_pages": [
+        26
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "seawater",
+        "高水风险区域海水"
+      ]
+    },
+    "GRI 303-3-b-iv": {
+      "candidate_pdf_pages": [
+        26
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "produced",
+        "water",
+        "高水风险区域采出水"
+      ]
+    },
+    "GRI 303-3-b-v": {
+      "candidate_pdf_pages": [
+        26
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "third-party",
+        "water",
+        "breakdown",
+        "total",
+        "withdrawal",
+        "sources",
+        "listed",
+        "i-iv",
+        "高水风险区域第三方水"
+      ]
+    },
+    "GRI 303-3-c": {
+      "candidate_pdf_pages": [
+        26
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "breakdown",
+        "total",
+        "water",
+        "withdrawal",
+        "each",
+        "sources",
+        "listed",
+        "disclosures",
+        "第三方淡水总量",
+        "第三方其他水总量"
+      ]
+    },
+    "GRI 303-3-c-i": {
+      "candidate_pdf_pages": [
+        26
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "freshwater",
+        "total",
+        "dissolved",
+        "solids",
+        "第三方淡水总量"
+      ]
+    },
+    "GRI 303-3-c-ii": {
+      "candidate_pdf_pages": [
+        26
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "other",
+        "water",
+        "total",
+        "dissolved",
+        "solids",
+        "第三方其他水总量"
+      ]
+    },
+    "GRI 303-3-d": {
+      "candidate_pdf_pages": [
+        26
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "any",
+        "contextual",
+        "information",
+        "necessary",
+        "understand",
+        "data",
+        "have",
+        "been",
+        "取水数据编制方法",
+        "取水数据标准",
+        "取水计算方法"
+      ]
+    },
+    "GRI 303-5-a": {
+      "candidate_pdf_pages": [
+        26
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "total",
+        "water",
+        "consumption",
+        "areas",
+        "megaliters"
+      ]
+    },
+    "GRI 303-5-b": {
+      "candidate_pdf_pages": [
+        26
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "total",
+        "water",
+        "consumption",
+        "areas",
+        "stress",
+        "megaliters"
+      ]
+    },
+    "GRI 303-5-c": {
+      "candidate_pdf_pages": [
+        26
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "change",
+        "water",
+        "storage",
+        "megaliters",
+        "has",
+        "been",
+        "identified",
+        "having"
+      ]
+    },
+    "GRI 303-5-d": {
+      "candidate_pdf_pages": [
+        26
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "any",
+        "contextual",
+        "information",
+        "necessary",
+        "understand",
+        "data",
+        "have",
+        "been"
+      ]
+    },
+    "GRI 304-2-a": {
+      "candidate_pdf_pages": [
+        15,
+        16,
+        28
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "nature",
+        "significant",
+        "direct",
+        "indirect",
+        "impacts",
+        "biodiversity",
+        "reference",
+        "one"
+      ]
+    },
+    "GRI 304-2-a-i": {
+      "candidate_pdf_pages": [
+        15,
+        16,
+        28
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "construction",
+        "use",
+        "manufacturing",
+        "plants",
+        "mines",
+        "transport",
+        "infrastructure"
+      ]
+    },
+    "GRI 304-2-a-ii": {
+      "candidate_pdf_pages": [
+        15,
+        16,
+        28
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "pollution",
+        "introduction",
+        "substances",
+        "that",
+        "not",
+        "naturally",
+        "occur",
+        "habitat"
+      ]
+    },
+    "GRI 304-2-a-iii": {
+      "candidate_pdf_pages": [
+        15,
+        16,
+        28
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "introduction",
+        "invasive",
+        "species",
+        "pests",
+        "pathogens"
+      ]
+    },
+    "GRI 304-2-a-iv": {
+      "candidate_pdf_pages": [
+        15,
+        16,
+        28
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "reduction",
+        "species"
+      ]
+    },
+    "GRI 304-2-a-v": {
+      "candidate_pdf_pages": [
+        15,
+        16,
+        28
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "habitat",
+        "conversion"
+      ]
+    },
+    "GRI 304-2-a-vi": {
+      "candidate_pdf_pages": [
+        15,
+        16,
+        28
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "changes",
+        "ecological",
+        "processes",
+        "outside",
+        "natural",
+        "range",
+        "variation",
+        "such"
+      ]
+    },
+    "GRI 304-2-b": {
+      "candidate_pdf_pages": [
+        15,
+        16,
+        28
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "significant",
+        "direct",
+        "indirect",
+        "positive",
+        "negative",
+        "impacts",
+        "reference",
+        "following"
+      ]
+    },
+    "GRI 304-2-b-i": {
+      "candidate_pdf_pages": [
+        15,
+        16,
+        28
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "species",
+        "affected"
+      ]
+    },
+    "GRI 304-2-b-ii": {
+      "candidate_pdf_pages": [
+        15,
+        16,
+        28
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "extent",
+        "areas",
+        "impacted"
+      ]
+    },
+    "GRI 304-2-b-iii": {
+      "candidate_pdf_pages": [
+        15,
+        16,
+        28
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "duration",
+        "impacts"
+      ]
+    },
+    "GRI 304-2-b-iv": {
+      "candidate_pdf_pages": [
+        15,
+        16,
+        28
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "reversibility",
+        "irreversibility",
+        "impacts"
+      ]
+    },
+    "GRI 305-1-a": {
+      "candidate_pdf_pages": [
+        25
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "gross",
+        "direct",
+        "scope",
+        "ghg",
+        "emissions",
+        "metric",
+        "tons",
+        "co2",
+        "范围一",
+        "直接温室气体排放",
+        "Scope 1",
+        "tCO2e"
+      ]
+    },
+    "GRI 305-1-d": {
+      "candidate_pdf_pages": [
+        25
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "gases",
+        "included",
+        "calculation",
+        "hfcs",
+        "pfcs",
+        "biogenic",
+        "co2",
+        "emissions",
+        "基准年",
+        "基准年排放",
+        "选择基准年的理由"
+      ]
+    },
+    "GRI 305-1-d-i": {
+      "candidate_pdf_pages": [
+        25
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "rationale",
+        "choosing",
+        "基准年",
+        "基准年排放"
+      ]
+    },
+    "GRI 305-1-d-ii": {
+      "candidate_pdf_pages": [
+        25
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "emissions",
+        "base",
+        "year",
+        "选择基准年的理由",
+        "基准年理由"
+      ]
+    },
+    "GRI 305-1-d-iii": {
+      "candidate_pdf_pages": [
+        25
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "context",
+        "any",
+        "significant",
+        "changes",
+        "emissions",
+        "that",
+        "triggered",
+        "recalculations",
+        "基准年重算",
+        "重大变化"
+      ]
+    },
+    "GRI 305-1-e": {
+      "candidate_pdf_pages": [
+        25
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "source",
+        "emission",
+        "factors",
+        "global",
+        "warming",
+        "potential",
+        "gwp",
+        "rates",
+        "排放因子",
+        "全球变暖潜势",
+        "GWP",
+        "温室气体核算方法"
+      ]
+    },
+    "GRI 305-1-f": {
+      "candidate_pdf_pages": [
+        25
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "consolidation",
+        "approach",
+        "emissions",
+        "equity",
+        "share",
+        "financial",
+        "control",
+        "operational",
+        "合并方法",
+        "权益比例",
+        "财务控制",
+        "运营控制"
+      ]
+    },
+    "GRI 305-1-g": {
+      "candidate_pdf_pages": [
+        25
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "standards",
+        "methodologies",
+        "assumptions",
+        "calculation",
+        "tools",
+        "used",
+        "温室气体核算方法",
+        "核算标准",
+        "GHG Protocol",
+        "ISO 14064"
+      ]
+    },
+    "GRI 305-2-a": {
+      "candidate_pdf_pages": [
+        25
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "gross",
+        "location-based",
+        "energy",
+        "indirect",
+        "scope",
+        "ghg",
+        "emissions",
+        "metric",
+        "范围二（基于位置）",
+        "基于位置",
+        "Scope 2"
+      ]
+    },
+    "GRI 305-2-b": {
+      "candidate_pdf_pages": [
+        25
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "applicable",
+        "gross",
+        "market-based",
+        "energy",
+        "indirect",
+        "scope",
+        "ghg",
+        "emissions",
+        "范围二（基于市场）",
+        "基于市场",
+        "Scope 2"
+      ]
+    },
+    "GRI 305-2-c": {
+      "candidate_pdf_pages": [
+        25
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "available",
+        "gases",
+        "included",
+        "calculation",
+        "hfcs",
+        "pfcs",
+        "温室气体种类",
+        "气体种类",
+        "CO2",
+        "CH4",
+        "N2O"
+      ]
+    },
+    "GRI 305-2-d": {
+      "candidate_pdf_pages": [
+        25
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "base",
+        "year",
+        "calculation",
+        "applicable",
+        "基准年",
+        "基准年排放",
+        "选择基准年的理由"
+      ]
+    },
+    "GRI 305-2-d-i": {
+      "candidate_pdf_pages": [
+        25
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "rationale",
+        "choosing",
+        "基准年",
+        "基准年排放"
+      ]
+    },
+    "GRI 305-2-d-ii": {
+      "candidate_pdf_pages": [
+        25
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "emissions",
+        "base",
+        "year"
+      ]
+    },
+    "GRI 305-2-d-iii": {
+      "candidate_pdf_pages": [
+        25
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "context",
+        "any",
+        "significant",
+        "changes",
+        "emissions",
+        "that",
+        "triggered",
+        "recalculations"
+      ]
+    },
+    "GRI 305-2-e": {
+      "candidate_pdf_pages": [
+        25
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "source",
+        "emission",
+        "factors",
+        "global",
+        "warming",
+        "potential",
+        "gwp",
+        "rates"
+      ]
+    },
+    "GRI 305-2-f": {
+      "candidate_pdf_pages": [
+        25
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "consolidation",
+        "approach",
+        "emissions",
+        "equity",
+        "share",
+        "financial",
+        "control",
+        "operational"
+      ]
+    },
+    "GRI 305-2-g": {
+      "candidate_pdf_pages": [
+        25
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "standards",
+        "methodologies",
+        "assumptions",
+        "calculation",
+        "tools",
+        "used"
+      ]
+    },
+    "GRI 305-4-a": {
+      "candidate_pdf_pages": [
+        25
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "ghg",
+        "emissions",
+        "intensity",
+        "ratio",
+        "organization"
+      ]
+    },
+    "GRI 305-4-b": {
+      "candidate_pdf_pages": [
+        25
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "organization-specific",
+        "metric",
+        "denominator",
+        "chosen",
+        "calculate",
+        "ratio"
+      ]
+    },
+    "GRI 305-4-c": {
+      "candidate_pdf_pages": [
+        25
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "types",
+        "ghg",
+        "emissions",
+        "included",
+        "intensity",
+        "ratio",
+        "direct",
+        "scope"
+      ]
+    },
+    "GRI 305-5-a": {
+      "candidate_pdf_pages": [
+        25
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "ghg",
+        "emissions",
+        "reduced",
+        "direct",
+        "result",
+        "reduction",
+        "initiatives",
+        "metric"
+      ]
+    },
+    "GRI 305-5-c": {
+      "candidate_pdf_pages": [
+        25
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "gases",
+        "included",
+        "calculation",
+        "hfcs",
+        "pfcs",
+        "base",
+        "year",
+        "baseline"
+      ]
+    },
+    "GRI 305-5-d": {
+      "candidate_pdf_pages": [
+        25
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "scopes",
+        "which",
+        "reductions",
+        "took",
+        "place",
+        "direct",
+        "scope",
+        "energy"
+      ]
+    },
+    "GRI 305-5-e": {
+      "candidate_pdf_pages": [
+        25
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "standards",
+        "methodologies",
+        "assumptions",
+        "calculation",
+        "tools",
+        "used"
+      ]
+    },
+    "GRI 306-1-a": {
+      "candidate_pdf_pages": [
+        34
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "organization",
+        "significant",
+        "actual",
+        "potential",
+        "waste-related",
+        "impacts",
+        "description"
+      ]
+    },
+    "GRI 306-1-a-i": {
+      "candidate_pdf_pages": [
+        34
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "inputs",
+        "activities",
+        "outputs",
+        "that",
+        "lead",
+        "could",
+        "these",
+        "impacts"
+      ]
+    },
+    "GRI 306-1-a-ii": {
+      "candidate_pdf_pages": [
+        34
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "these",
+        "impacts",
+        "relate",
+        "waste",
+        "generated",
+        "organization",
+        "own",
+        "activities"
+      ]
+    },
+    "GRI 306-2-a": {
+      "candidate_pdf_pages": [
+        27
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "actions",
+        "circularity",
+        "measures",
+        "taken",
+        "prevent",
+        "waste",
+        "generation",
+        "organization"
+      ]
+    },
+    "GRI 306-2-b": {
+      "candidate_pdf_pages": [
+        27
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "waste",
+        "generated",
+        "organization",
+        "own",
+        "activities",
+        "managed",
+        "third",
+        "party"
+      ]
+    },
+    "GRI 306-2-c": {
+      "candidate_pdf_pages": [
+        27
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "processes",
+        "used",
+        "collect",
+        "monitor",
+        "waste-related",
+        "data"
+      ]
+    },
+    "GRI 306-3-a": {
+      "candidate_pdf_pages": [
+        27
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "total",
+        "weight",
+        "waste",
+        "generated",
+        "metric",
+        "tons",
+        "breakdown",
+        "composition"
+      ]
+    },
+    "GRI 306-3-b": {
+      "candidate_pdf_pages": [
+        27
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "contextual",
+        "information",
+        "necessary",
+        "understand",
+        "data",
+        "has",
+        "been",
+        "compiled"
+      ]
+    },
+    "GRI 306-4-a": {
+      "candidate_pdf_pages": [
+        27
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "total",
+        "weight",
+        "waste",
+        "diverted",
+        "disposal",
+        "metric",
+        "tons",
+        "breakdown"
+      ]
+    },
+    "GRI 306-4-b": {
+      "candidate_pdf_pages": [
+        27
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "total",
+        "weight",
+        "hazardous",
+        "waste",
+        "diverted",
+        "disposal",
+        "metric",
+        "tons"
+      ]
+    },
+    "GRI 306-4-b-i": {
+      "candidate_pdf_pages": [
+        27
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "preparation",
+        "reuse"
+      ]
+    },
+    "GRI 306-4-b-ii": {
+      "candidate_pdf_pages": [
+        27
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "recycling"
+      ]
+    },
+    "GRI 306-4-b-iii": {
+      "candidate_pdf_pages": [
+        27
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "other",
+        "recovery",
+        "operations"
+      ]
+    },
+    "GRI 306-4-c": {
+      "candidate_pdf_pages": [
+        27
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "total",
+        "weight",
+        "non-hazardous",
+        "waste",
+        "diverted",
+        "disposal",
+        "metric",
+        "tons"
+      ]
+    },
+    "GRI 306-4-c-i": {
+      "candidate_pdf_pages": [
+        27
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "preparation",
+        "reuse"
+      ]
+    },
+    "GRI 306-4-c-ii": {
+      "candidate_pdf_pages": [
+        27
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "recycling"
+      ]
+    },
+    "GRI 306-4-c-iii": {
+      "candidate_pdf_pages": [
+        27
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "other",
+        "recovery",
+        "operations"
+      ]
+    },
+    "GRI 306-4-d": {
+      "candidate_pdf_pages": [
+        27
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "each",
+        "recovery",
+        "operation",
+        "listed",
+        "disclosures",
+        "breakdown",
+        "total",
+        "weight"
+      ]
+    },
+    "GRI 306-4-d-i": {
+      "candidate_pdf_pages": [
+        27
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "onsite"
+      ]
+    },
+    "GRI 306-4-d-ii": {
+      "candidate_pdf_pages": [
+        27
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "offsite"
+      ]
+    },
+    "GRI 306-4-e": {
+      "candidate_pdf_pages": [
+        27
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "contextual",
+        "information",
+        "necessary",
+        "understand",
+        "data",
+        "has",
+        "been",
+        "compiled"
+      ]
+    },
+    "GRI 306-5-a": {
+      "candidate_pdf_pages": [
+        27
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "total",
+        "weight",
+        "waste",
+        "directed",
+        "disposal",
+        "metric",
+        "tons",
+        "breakdown"
+      ]
+    },
+    "GRI 306-5-b": {
+      "candidate_pdf_pages": [
+        27
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "total",
+        "weight",
+        "hazardous",
+        "waste",
+        "directed",
+        "disposal",
+        "metric",
+        "tons"
+      ]
+    },
+    "GRI 306-5-b-i": {
+      "candidate_pdf_pages": [
+        27
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "incineration",
+        "energy",
+        "recovery"
+      ]
+    },
+    "GRI 306-5-b-ii": {
+      "candidate_pdf_pages": [
+        27
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "incineration",
+        "without",
+        "energy",
+        "recovery"
+      ]
+    },
+    "GRI 306-5-b-iii": {
+      "candidate_pdf_pages": [
+        27
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "landfilling"
+      ]
+    },
+    "GRI 306-5-b-iv": {
+      "candidate_pdf_pages": [
+        27
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "other",
+        "disposal",
+        "operations"
+      ]
+    },
+    "GRI 306-5-c": {
+      "candidate_pdf_pages": [
+        27
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "total",
+        "weight",
+        "non-hazardous",
+        "waste",
+        "directed",
+        "disposal",
+        "metric",
+        "tons"
+      ]
+    },
+    "GRI 306-5-c-i": {
+      "candidate_pdf_pages": [
+        27
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "incineration",
+        "energy",
+        "recovery"
+      ]
+    },
+    "GRI 306-5-c-ii": {
+      "candidate_pdf_pages": [
+        27
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "incineration",
+        "without",
+        "energy",
+        "recovery"
+      ]
+    },
+    "GRI 306-5-c-iii": {
+      "candidate_pdf_pages": [
+        27
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "landfilling"
+      ]
+    },
+    "GRI 306-5-c-iv": {
+      "candidate_pdf_pages": [
+        27
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "other",
+        "disposal",
+        "operations"
+      ]
+    },
+    "GRI 306-5-d": {
+      "candidate_pdf_pages": [
+        27
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "each",
+        "disposal",
+        "operation",
+        "listed",
+        "disclosures",
+        "breakdown",
+        "total",
+        "weight"
+      ]
+    },
+    "GRI 306-5-d-i": {
+      "candidate_pdf_pages": [
+        27
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "onsite"
+      ]
+    },
+    "GRI 306-5-d-ii": {
+      "candidate_pdf_pages": [
+        27
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "offsite"
+      ]
+    },
+    "GRI 306-5-e": {
+      "candidate_pdf_pages": [
+        27
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "contextual",
+        "information",
+        "necessary",
+        "understand",
+        "data",
+        "has",
+        "been",
+        "compiled"
+      ]
+    },
+    "GRI 308-1-a": {
+      "candidate_pdf_pages": [
+        32
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "percentage",
+        "new",
+        "suppliers",
+        "that",
+        "were",
+        "screened",
+        "using",
+        "environmental"
+      ]
+    },
+    "GRI 308-2-a": {
+      "candidate_pdf_pages": [
+        32
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "number",
+        "suppliers",
+        "assessed",
+        "environmental",
+        "impacts"
+      ]
+    },
+    "GRI 308-2-b": {
+      "candidate_pdf_pages": [
+        32
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "number",
+        "suppliers",
+        "identified",
+        "having",
+        "significant",
+        "actual",
+        "potential",
+        "negative"
+      ]
+    },
+    "GRI 308-2-c": {
+      "candidate_pdf_pages": [
+        32
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "significant",
+        "actual",
+        "potential",
+        "negative",
+        "environmental",
+        "impacts",
+        "identified",
+        "supply"
+      ]
+    },
+    "GRI 308-2-d": {
+      "candidate_pdf_pages": [
+        32
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "percentage",
+        "suppliers",
+        "identified",
+        "having",
+        "significant",
+        "actual",
+        "potential",
+        "negative"
+      ]
+    },
+    "GRI 308-2-e": {
+      "candidate_pdf_pages": [
+        32
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "percentage",
+        "suppliers",
+        "identified",
+        "having",
+        "significant",
+        "actual",
+        "potential",
+        "negative"
+      ]
+    },
+    "GRI 401-1-a": {
+      "candidate_pdf_pages": [
+        45,
+        46
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "total",
+        "number",
+        "rate",
+        "new",
+        "employee",
+        "hires",
+        "during",
+        "reporting"
+      ]
+    },
+    "GRI 401-1-b": {
+      "candidate_pdf_pages": [
+        45,
+        46
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "total",
+        "number",
+        "rate",
+        "employee",
+        "turnover",
+        "during",
+        "reporting",
+        "period"
+      ]
+    },
+    "GRI 401-2-a": {
+      "candidate_pdf_pages": [
+        40
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "benefits",
+        "which",
+        "standard",
+        "full-time",
+        "employees",
+        "organization",
+        "but",
+        "not"
+      ]
+    },
+    "GRI 401-2-a-i": {
+      "candidate_pdf_pages": [
+        40
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "life",
+        "insurance"
+      ]
+    },
+    "GRI 401-2-a-ii": {
+      "candidate_pdf_pages": [
+        40
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "health",
+        "care"
+      ]
+    },
+    "GRI 401-2-a-iii": {
+      "candidate_pdf_pages": [
+        40
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "disability",
+        "invalidity",
+        "coverage"
+      ]
+    },
+    "GRI 401-2-a-iv": {
+      "candidate_pdf_pages": [
+        40
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "parental",
+        "leave"
+      ]
+    },
+    "GRI 401-2-a-v": {
+      "candidate_pdf_pages": [
+        40
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "retirement",
+        "provision"
+      ]
+    },
+    "GRI 401-2-a-vi": {
+      "candidate_pdf_pages": [
+        40
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "stock",
+        "ownership"
+      ]
+    },
+    "GRI 401-2-a-vii": {
+      "candidate_pdf_pages": [
+        40
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "others"
+      ]
+    },
+    "GRI 401-2-b": {
+      "candidate_pdf_pages": [
+        40
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "definition",
+        "used",
+        "significant",
+        "locations",
+        "operation"
+      ]
+    },
+    "GRI 403-3-a": {
+      "candidate_pdf_pages": [
+        38
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "description",
+        "occupational",
+        "health",
+        "services",
+        "functions",
+        "that",
+        "contribute",
+        "identification"
+      ]
+    },
+    "GRI 403-9-a": {
+      "candidate_pdf_pages": [
+        47
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "employees"
+      ]
+    },
+    "GRI 403-9-a-i": {
+      "candidate_pdf_pages": [
+        47
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "number",
+        "rate",
+        "fatalities",
+        "result",
+        "work-related",
+        "injury"
+      ]
+    },
+    "GRI 403-9-a-ii": {
+      "candidate_pdf_pages": [
+        47
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "number",
+        "rate",
+        "high-consequence",
+        "work-related",
+        "injuries",
+        "excluding",
+        "fatalities"
+      ]
+    },
+    "GRI 403-9-a-iii": {
+      "candidate_pdf_pages": [
+        47
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "number",
+        "rate",
+        "recordable",
+        "work-related",
+        "injuries"
+      ]
+    },
+    "GRI 403-9-a-iv": {
+      "candidate_pdf_pages": [
+        47
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "main",
+        "types",
+        "work-related",
+        "injury"
+      ]
+    },
+    "GRI 403-9-a-v": {
+      "candidate_pdf_pages": [
+        47
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "number",
+        "hours",
+        "worked"
+      ]
+    },
+    "GRI 403-9-b": {
+      "candidate_pdf_pages": [
+        47
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "workers",
+        "who",
+        "not",
+        "employees",
+        "but",
+        "whose",
+        "work",
+        "workplace"
+      ]
+    },
+    "GRI 403-9-b-i": {
+      "candidate_pdf_pages": [
+        47
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "number",
+        "rate",
+        "fatalities",
+        "result",
+        "work-related",
+        "injury"
+      ]
+    },
+    "GRI 403-9-b-ii": {
+      "candidate_pdf_pages": [
+        47
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "number",
+        "rate",
+        "high-consequence",
+        "work-related",
+        "injuries",
+        "excluding",
+        "fatalities"
+      ]
+    },
+    "GRI 403-9-b-iii": {
+      "candidate_pdf_pages": [
+        47
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "number",
+        "rate",
+        "recordable",
+        "work-related",
+        "injuries"
+      ]
+    },
+    "GRI 403-9-b-iv": {
+      "candidate_pdf_pages": [
+        47
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "main",
+        "types",
+        "work-related",
+        "injury"
+      ]
+    },
+    "GRI 403-9-b-v": {
+      "candidate_pdf_pages": [
+        47
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "number",
+        "hours",
+        "worked"
+      ]
+    },
+    "GRI 403-9-c": {
+      "candidate_pdf_pages": [
+        47
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "work-related",
+        "hazards",
+        "that",
+        "pose",
+        "risk",
+        "high-consequence",
+        "injury"
+      ]
+    },
+    "GRI 403-9-c-i": {
+      "candidate_pdf_pages": [
+        47
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "these",
+        "hazards",
+        "have",
+        "been",
+        "determined"
+      ]
+    },
+    "GRI 403-9-c-ii": {
+      "candidate_pdf_pages": [
+        47
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "which",
+        "these",
+        "hazards",
+        "have",
+        "caused",
+        "contributed",
+        "high-consequence",
+        "injuries"
+      ]
+    },
+    "GRI 403-9-c-iii": {
+      "candidate_pdf_pages": [
+        47
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "actions",
+        "taken",
+        "underway",
+        "eliminate",
+        "these",
+        "hazards",
+        "minimize",
+        "risks"
+      ]
+    },
+    "GRI 403-9-d": {
+      "candidate_pdf_pages": [
+        47
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "any",
+        "actions",
+        "taken",
+        "underway",
+        "eliminate",
+        "other",
+        "work-related",
+        "hazards"
+      ]
+    },
+    "GRI 403-9-e": {
+      "candidate_pdf_pages": [
+        47
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "rates",
+        "have",
+        "been",
+        "calculated",
+        "based",
+        "hours",
+        "worked"
+      ]
+    },
+    "GRI 403-9-f": {
+      "candidate_pdf_pages": [
+        47
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "why",
+        "any",
+        "workers",
+        "have",
+        "been",
+        "excluded",
+        "disclosure",
+        "types"
+      ]
+    },
+    "GRI 403-9-g": {
+      "candidate_pdf_pages": [
+        47
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "any",
+        "contextual",
+        "information",
+        "necessary",
+        "understand",
+        "data",
+        "have",
+        "been"
+      ]
+    },
+    "GRI 404-1-a": {
+      "candidate_pdf_pages": [
+        36
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "average",
+        "hours",
+        "training",
+        "that",
+        "organization",
+        "employees",
+        "have",
+        "undertaken"
+      ]
+    },
+    "GRI 404-1-a-i": {
+      "candidate_pdf_pages": [
+        36
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "gender"
+      ]
+    },
+    "GRI 404-1-a-ii": {
+      "candidate_pdf_pages": [
+        36
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "employee",
+        "category"
+      ]
+    },
+    "GRI 404-2-a": {
+      "candidate_pdf_pages": [
+        35,
+        36
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "type",
+        "scope",
+        "programs",
+        "implemented",
+        "assistance",
+        "provided",
+        "upgrade",
+        "employee"
+      ]
+    },
+    "GRI 404-2-b": {
+      "candidate_pdf_pages": [
+        35,
+        36
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "transition",
+        "assistance",
+        "programs",
+        "provided",
+        "facilitate",
+        "continued",
+        "employability",
+        "management"
+      ]
+    },
+    "GRI 405-1-a": {
+      "candidate_pdf_pages": [
+        19,
+        34,
+        40
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "percentage",
+        "individuals",
+        "within",
+        "organization",
+        "governance",
+        "bodies",
+        "each",
+        "following"
+      ]
+    },
+    "GRI 405-1-a-i": {
+      "candidate_pdf_pages": [
+        19,
+        34,
+        40
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "gender"
+      ]
+    },
+    "GRI 405-1-a-ii": {
+      "candidate_pdf_pages": [
+        19,
+        34,
+        40
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "age",
+        "group",
+        "under",
+        "years",
+        "old",
+        "over"
+      ]
+    },
+    "GRI 405-1-a-iii": {
+      "candidate_pdf_pages": [
+        19,
+        34,
+        40
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "other",
+        "indicators",
+        "diversity",
+        "where",
+        "relevant",
+        "such",
+        "minority",
+        "vulnerable"
+      ]
+    },
+    "GRI 405-1-b": {
+      "candidate_pdf_pages": [
+        19,
+        34,
+        40
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "percentage",
+        "employees",
+        "per",
+        "employee",
+        "category",
+        "each",
+        "following",
+        "diversity"
+      ]
+    },
+    "GRI 405-1-b-i": {
+      "candidate_pdf_pages": [
+        19,
+        34,
+        40
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "gender"
+      ]
+    },
+    "GRI 405-1-b-ii": {
+      "candidate_pdf_pages": [
+        19,
+        34,
+        40
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "age",
+        "group",
+        "under",
+        "years",
+        "old",
+        "over"
+      ]
+    },
+    "GRI 405-1-b-iii": {
+      "candidate_pdf_pages": [
+        19,
+        34,
+        40
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "other",
+        "indicators",
+        "diversity",
+        "where",
+        "relevant",
+        "such",
+        "minority",
+        "vulnerable"
+      ]
+    },
+    "GRI 413-1-a": {
+      "candidate_pdf_pages": [
+        42,
+        43
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "percentage",
+        "operations",
+        "implemented",
+        "local",
+        "community",
+        "engagement",
+        "impact",
+        "assessments"
+      ]
+    },
+    "GRI 413-1-a-i": {
+      "candidate_pdf_pages": [
+        42,
+        43
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "social",
+        "impact",
+        "assessments",
+        "gender",
+        "based",
+        "participatory",
+        "processes"
+      ]
+    },
+    "GRI 413-1-a-ii": {
+      "candidate_pdf_pages": [
+        42,
+        43
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "environmental",
+        "impact",
+        "assessments",
+        "ongoing",
+        "monitoring"
+      ]
+    },
+    "GRI 413-1-a-iii": {
+      "candidate_pdf_pages": [
+        42,
+        43
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "public",
+        "disclosure",
+        "results",
+        "environmental",
+        "social",
+        "impact",
+        "assessments"
+      ]
+    },
+    "GRI 413-1-a-iv": {
+      "candidate_pdf_pages": [
+        42,
+        43
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "local",
+        "community",
+        "development",
+        "programs",
+        "based",
+        "communities",
+        "needs"
+      ]
+    },
+    "GRI 413-1-a-v": {
+      "candidate_pdf_pages": [
+        42,
+        43
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "stakeholder",
+        "engagement",
+        "plans",
+        "based",
+        "mapping"
+      ]
+    },
+    "GRI 413-1-a-vi": {
+      "candidate_pdf_pages": [
+        42,
+        43
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "broad",
+        "based",
+        "local",
+        "community",
+        "consultation",
+        "committees",
+        "processes",
+        "that"
+      ]
+    },
+    "GRI 413-1-a-vii": {
+      "candidate_pdf_pages": [
+        42,
+        43
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "works",
+        "councils",
+        "occupational",
+        "health",
+        "safety",
+        "committees",
+        "other",
+        "worker"
+      ]
+    },
+    "GRI 413-1-a-viii": {
+      "candidate_pdf_pages": [
+        42,
+        43
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "formal",
+        "local",
+        "community",
+        "grievance",
+        "processes"
+      ]
+    },
+    "GRI 414-1-a": {
+      "candidate_pdf_pages": [
+        31,
+        32
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "percentage",
+        "new",
+        "suppliers",
+        "that",
+        "were",
+        "screened",
+        "using",
+        "social"
+      ]
+    },
+    "GRI 416-1-a": {
+      "candidate_pdf_pages": [
+        15
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "percentage",
+        "significant",
+        "product",
+        "service",
+        "categories",
+        "which",
+        "health",
+        "safety"
+      ]
+    },
+    "GRI 416-2-a": {
+      "candidate_pdf_pages": [
+        15
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "total",
+        "number",
+        "incidents",
+        "non-compliance",
+        "regulations",
+        "voluntary",
+        "codes",
+        "concerning"
+      ]
+    },
+    "GRI 416-2-a-i": {
+      "candidate_pdf_pages": [
+        15
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "incidents",
+        "non-compliance",
+        "regulations",
+        "resulting",
+        "fine",
+        "penalty"
+      ]
+    },
+    "GRI 416-2-a-ii": {
+      "candidate_pdf_pages": [
+        15
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "incidents",
+        "non-compliance",
+        "regulations",
+        "resulting",
+        "warning"
+      ]
+    },
+    "GRI 416-2-a-iii": {
+      "candidate_pdf_pages": [
+        15
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "incidents",
+        "non-compliance",
+        "voluntary",
+        "codes"
+      ]
+    },
+    "GRI 416-2-b": {
+      "candidate_pdf_pages": [
+        15
+      ],
+      "kpi_table_pages": [],
+      "metric_terms": [
+        "organization",
+        "has",
+        "not",
+        "identified",
+        "any",
+        "non-compliance",
+        "regulations",
+        "voluntary"
+      ]
+    }
+  }
+}
