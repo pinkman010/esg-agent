@@ -103,3 +103,37 @@ def test_match_kpi_row_does_not_match_unrelated_metric():
     matches = match_kpi_rows([chunk], ["使用社会评价维度筛选的新供应商百分比"], year_columns=["2024"])
 
     assert matches == []
+
+
+def test_match_kpi_rows_matches_supplier_social_audit_nearby_values():
+    chunk = DocumentChunk(
+        chunk_id="p31",
+        report_id="goldwind",
+        text="2024年，公司完成85家风电机组零部件供应商社会责任审核，其中A级83家、B级2家，主要零部件制造商社会责任审核率100%。",
+        source_page=31,
+        source_method=EvidenceSourceMethod.PDFPLUMBER,
+        source_file_hash="hash",
+    )
+
+    matches = match_kpi_rows([chunk], ["供应商社会责任审核", "社会责任审核率"], year_columns=["2024"])
+
+    assert matches
+    assert matches[0].source_page == 31
+    assert "供应商社会责任审核" in matches[0].preview or "社会责任审核率" in matches[0].preview
+
+
+def test_match_kpi_rows_matches_ohs_fatality_count_without_rate():
+    chunk = DocumentChunk(
+        chunk_id="p37",
+        report_id="goldwind",
+        text="2024年，员工因工死亡人数为1，重大安全事故数为0，职业病发病次数为0，安全培训总学时约为441630小时。",
+        source_page=37,
+        source_method=EvidenceSourceMethod.PDFPLUMBER,
+        source_file_hash="hash",
+    )
+
+    matches = match_kpi_rows([chunk], ["员工因工死亡人数", "因工死亡人数"], year_columns=["2024"])
+
+    assert matches
+    assert matches[0].source_page == 37
+    assert "因工死亡人数" in matches[0].preview
