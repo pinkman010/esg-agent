@@ -174,3 +174,20 @@ def test_section_route_only_provides_candidates_for_unrouted_topic():
     assert route.source == "report_profile_section"
     assert route.candidate_pdf_pages == [41, 42, 43, 44, 45]
     assert "和谐社区关系" in route.metric_terms
+
+
+def test_topic_section_route_handles_goldwind_product_and_customer_topics():
+    profile = load_report_profile(Path("data/reports/profiles/goldwind_2024.json"))
+    router = EvidenceRouter(report_profile=profile)
+    task = make_task("GRI 418-1-a", "GRI 418-1").model_copy(
+        update={
+            "requirement_text": "customer privacy complaints",
+            "keywords": ["customer", "privacy", "complaints"],
+        }
+    )
+
+    route = router.route(task)
+
+    assert route.source == "report_profile_section"
+    assert route.candidate_pdf_pages
+    assert "产品服务与研发创新" in route.metric_terms

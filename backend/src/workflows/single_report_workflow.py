@@ -131,7 +131,7 @@ class SingleReportWorkflow:
             disclosure_id = task.disclosure_id.removeprefix("GRI ").strip()
             entry = report_index.get(disclosure_id)
             route = self.evidence_router.route(task)
-            if route.source == "report_profile":
+            if route.source in {"report_profile", "report_profile_section"}:
                 enriched_tasks.append(
                     task.model_copy(
                         update={

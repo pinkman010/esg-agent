@@ -437,6 +437,68 @@ def test_single_report_workflow_supplements_candidate_pages_for_current_50_rules
     assert enriched[2].candidate_report_pages == [12]
 
 
+def test_single_report_workflow_applies_profile_section_route(tmp_path):
+    pack_path = tmp_path / "gri_requirement_pack.json"
+    pack_path.write_text(json.dumps({"requirements": []}), encoding="utf-8")
+    profile_path = tmp_path / "profile.json"
+    profile_path.write_text(
+        json.dumps(
+            {
+                "report_id": "goldwind_2024",
+                "company_name": "Goldwind",
+                "report_year": 2024,
+                "pdf_file": "goldwind.pdf",
+                "total_pdf_pages": 52,
+                "page_numbering": {
+                    "report_index_pdf_page": 50,
+                    "report_index_report_page": 96,
+                    "total_pdf_pages": 52,
+                },
+                "gri_index": {"pdf_pages": [50, 51]},
+                "sections": [
+                    {
+                        "name": "产品服务与研发创新",
+                        "pdf_pages": [13, 14, 15],
+                        "report_pages": [22, 24, 26],
+                        "terms": ["产品服务与研发创新", "产品质量", "产品安全", "客户", "服务"],
+                    }
+                ],
+                "index_note_pages": [],
+                "assurance_pages": [],
+                "requirement_routes": {},
+            }
+        ),
+        encoding="utf-8",
+    )
+    workflow = SingleReportWorkflow(
+        None,
+        FakeParser(),
+        FakeAdapter(),
+        DisclosureAgent(),
+        requirement_pack_path=pack_path,
+        report_profile_path=profile_path,
+    )
+    from src.domain.models import DisclosureTask
+
+    task = DisclosureTask(
+        task_id="task-418-1-a",
+        run_id="run-1",
+        report_id="report-1",
+        standard_id="GRI",
+        standard_version="2016",
+        disclosure_id="GRI 418-1",
+        requirement_id="GRI 418-1-a",
+        requirement_text="customer privacy complaints",
+        keywords=["customer", "privacy", "complaints"],
+    )
+
+    enriched = workflow._attach_report_index_candidates([], [task])
+
+    assert enriched[0].candidate_pdf_pages == [13, 14, 15]
+    assert enriched[0].candidate_report_pages == [22, 24, 26]
+    assert enriched[0].candidate_page_source == "report_profile_section"
+
+
 def test_single_report_workflow_supplements_candidate_pages_for_current_150_rules(tmp_path):
     pack_path = tmp_path / "gri_requirement_pack.json"
     pack_path.write_text(

@@ -5,6 +5,34 @@ from src.reports.profile import ReportProfile
 from src.standards.evidence_contracts import get_requirement_contract
 
 
+TOPIC_SECTION_MAP = {
+    "205": "诚信合规经营",
+    "206": "诚信合规经营",
+    "207": "诚信合规经营",
+    "302": "绿色环保运营",
+    "303": "绿色环保运营",
+    "304": "绿色环保运营",
+    "305": "绿色环保运营",
+    "306": "绿色环保运营",
+    "308": "可持续产业链",
+    "401": "公平健康工作环境",
+    "402": "公平健康工作环境",
+    "403": "公平健康工作环境",
+    "404": "公平健康工作环境",
+    "405": "公平健康工作环境",
+    "406": "公平健康工作环境",
+    "407": "公平健康工作环境",
+    "408": "公平健康工作环境",
+    "409": "公平健康工作环境",
+    "410": "公平健康工作环境",
+    "413": "和谐社区关系",
+    "414": "可持续产业链",
+    "416": "产品服务与研发创新",
+    "417": "产品服务与研发创新",
+    "418": "产品服务与研发创新",
+}
+
+
 @dataclass(frozen=True)
 class EvidenceRoute:
     candidate_pdf_pages: list[int] = field(default_factory=list)
@@ -35,14 +63,16 @@ class EvidenceRouter:
             )
 
         if contract is not None and contract.candidate_pages is not None:
-            pages = self._valid_pages(list(contract.candidate_pages))
-            return EvidenceRoute(
-                candidate_pdf_pages=pages,
-                candidate_report_pages=self._report_pages(pages),
-                kpi_table_pages=list(contract.kpi_table_pages or ()),
-                source="contract",
-                reasons=["contract:candidate_pages"],
-            )
+            raw_pages = list(contract.candidate_pages)
+            pages = self._valid_pages(raw_pages)
+            if not raw_pages or pages:
+                return EvidenceRoute(
+                    candidate_pdf_pages=pages,
+                    candidate_report_pages=self._report_pages(pages),
+                    kpi_table_pages=list(contract.kpi_table_pages or ()),
+                    source="contract",
+                    reasons=["contract:candidate_pages"],
+                )
 
         if task.candidate_pdf_pages:
             pages = self._valid_pages(task.candidate_pdf_pages)
@@ -81,6 +111,20 @@ class EvidenceRouter:
     def _section_route(self, task: DisclosureTask) -> EvidenceRoute | None:
         if self.report_profile is None:
             return None
+        topic_section = self._topic_section_name(task)
+        if topic_section:
+            section = next((item for item in self.report_profile.sections if item.name == topic_section), None)
+            if section is not None:
+                pages = self._valid_pages(section.pdf_pages)
+                if pages:
+                    return EvidenceRoute(
+                        candidate_pdf_pages=pages,
+                        candidate_report_pages=self._report_pages(pages),
+                        kpi_table_pages=[],
+                        metric_terms=list(section.terms),
+                        source="report_profile_section",
+                        reasons=[f"profile_section:{self.report_profile.report_id}:{section.name}:topic"],
+                    )
         haystack = " ".join([task.requirement_text, *task.keywords]).lower()
         best_section = None
         best_score = 0
@@ -106,3 +150,8 @@ class EvidenceRouter:
             source="report_profile_section",
             reasons=[f"profile_section:{self.report_profile.report_id}:{best_section.name}"],
         )
+
+    def _topic_section_name(self, task: DisclosureTask) -> str | None:
+        disclosure_id = task.disclosure_id.removeprefix("GRI ").strip()
+        topic = disclosure_id.split("-", 1)[0]
+        return TOPIC_SECTION_MAP.get(topic)

@@ -219,6 +219,7 @@ def test_profile_builder_extracts_goldwind_index_routes_for_adjacent_disclosures
 def test_profile_builder_extracts_goldwind_section_ranges():
     pages = [
         PageExtraction(report_id="goldwind", page_number=8, text="02 可持续发展管理 战略规划"),
+        PageExtraction(report_id="goldwind", page_number=15, text="产品服务与研发创新 产品质量与安全"),
         PageExtraction(report_id="goldwind", page_number=19, text="诚信合规经营 公司治理 风险合规管理"),
         PageExtraction(report_id="goldwind", page_number=25, text="绿色环保运营 碳减排与碳中和"),
         PageExtraction(report_id="goldwind", page_number=31, text="可持续产业链 供应链可持续"),
@@ -238,9 +239,57 @@ def test_profile_builder_extracts_goldwind_section_ranges():
     )
 
     sections = {section.name: section for section in profile.sections}
-    assert sections["可持续发展管理"].pdf_pages == list(range(8, 19))
+    assert sections["可持续发展管理"].pdf_pages == list(range(8, 15))
+    assert sections["产品服务与研发创新"].pdf_pages == list(range(15, 19))
     assert sections["诚信合规经营"].pdf_pages == list(range(19, 25))
     assert sections["绿色环保运营"].pdf_pages == list(range(25, 31))
     assert sections["可持续产业链"].pdf_pages == list(range(31, 38))
     assert sections["公平健康工作环境"].pdf_pages == list(range(38, 42))
     assert sections["和谐社区关系"].pdf_pages == list(range(42, 47))
+
+
+def test_profile_builder_expands_goldwind_topic_routes_to_missing_leaf_requirements():
+    pages = [
+        PageExtraction(
+            report_id="goldwind",
+            page_number=50,
+            text=(
+                "GRI指标、联合国可持续发展目标（SDGs）索引 指标编号和描述 页码 "
+                "GRI 205：反腐败 2016 205-1 已进行腐败风险评估的运营点 P38 "
+                "GRI 414：供应商社会评估 2016 414-1 使用社会标准筛选的新供应商 P59-P60"
+            ),
+        )
+    ]
+    requirements = [
+        DisclosureRequirement(
+            standard_id="GRI",
+            standard_version="2016",
+            disclosure_id="GRI 205-1",
+            requirement_id="GRI 205-1-a",
+            requirement_text="operations assessed for risks related to corruption",
+            keywords=["腐败", "风险评估"],
+        ),
+        DisclosureRequirement(
+            standard_id="GRI",
+            standard_version="2016",
+            disclosure_id="GRI 414-1",
+            requirement_id="GRI 414-1-a",
+            requirement_text="new suppliers screened using social criteria",
+            keywords=["供应商", "社会标准", "筛选"],
+        ),
+    ]
+
+    profile = build_initial_profile(
+        report_id="goldwind_2024",
+        company_name="Goldwind",
+        report_year=2024,
+        pdf_file="goldwind.pdf",
+        total_pdf_pages=52,
+        pages=pages,
+        report_index_pdf_page=50,
+        report_index_report_page=96,
+        requirements=requirements,
+    )
+
+    assert profile.requirement_routes["GRI 205-1-a"].candidate_pdf_pages == [21]
+    assert profile.requirement_routes["GRI 414-1-a"].candidate_pdf_pages == [31, 32]
