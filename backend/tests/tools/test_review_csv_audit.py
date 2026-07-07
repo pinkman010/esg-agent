@@ -1,4 +1,7 @@
 import csv
+import json
+import subprocess
+import sys
 from pathlib import Path
 
 from src.tools.review_csv_audit import audit_review_csv
@@ -95,3 +98,49 @@ def test_review_csv_audit_reports_hard_gate_failures(tmp_path):
     assert "GRI 304-4-a omission_note cannot be partially_disclosed" in result.errors
     assert "GRI 205-3-b KPI page 68 missing complex_table" in result.errors
     assert "GRI 308-1-a KPI page 67 missing complex_table" in result.errors
+
+
+def test_review_csv_audit_cli_writes_json(tmp_path: Path):
+    csv_path = tmp_path / "review.csv"
+    write_csv(
+        csv_path,
+        [
+            {
+                "requirement_id": "GRI 2-1-a",
+                "verdict": "disclosed",
+                "review_status": "not_required",
+                "retrieval_strategy": "index_page_bounded",
+                "evidence_type": "substantive",
+                "source_pdf_page": "1",
+                "source_report_page": "",
+                "page_label": "PDF 第 1 页",
+                "candidate_pdf_pages": "[1]",
+                "quality_flags": "[]",
+                "requires_ocr": "False",
+                "needs_ocr_or_vlm": "False",
+            }
+        ],
+    )
+    output_path = tmp_path / "audit.json"
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "src.tools.review_csv_audit",
+            str(csv_path),
+            "--report-total-pages",
+            "78",
+            "--json-output",
+            str(output_path),
+        ],
+        cwd=Path(__file__).resolve().parents[2],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0
+    payload = json.loads(output_path.read_text(encoding="utf-8"))
+    assert payload["ok"] is True
+    assert payload["errors"] == []

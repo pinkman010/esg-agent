@@ -380,6 +380,7 @@ class DisclosureAgent:
             "GRI 305-1-g": {64},
             "GRI 305-2-a": {20, 63},
             "GRI 305-2-b": {20, 63},
+            "GRI 413-1-a-iv": {14, 42},
         }
 
     def _mark_requirement_specific_quality_flags(self, task: DisclosureTask, evidence: list[EvidenceItem]) -> None:
@@ -547,6 +548,16 @@ class DisclosureAgent:
 
     def _has_required_ohs_rate_evidence(self, task: DisclosureTask, evidence_text: str) -> bool:
         evidence_text_lower = evidence_text.lower()
+        if task.disclosure_id == "GRI 403-10":
+            return any(
+                term in evidence_text_lower
+                for term in (
+                    "职业病发病率",
+                    "工作相关健康问题发生率",
+                    "work-related ill health rate",
+                    "occupational disease rate",
+                )
+            )
         if task.requirement_id.endswith("-a-i") or "fatalit" in task.requirement_text.lower() or "死亡" in task.requirement_text:
             return "死亡率" in evidence_text or "fatality rate" in evidence_text_lower
         return any(term in evidence_text_lower for term in ("trir", "ltir", "百万工时", "per million hours"))

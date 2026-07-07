@@ -131,6 +131,39 @@ class SingleReportWorkflow:
             disclosure_id = task.disclosure_id.removeprefix("GRI ").strip()
             entry = report_index.get(disclosure_id)
             route = self.evidence_router.route(task)
+            override_pages = self._candidate_page_overrides(task)
+            if (
+                route.source == "report_profile_section"
+                and override_pages is not None
+                and self.report_profile is not None
+                and self.report_profile.report_id == "envision_2024"
+            ):
+                page_count = max((page.page_number for page in pages), default=0)
+                candidate_pages = [
+                    page for page in override_pages if page_count == 0 or 1 <= page <= page_count
+                ]
+                candidate_report_pages = [
+                    self.report_profile.report_page_for_pdf_page(page) if self.report_profile else None
+                    for page in candidate_pages
+                ]
+                enriched_tasks.append(
+                    task.model_copy(
+                        update={
+                            "candidate_pages": candidate_pages,
+                            "candidate_pdf_pages": candidate_pages,
+                            "candidate_report_pages": candidate_report_pages,
+                            "candidate_page_source": "requirement_contract",
+                            "excluded_pdf_pages": profile_excluded_pages,
+                            "report_index_pdf_page": self.report_profile.page_numbering.report_index_pdf_page
+                            if self.report_profile
+                            else None,
+                            "report_index_report_page": self.report_profile.page_numbering.report_index_report_page
+                            if self.report_profile
+                            else None,
+                        }
+                    )
+                )
+                continue
             if route.source in {"report_profile", "report_profile_section"}:
                 enriched_tasks.append(
                     task.model_copy(
@@ -313,6 +346,8 @@ class SingleReportWorkflow:
         if contract is not None and contract.candidate_pages is not None:
             return list(contract.candidate_pages)
         pages_by_requirement = {
+            "GRI 2-12-b": [13],
+            "GRI 2-12-b-i": [13],
             "GRI 2-22-a": [4, 5],
             "GRI 2-23-a": [9, 11, 32, 54, 57, 59],
             "GRI 2-23-a-i": [9, 32],
@@ -335,6 +370,14 @@ class SingleReportWorkflow:
             "GRI 2-26-a-ii": [59],
             "GRI 2-27-d": [],
             "GRI 2-28-a": [9],
+            "GRI 2-29-a": [14, 15],
+            "GRI 2-29-a-i": [14, 15],
+            "GRI 2-29-a-ii": [14, 15],
+            "GRI 2-29-a-iii": [14, 15],
+            "GRI 3-1-a": [14, 15],
+            "GRI 3-1-a-i": [14, 15],
+            "GRI 3-1-a-ii": [14, 15],
+            "GRI 3-1-b": [14, 15],
             "GRI 201-2-a": [17, 18, 19],
             "GRI 201-2-a-i": [17, 18],
             "GRI 201-2-a-ii": [17, 18],
@@ -353,6 +396,10 @@ class SingleReportWorkflow:
             "GRI 202-1-b": [],
             "GRI 202-1-c": [],
             "GRI 202-1-d": [],
+            "GRI 202-2-a": [72],
+            "GRI 202-2-b": [72],
+            "GRI 202-2-c": [72],
+            "GRI 202-2-d": [72],
             "GRI 203-1-a": [4, 12, 42, 43, 44],
             "GRI 203-1-b": [4, 42, 43, 44],
             "GRI 203-1-c": [42, 43, 44],

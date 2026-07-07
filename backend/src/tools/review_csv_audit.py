@@ -1,6 +1,7 @@
 import csv
 import json
 from dataclasses import dataclass, field
+from dataclasses import asdict
 from pathlib import Path
 
 
@@ -73,3 +74,26 @@ def audit_review_csv(path: str | Path, report_total_pages: int) -> ReviewCsvAudi
             result.errors.append(f"{requirement_id} {verdict} must be needs_manual_review")
 
     return result
+
+
+def main() -> None:
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Audit review CSV hard gates.")
+    parser.add_argument("review_csv", type=Path)
+    parser.add_argument("--report-total-pages", type=int, required=True)
+    parser.add_argument("--json-output", type=Path)
+    args = parser.parse_args()
+
+    result = audit_review_csv(args.review_csv, report_total_pages=args.report_total_pages)
+    payload = {"ok": result.ok, **asdict(result)}
+    text = json.dumps(payload, ensure_ascii=False, indent=2)
+    if args.json_output:
+        args.json_output.parent.mkdir(parents=True, exist_ok=True)
+        args.json_output.write_text(text + "\n", encoding="utf-8")
+    print(text)
+    raise SystemExit(0 if result.ok else 1)
+
+
+if __name__ == "__main__":
+    main()

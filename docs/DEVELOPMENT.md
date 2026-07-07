@@ -190,6 +190,38 @@ uv run --no-sync python -m src.tools.first_pass_quality ../tmp/review/current_55
 
 该工具按 `requirement_id` 聚合首行，并支持人工复核字段：`manual_label`、`correct_pdf_pages`、`suggested_verdict`、`issue_type`。输出指标包括 first-pass recall、false disclosed、wrong source page、unknown leakage 和 after-rules delta。
 
+## Envision 577 Review CSV Regeneration Gate
+
+用途：从 Envision 2024 源报告、report profile 和当前规则重新生成 577 条 eligible GRI assessment review CSV，并与已批准 baseline 比较。
+
+命令：
+
+```powershell
+cd backend
+uv run --no-sync python -m src.tools.regenerate_review_csv `
+  --report-id envision_2024 `
+  --pdf "data/reports/Envision Energy 2024-zh.pdf" `
+  --profile data/reports/profiles/envision_2024.json `
+  --output ../tmp/review/current_577_review_regenerated.csv `
+  --baseline ../tmp/review/current_577_review_after_profile_routing.csv `
+  --audit-output ../tmp/review/current_577_review_regenerated_audit.json `
+  --diff-summary-output ../tmp/review/current_577_review_regeneration_diff_summary.json `
+  --report-total-pages 78
+```
+
+通过标准：
+
+- 唯一 eligible requirement 数为 577。
+- compilation requirement 不作为独立 assessment 输出。
+- `review_csv_audit` 通过。
+- `global_fallback=0`。
+- `omission_note` 不升格。
+- `disclosed` 全部为 `not_required`。
+- `partially_disclosed` 和 `unknown` 全部为 `needs_manual_review`。
+- 和 baseline 的 verdict、review_status、source page、evidence_type、quality_flags、OCR/VLM 字段无非预期变化。
+
+产物写入 `tmp/review/`，不提交。
+
 ## 7. OpenAPI 类型生成
 
 前端 API 类型通过 FastAPI OpenAPI 自动生成。

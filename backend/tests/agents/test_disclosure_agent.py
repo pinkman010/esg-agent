@@ -3237,6 +3237,39 @@ def test_disclosure_agent_handles_403_10_ill_health_kpi_rules():
             assert PageQualityFlag.COMPLEX_TABLE in result.assessment.evidence[-1].quality_flags
 
 
+def test_disclosure_agent_does_not_use_injury_rate_as_ill_health_rate_for_profile_route():
+    task = DisclosureTask(
+        task_id="task-403-10-a",
+        run_id="run-1",
+        report_id="report-1",
+        standard_id="GRI 403",
+        standard_version="2018",
+        disclosure_id="GRI 403-10",
+        requirement_id="GRI 403-10-a",
+        requirement_text="For all employees:",
+        keywords=["职业病", "工作相关健康问题", "死亡", "职业健康"],
+        candidate_pages=[67],
+        candidate_pdf_pages=[67],
+        candidate_page_source="report_profile",
+    )
+    chunks = [
+        DocumentChunk(
+            chunk_id="chunk-403-10-a",
+            report_id="report-1",
+            text="职业病病例数量 0 工作相关健康问题导致死亡数 0 TRIR 0.29 按百万工时计算",
+            source_page=67,
+            source_method=EvidenceSourceMethod.PDFPLUMBER,
+            source_file_hash="hash-1",
+            quality_flags=[PageQualityFlag.DIGITAL_TEXT, PageQualityFlag.COMPLEX_TABLE],
+        )
+    ]
+
+    result = DisclosureAgent().analyze(task, chunks, confirm_llm=False)
+
+    assert result.assessment.verdict is AssessmentVerdict.PARTIALLY_DISCLOSED
+    assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+
+
 def test_disclosure_agent_handles_404_and_405_partial_rules():
     cases = [
         ("GRI 404-1-a", "GRI 404-1", [(35, "员工培训总时数 259,036 小时 人均受训 56.30 小时"), (66, "员工培训总时数 人均受训小时")], AssessmentVerdict.PARTIALLY_DISCLOSED, [35, 66]),

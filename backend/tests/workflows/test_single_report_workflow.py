@@ -499,6 +499,95 @@ def test_single_report_workflow_applies_profile_section_route(tmp_path):
     assert enriched[0].candidate_page_source == "report_profile_section"
 
 
+def test_single_report_workflow_prefers_requirement_override_over_profile_section_route(tmp_path):
+    pack_path = tmp_path / "gri_requirement_pack.json"
+    pack_path.write_text(json.dumps({"requirements": []}), encoding="utf-8")
+    profile_path = tmp_path / "profile.json"
+    profile_path.write_text(
+        json.dumps(
+            {
+                "report_id": "envision_2024",
+                "company_name": "Envision",
+                "report_year": 2024,
+                "pdf_file": "envision.pdf",
+                "total_pdf_pages": 78,
+                "page_numbering": {
+                    "report_index_pdf_page": 71,
+                    "report_index_report_page": 70,
+                    "total_pdf_pages": 78,
+                },
+                "gri_index": {"pdf_pages": [71, 72]},
+                "sections": [
+                    {
+                        "name": "stakeholder_engagement",
+                        "pdf_pages": [14, 15],
+                        "report_pages": [13, 14],
+                        "terms": ["利益相关方"],
+                    }
+                ],
+                "index_note_pages": [],
+                "assurance_pages": [],
+                "requirement_routes": {},
+            }
+        ),
+        encoding="utf-8",
+    )
+    workflow = SingleReportWorkflow(
+        None,
+        FakeParser(),
+        FakeAdapter(),
+        DisclosureAgent(),
+        requirement_pack_path=pack_path,
+        report_profile_path=profile_path,
+    )
+    from src.domain.models import DisclosureTask
+
+    tasks = [
+        DisclosureTask(
+            task_id="task-203-2-b",
+            run_id="run-1",
+            report_id="report-1",
+            standard_id="GRI 203",
+            standard_version="2016",
+            disclosure_id="GRI 203-2",
+            requirement_id="GRI 203-2-b",
+            requirement_text="significant indirect economic impacts.",
+            keywords=["利益相关方", "SDGs"],
+        ),
+        DisclosureTask(
+            task_id="task-207-3-a",
+            run_id="run-1",
+            report_id="report-1",
+            standard_id="GRI 207",
+            standard_version="2019",
+            disclosure_id="GRI 207-3",
+            requirement_id="GRI 207-3-a",
+            requirement_text="stakeholder concerns related to tax.",
+            keywords=["利益相关方"],
+        ),
+        DisclosureTask(
+            task_id="task-202-2-a",
+            run_id="run-1",
+            report_id="report-1",
+            standard_id="GRI 202",
+            standard_version="2016",
+            disclosure_id="GRI 202-2",
+            requirement_id="GRI 202-2-a",
+            requirement_text="proportion of senior management hired from the local community.",
+            keywords=["利益相关方"],
+        ),
+    ]
+
+    enriched = workflow._attach_report_index_candidates([], tasks)
+
+    assert enriched[0].candidate_pdf_pages == [12, 42, 43, 44, 69]
+    assert enriched[0].candidate_page_source == "requirement_contract"
+    assert enriched[1].candidate_pdf_pages == [57]
+    assert enriched[1].candidate_page_source == "requirement_contract"
+    assert enriched[2].candidate_pdf_pages == [72]
+    assert enriched[2].candidate_page_source == "requirement_contract"
+
+
 def test_single_report_workflow_supplements_candidate_pages_for_current_150_rules(tmp_path):
     pack_path = tmp_path / "gri_requirement_pack.json"
     pack_path.write_text(
