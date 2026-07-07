@@ -145,3 +145,72 @@ def test_profile_builder_extracts_goldwind_two_up_index_routes():
     assert profile.requirement_routes["GRI 205-2-b"].candidate_pdf_pages == [21]
     assert profile.requirement_routes["GRI 2-5-b-ii"].candidate_pdf_pages == [47, 48]
     assert profile.assurance_pages[0].pdf_page == 47
+
+
+def test_profile_builder_extracts_goldwind_index_routes_for_adjacent_disclosures():
+    pages = [
+        PageExtraction(
+            report_id="goldwind",
+            page_number=50,
+            text=(
+                "GRI指标、联合国可持续发展目标（SDGs）索引 指标编号和描述 页码 "
+                "2-6 活动、价值链和其他业务关系 P08-P09, P58-P61 GRI 205：反腐败 2016 "
+                "2-8 员工之外的工作者 P58-P61 SDG8 205-2 反腐败政策和程序的传达及培训 P38 "
+                "管治 205-3 经确认的腐败事件和采取的行动 P38 "
+                "GRI 414：供应商社会评估 2016 414-1 使用社会标准筛选的新供应商 P59-P60 "
+                "GRI 305：排放 2016 305-1 直接（范畴1）温室气体排放 P46 "
+                "305-2 能源间接（范畴2）温室气体排放 P46"
+            ),
+        ),
+    ]
+    requirements = [
+        DisclosureRequirement(
+            standard_id="GRI",
+            standard_version="2016",
+            disclosure_id="GRI 205-2",
+            requirement_id="GRI 205-2-b",
+            requirement_text="anti-corruption training",
+            keywords=["反腐败", "培训"],
+        ),
+        DisclosureRequirement(
+            standard_id="GRI",
+            standard_version="2016",
+            disclosure_id="GRI 205-3",
+            requirement_id="GRI 205-3-a",
+            requirement_text="confirmed incidents of corruption",
+            keywords=["腐败事件"],
+        ),
+        DisclosureRequirement(
+            standard_id="GRI",
+            standard_version="2016",
+            disclosure_id="GRI 414-2",
+            requirement_id="GRI 414-2-a",
+            requirement_text="suppliers assessed for social impacts",
+            keywords=["供应商", "社会影响"],
+        ),
+        DisclosureRequirement(
+            standard_id="GRI",
+            standard_version="2016",
+            disclosure_id="GRI 305-1",
+            requirement_id="GRI 305-1-a",
+            requirement_text="scope 1 emissions",
+            keywords=["范围一"],
+        ),
+    ]
+
+    profile = build_initial_profile(
+        report_id="goldwind_2024",
+        company_name="Goldwind",
+        report_year=2024,
+        pdf_file="goldwind.pdf",
+        total_pdf_pages=52,
+        pages=pages,
+        report_index_pdf_page=50,
+        report_index_report_page=96,
+        requirements=requirements,
+    )
+
+    assert profile.requirement_routes["GRI 205-2-b"].candidate_pdf_pages == [21]
+    assert profile.requirement_routes["GRI 205-3-a"].candidate_pdf_pages == [21]
+    assert profile.requirement_routes["GRI 414-2-a"].candidate_pdf_pages == [31, 32]
+    assert profile.requirement_routes["GRI 305-1-a"].candidate_pdf_pages == [25]

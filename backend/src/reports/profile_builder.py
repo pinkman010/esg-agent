@@ -147,9 +147,10 @@ def _requirement_routes(
     requirements: list[DisclosureRequirement],
 ) -> dict[str, dict]:
     routes: dict[str, dict] = {}
+    topic_routes = _topic_routes(disclosure_routes)
     for requirement in requirements:
         disclosure_id = requirement.disclosure_id.removeprefix("GRI ").strip()
-        candidate_pages = disclosure_routes.get(disclosure_id)
+        candidate_pages = disclosure_routes.get(disclosure_id) or _topic_candidate_pages(disclosure_id, topic_routes)
         if not candidate_pages:
             continue
         routes[requirement.requirement_id] = {
@@ -158,6 +159,30 @@ def _requirement_routes(
             "metric_terms": requirement.keywords,
         }
     return routes
+
+
+def _topic_routes(disclosure_routes: dict[str, list[int]]) -> dict[str, list[int]]:
+    routes: dict[str, set[int]] = {}
+    for disclosure_id, pages in disclosure_routes.items():
+        topic = _three_digit_topic(disclosure_id)
+        if topic is None:
+            continue
+        routes.setdefault(topic, set()).update(pages)
+    return {topic: sorted(pages) for topic, pages in routes.items()}
+
+
+def _topic_candidate_pages(disclosure_id: str, topic_routes: dict[str, list[int]]) -> list[int] | None:
+    topic = _three_digit_topic(disclosure_id)
+    if topic is None:
+        return None
+    return topic_routes.get(topic)
+
+
+def _three_digit_topic(disclosure_id: str) -> str | None:
+    match = re.match(r"^(?P<topic>\d{3})-\d+", disclosure_id)
+    if match is None:
+        return None
+    return match.group("topic")
 
 
 def _assurance_pages(pages: list[PageExtraction], page_numbering: PageNumbering) -> list[AssurancePageProfile]:
