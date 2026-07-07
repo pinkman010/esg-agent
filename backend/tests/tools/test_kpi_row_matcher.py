@@ -23,6 +23,27 @@ def test_match_kpi_row_extracts_metric_value_and_unit():
     assert matches[0].source_page == 63
 
 
+def test_kpi_row_matcher_extracts_goldwind_year_value_unit():
+    chunk = DocumentChunk(
+        chunk_id="goldwind-p47",
+        report_id="goldwind",
+        text="指标 单位 2024年 2023年 2022年\n职业病发病次数 次 0 0 0\n重大安全事故 次 0 0 0",
+        source_page=47,
+        source_method=EvidenceSourceMethod.PDFPLUMBER,
+        source_file_hash="hash",
+        quality_flags=[PageQualityFlag.COMPLEX_TABLE],
+    )
+
+    matches = match_kpi_rows([chunk], ["职业病发病次数"], year_columns=["2024年", "2024"])
+
+    assert len(matches) == 1
+    assert matches[0].row_label == "职业病发病次数"
+    assert matches[0].unit == "次"
+    assert matches[0].value == "0"
+    assert matches[0].year_column == "2024年"
+    assert matches[0].preview.startswith("职业病发病次数")
+
+
 def test_match_kpi_row_does_not_match_unrelated_metric():
     chunk = DocumentChunk(
         chunk_id="chunk-67",

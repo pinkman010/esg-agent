@@ -65,11 +65,11 @@ def _match_metric_line(text: str, term: str, year_columns: list[str]) -> tuple[s
 
 def _preview(text: str, term: str) -> str:
     index = text.find(term)
-    start = max(0, index - 20)
+    if index < 0:
+        return text[:140] + "..." if len(text) > 140 else text
+    start = index
     end = min(len(text), index + len(term) + 120)
     preview = text[start:end].strip()
-    if start > 0:
-        preview = f"...{preview}"
     if end < len(text):
         preview = f"{preview}..."
     return preview
