@@ -1,4 +1,6 @@
-from src.tools.evidence import build_kpi_evidence_preview
+from src.domain.enums import EvidenceSourceMethod
+from src.domain.models import DisclosureTask, DocumentChunk
+from src.tools.evidence import build_kpi_evidence_preview, chunk_to_evidence
 
 
 def test_build_kpi_evidence_preview_prefers_target_metric_row():
@@ -15,3 +17,60 @@ def test_build_kpi_evidence_preview_prefers_target_metric_row():
 
     assert "范围二 - 基于位置(tCO2e) 57,897.05" in preview
     assert "总耗水量" not in preview
+
+
+def test_chunk_to_evidence_preview_prefers_kpi_row_preview():
+    task = DisclosureTask(
+        task_id="task",
+        run_id="run",
+        report_id="goldwind",
+        standard_id="GRI",
+        standard_version="2021",
+        disclosure_id="GRI 403-9",
+        requirement_id="GRI 403-9-a-i",
+        requirement_text="fatalities",
+        keywords=["死亡", "工伤"],
+    )
+    chunk = DocumentChunk(
+        chunk_id="chunk",
+        report_id="goldwind",
+        text="页眉 目录 相邻表格 职业病发病次数 次 0 0 0",
+        source_page=47,
+        source_method=EvidenceSourceMethod.PDFPLUMBER,
+        source_file_hash="hash",
+    )
+
+    evidence = chunk_to_evidence(
+        task,
+        chunk,
+        retrieval_metadata={"kpi_row_preview": "职业病发病次数 次 0"},
+    )
+
+    assert evidence.evidence_preview == "职业病发病次数 次 0"
+
+
+def test_chunk_to_evidence_ignores_blank_kpi_row_preview():
+    task = DisclosureTask(
+        task_id="task",
+        run_id="run",
+        report_id="goldwind",
+        standard_id="GRI",
+        standard_version="2021",
+        disclosure_id="GRI 418-1",
+        requirement_id="GRI 418-1-a",
+        requirement_text="customer privacy complaints",
+        keywords=["客户隐私", "投诉"],
+    )
+    chunk = DocumentChunk(
+        chunk_id="chunk",
+        report_id="goldwind",
+        text="页眉 目录 2024年公司未接到任何涉及侵犯客户隐私或数据丢失的投诉。",
+        source_page=61,
+        source_method=EvidenceSourceMethod.PDFPLUMBER,
+        source_file_hash="hash",
+    )
+
+    evidence = chunk_to_evidence(task, chunk, retrieval_metadata={"kpi_row_preview": "   "})
+
+    assert "客户隐私" in evidence.evidence_preview
+    assert evidence.evidence_preview != "   "

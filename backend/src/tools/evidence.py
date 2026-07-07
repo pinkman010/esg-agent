@@ -17,11 +17,8 @@ def chunk_to_evidence(
     metadata = {**chunk.metadata, "task_id": task.task_id, "chunk_id": chunk.chunk_id}
     if retrieval_metadata:
         metadata.update(retrieval_metadata)
-    evidence_preview = (
-        str(metadata.get("kpi_row_preview"))
-        if metadata.get("kpi_row_preview")
-        else build_evidence_preview(chunk.text, task.keywords)
-    )
+    metadata_preview = _metadata_preview(metadata)
+    evidence_preview = metadata_preview or build_evidence_preview(chunk.text, task.keywords)
 
     return EvidenceItem(
         evidence_id=evidence_id_for(task.task_id, chunk.chunk_id),
@@ -36,6 +33,17 @@ def chunk_to_evidence(
         evidence_preview=evidence_preview,
         metadata=metadata,
     )
+
+
+def _metadata_preview(metadata: dict) -> str:
+    for key in ("kpi_row_preview", "evidence_anchor_preview", "gri_index_row_preview", "section_heading_preview"):
+        value = metadata.get(key)
+        if value is None:
+            continue
+        preview = str(value).strip()
+        if preview:
+            return preview
+    return ""
 
 
 def build_evidence_preview(text: str, keywords: list[str], window_before: int = 80, window_after: int = 140) -> str:
