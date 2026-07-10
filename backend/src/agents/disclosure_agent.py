@@ -714,8 +714,12 @@ class DisclosureAgent:
         if task.requirement_id == "GRI 418-1-a" and not bounded_evidence:
             return (
                 AssessmentVerdict.UNKNOWN,
-                "No valid report evidence discloses substantiated customer privacy complaints.",
-                ["客户隐私投诉数量", "投诉来源分类"],
+                "报告未披露经证实的客户隐私投诉总数，也未分别披露外部方投诉和监管机构投诉数量；当前无有效 source evidence，因此判定为 unknown。",
+                [
+                    "经证实的客户隐私投诉总数",
+                    "由外部方提出并经组织证实的投诉数量",
+                    "监管机构提出的投诉数量",
+                ],
             )
         if not bounded_evidence:
             return None, None, []
@@ -759,13 +763,18 @@ class DisclosureAgent:
             for item in evidence:
                 item.metadata.setdefault("decision_source", decision_source)
                 item.metadata.setdefault("ontology_review_status", ontology_result.review_status.value)
-            missing_items = [*ontology_result.missing_items]
-            for item in contract.missing_items:
-                if item not in missing_items:
-                    missing_items.append(item)
+            if contract.rationale:
+                rationale = contract.rationale
+                missing_items = list(contract.missing_items)
+            else:
+                rationale = ontology_result.rationale
+                missing_items = [*ontology_result.missing_items]
+                for item in contract.missing_items:
+                    if item not in missing_items:
+                        missing_items.append(item)
             return (
                 ontology_result.verdict,
-                ontology_result.rationale,
+                rationale,
                 missing_items,
             )
 

@@ -180,6 +180,33 @@ def test_ohs_management_contracts_have_ontology_metadata():
         assert contract.review_status is None
 
 
+def test_holdout_leaf_contracts_define_atomic_review_narratives():
+    expected = {
+        "GRI 205-1-a": (
+            "PDF 第21页披露公司根据不同业务单位的特点、重要性和风险程度制定审计策略，可支撑腐败风险评估机制方向；但未披露接受腐败风险评估的运营点总数、运营点统计口径和覆盖百分比，因此判定为 partially_disclosed。",
+            ("接受腐败风险评估的运营点总数", "运营点定义或统计口径", "接受腐败风险评估的运营点百分比"),
+        ),
+        "GRI 205-1-b": (
+            "PDF 第21页披露按风险程度制定审计策略，并在审计中关注商业道德问题，可支撑腐败风险识别方向；但未披露实际识别出的重大腐败风险类型、高风险业务环节、地点或完整风险清单，因此判定为 partially_disclosed。",
+            ("识别出的重大腐败风险类型", "涉及重大腐败风险的高风险业务环节", "重大腐败风险涉及的运营地点或完整风险清单"),
+        ),
+        "GRI 414-1-a": (
+            "PDF 第31页披露2024年完成85家供应商社会责任审核及A、B级审核结果，可支撑供应商社会标准审核方向；但未明确这些供应商是否为报告期新供应商，也未披露新供应商总数、经社会标准筛选的数量和百分比，因此判定为 partially_disclosed。",
+            ("报告期内新供应商总数或计算分母", "使用社会标准筛选的新供应商数量", "使用社会标准筛选的新供应商百分比"),
+        ),
+        "GRI 403-9-a-i": (
+            "PDF 第47页明确披露2024年员工因工死亡人数为1，可支撑死亡数量；但未披露员工工伤死亡率、计算使用的工作小时数分母及比率计算口径，因此判定为 partially_disclosed。",
+            ("员工因工伤死亡率", "死亡率计算使用的工作小时数分母", "死亡率计算口径及所采用的每20万或每100万工时基准"),
+        ),
+    }
+
+    for requirement_id, (rationale, missing_items) in expected.items():
+        contract = get_requirement_contract(requirement_id)
+        assert contract is not None
+        assert contract.rationale == rationale
+        assert contract.missing_items == missing_items
+
+
 def test_training_and_diversity_contracts_share_breakdown_dimension_group():
     contract_404 = get_requirement_contract("GRI 404-1-a")
     contract_405 = get_requirement_contract("GRI 405-1-b")

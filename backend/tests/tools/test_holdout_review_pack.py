@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from src.tools.holdout_review_pack import build_review_pack_rows, build_route_improvement_rows
+from src.tools.holdout_review_pack import build_review_pack_rows, build_route_improvement_rows, write_review_pack_rows
 
 
 def test_build_route_improvement_rows_joins_gold_and_first_pass(tmp_path: Path):
@@ -64,6 +64,55 @@ def test_build_route_improvement_rows_uses_profile_candidates_when_first_pass_ha
     assert rows[0]["route_status"] == "candidate_without_evidence"
 
 
+def test_build_route_improvement_rows_aggregates_review_context_per_requirement(tmp_path: Path):
+    diagnosis = tmp_path / "diagnosis.csv"
+    diagnosis.write_text(
+        "requirement_id,issue_type,correct_pdf_pages,evidence_kind,suggested_profile_route\n"
+        'GRI 414-1-a,unknown_leakage,"[31]",kpi_value,"[31, 32]"\n',
+        encoding="utf-8",
+    )
+    first_pass = tmp_path / "first.csv"
+    first_pass.write_text(
+        "requirement_id,requirement_text,verdict,review_status,source_pdf_page,candidate_pdf_pages,rationale,missing_items,evidence_preview\n"
+        'GRI 414-1-a,new supplier social screening percentage,partially_disclosed,needs_manual_review,31,"[31, 32]",directional supplier audit evidence,"[\"\"new supplier denominator\"\"]",social audit row\n'
+        'GRI 414-1-a,new supplier social screening percentage,partially_disclosed,needs_manual_review,32,"[31, 32]",directional supplier audit evidence,"[\"\"new supplier denominator\"\"]",adjacent page\n',
+        encoding="utf-8",
+    )
+
+    rows = build_route_improvement_rows(diagnosis, first_pass)
+
+    assert len(rows) == 1
+    assert rows[0]["requirement_text"] == "new supplier social screening percentage"
+    assert rows[0]["verdict"] == "partially_disclosed"
+    assert rows[0]["review_status"] == "needs_manual_review"
+    assert rows[0]["source_pdf_pages"] == "[31, 32]"
+    assert rows[0]["rationale"] == "directional supplier audit evidence"
+    assert rows[0]["missing_items"] == '["new supplier denominator"]'
+
+
+def test_build_route_improvement_rows_falls_back_to_requirement_text_mapping(tmp_path: Path):
+    diagnosis = tmp_path / "diagnosis.csv"
+    diagnosis.write_text(
+        "requirement_id,issue_type,correct_pdf_pages,evidence_kind,suggested_profile_route\n"
+        "GRI 418-1-a,acceptable,[], ,[]\n",
+        encoding="utf-8",
+    )
+    first_pass = tmp_path / "first.csv"
+    first_pass.write_text(
+        "requirement_id,requirement_text,verdict,review_status,source_pdf_page,candidate_pdf_pages,rationale,missing_items,evidence_preview\n"
+        'GRI 418-1-a,,unknown,needs_manual_review,,,no valid complaint evidence,"[""complaint total""]",\n',
+        encoding="utf-8",
+    )
+
+    rows = build_route_improvement_rows(
+        diagnosis,
+        first_pass,
+        requirement_texts={"GRI 418-1-a": "substantiated customer privacy complaints"},
+    )
+
+    assert rows[0]["requirement_text"] == "substantiated customer privacy complaints"
+
+
 def test_route_improvement_marks_profile_route_without_evidence_as_keyword_miss(tmp_path: Path):
     diagnosis = tmp_path / "diagnosis.csv"
     diagnosis.write_text(
@@ -116,6 +165,46 @@ def test_build_review_pack_rows_marks_manual_review_need(tmp_path: Path):
 
     assert rows[0]["manual_check_required"] == "true"
     assert rows[0]["manual_check_focus"] == "route_and_preview"
+
+
+def test_build_review_pack_rows_includes_aggregated_assessment_context(tmp_path: Path):
+    route_improvement = tmp_path / "routes.csv"
+    route_improvement.write_text(
+        "requirement_id,requirement_text,verdict,review_status,source_pdf_pages,rationale,missing_items,issue_type,evidence_kind,correct_pdf_pages,suggested_profile_route,before_verdict,before_review_status,before_source_pdf_pages,before_candidate_pdf_pages,profile_candidate_pdf_pages,route_status,evidence_preview\n"
+        'GRI 414-1-a,new supplier social screening percentage,partially_disclosed,needs_manual_review,"[31]",directional supplier audit evidence,"[""new supplier denominator""]",acceptable,kpi_value,"[31]","[31, 32]",partially_disclosed,needs_manual_review,"[31]","[31, 32]","[31, 32]",candidate_with_evidence,social audit row\n',
+        encoding="utf-8",
+    )
+
+    rows = build_review_pack_rows(route_improvement)
+
+    assert rows[0]["requirement_text"] == "new supplier social screening percentage"
+    assert rows[0]["verdict"] == "partially_disclosed"
+    assert rows[0]["review_status"] == "needs_manual_review"
+    assert rows[0]["source_pdf_pages"] == "[31]"
+    assert rows[0]["rationale"] == "directional supplier audit evidence"
+    assert rows[0]["missing_items"] == '["new supplier denominator"]'
+
+
+def test_build_review_pack_rows_separates_compilation_guardrails_from_leaf_missing_items(tmp_path: Path):
+    route_improvement = tmp_path / "routes.csv"
+    route_improvement.write_text(
+        "requirement_id,requirement_text,verdict,review_status,source_pdf_pages,rationale,missing_items,issue_type,evidence_kind,correct_pdf_pages,suggested_profile_route,before_verdict,before_review_status,before_source_pdf_pages,before_candidate_pdf_pages,profile_candidate_pdf_pages,route_status,evidence_preview\n"
+        'GRI 403-9-a-i,work-related injury fatalities,partially_disclosed,needs_manual_review,"[47]",fatality count only,"[""employee fatality rate"", ""commuting incidents included only when transport is organization-arranged"", ""rates based on 200000 or 1000000 hours worked""]",acceptable,kpi_value,"[47]","[47]",partially_disclosed,needs_manual_review,"[47]","[47]","[47]",candidate_with_evidence,fatality row\n',
+        encoding="utf-8",
+    )
+
+    rows = build_review_pack_rows(route_improvement)
+
+    assert rows[0]["missing_items"] == '["employee fatality rate"]'
+    assert rows[0]["guardrail_items"] == (
+        '["commuting incidents included only when transport is organization-arranged", '
+        '"rates based on 200000 or 1000000 hours worked"]'
+    )
+
+    output = tmp_path / "review-pack.csv"
+    write_review_pack_rows(rows, output)
+
+    assert "guardrail_items" in output.read_text(encoding="utf-8-sig").splitlines()[0]
 
 
 def test_build_review_pack_rows_clears_stale_diagnosis_when_unknown_has_no_evidence(tmp_path: Path):

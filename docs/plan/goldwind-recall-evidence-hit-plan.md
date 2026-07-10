@@ -570,6 +570,7 @@ Run:
 cd backend
 @'
 from pathlib import Path
+from src.standards.gri import GRIAdapter
 from src.tools.holdout_review_pack import (
     build_route_improvement_rows,
     write_route_improvement_rows,
@@ -578,12 +579,18 @@ from src.tools.holdout_review_pack import (
 )
 
 review_dir = Path("../tmp/review")
+adapter = GRIAdapter(Path("data/manifests/gri_requirement_checklist.json"))
+requirement_texts = {
+    requirement.requirement_id: requirement.requirement_text
+    for requirement in adapter.load_requirements()
+}
 route_path = review_dir / "holdout_goldwind_2024_route_improvement.csv"
 pack_path = review_dir / "holdout_goldwind_2024_review_pack.csv"
 rows = build_route_improvement_rows(
     review_dir / "holdout_goldwind_2024_recall_diagnosis.csv",
     review_dir / "holdout_goldwind_2024_first_pass.csv",
     Path("data/reports/profiles/goldwind_2024.json"),
+    requirement_texts=requirement_texts,
 )
 write_route_improvement_rows(rows, route_path)
 pack = build_review_pack_rows(route_path)

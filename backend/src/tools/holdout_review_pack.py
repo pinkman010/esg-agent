@@ -2,13 +2,21 @@ from __future__ import annotations
 
 import csv
 import json
+from collections.abc import Mapping
 from pathlib import Path
 
 from src.reports.profile import load_report_profile
+from src.standards.compilation_guardrails import get_compilation_guardrails
 
 
 ROUTE_IMPROVEMENT_COLUMNS = [
     "requirement_id",
+    "requirement_text",
+    "verdict",
+    "review_status",
+    "source_pdf_pages",
+    "rationale",
+    "missing_items",
     "issue_type",
     "evidence_kind",
     "correct_pdf_pages",
@@ -26,6 +34,13 @@ ROUTE_IMPROVEMENT_COLUMNS = [
 
 REVIEW_PACK_COLUMNS = [
     "requirement_id",
+    "requirement_text",
+    "verdict",
+    "review_status",
+    "source_pdf_pages",
+    "rationale",
+    "missing_items",
+    "guardrail_items",
     "issue_type",
     "evidence_kind",
     "correct_pdf_pages",
@@ -45,6 +60,7 @@ def build_route_improvement_rows(
     diagnosis_csv: Path,
     first_pass_csv: Path,
     report_profile_path: Path | None = None,
+    requirement_texts: Mapping[str, str] | None = None,
 ) -> list[dict[str, str]]:
     diagnosis_rows = _read_csv(diagnosis_csv)
     first_rows = _group_by_requirement(_read_csv(first_pass_csv))
@@ -53,13 +69,23 @@ def build_route_improvement_rows(
     for diagnosis in diagnosis_rows:
         requirement_id = diagnosis["requirement_id"]
         rows = first_rows.get(requirement_id, [])
-        source_pages = sorted({row["source_pdf_page"] for row in rows if row.get("source_pdf_page")})
+        source_pages = sorted(
+            {row["source_pdf_page"] for row in rows if row.get("source_pdf_page")},
+            key=int,
+        )
         candidate_pages = _first_non_empty(rows, "candidate_pdf_pages")
         profile_candidate_pages = profile_routes.get(requirement_id, "[]")
         correct_pages = diagnosis.get("correct_pdf_pages", "[]")
         output.append(
             {
                 "requirement_id": requirement_id,
+                "requirement_text": _first_non_empty(rows, "requirement_text")
+                or (requirement_texts or {}).get(requirement_id, ""),
+                "verdict": _first_non_empty(rows, "verdict") or "missing",
+                "review_status": _first_non_empty(rows, "review_status") or "missing",
+                "source_pdf_pages": json.dumps([int(page) for page in source_pages], ensure_ascii=False),
+                "rationale": _first_non_empty(rows, "rationale"),
+                "missing_items": _first_non_empty(rows, "missing_items"),
                 "issue_type": diagnosis.get("issue_type", ""),
                 "evidence_kind": diagnosis.get("evidence_kind", ""),
                 "correct_pdf_pages": correct_pages,
@@ -90,6 +116,10 @@ def build_review_pack_rows(route_improvement_csv: Path) -> list[dict[str, str]]:
     rows = _read_csv(route_improvement_csv)
     output: list[dict[str, str]] = []
     for row in rows:
+        leaf_missing_items, guardrail_items = _split_missing_items(
+            row["requirement_id"],
+            row.get("missing_items", ""),
+        )
         expected_no_evidence = _is_expected_no_evidence_row(row)
         issue_type = "acceptable" if expected_no_evidence else row.get("issue_type", "")
         evidence_kind = "" if expected_no_evidence else row.get("evidence_kind", "")
@@ -101,6 +131,13 @@ def build_review_pack_rows(route_improvement_csv: Path) -> list[dict[str, str]]:
         output.append(
             {
                 "requirement_id": row["requirement_id"],
+                "requirement_text": row.get("requirement_text", ""),
+                "verdict": row.get("verdict", ""),
+                "review_status": row.get("review_status", ""),
+                "source_pdf_pages": row.get("source_pdf_pages", "[]"),
+                "rationale": row.get("rationale", ""),
+                "missing_items": leaf_missing_items,
+                "guardrail_items": guardrail_items,
                 "issue_type": issue_type,
                 "evidence_kind": evidence_kind,
                 "correct_pdf_pages": row.get("correct_pdf_pages", ""),
@@ -116,6 +153,25 @@ def build_review_pack_rows(route_improvement_csv: Path) -> list[dict[str, str]]:
             }
         )
     return output
+
+
+def _split_missing_items(requirement_id: str, raw_missing_items: str) -> tuple[str, str]:
+    try:
+        parsed = json.loads(raw_missing_items or "[]")
+    except json.JSONDecodeError:
+        parsed = []
+    missing_items = [str(item) for item in parsed] if isinstance(parsed, list) else []
+    guardrail_templates = {
+        template
+        for guardrail in get_compilation_guardrails(requirement_id)
+        for template in guardrail.missing_item_templates
+    }
+    leaf_items = [item for item in missing_items if item not in guardrail_templates]
+    guardrail_items = [item for item in missing_items if item in guardrail_templates]
+    return (
+        json.dumps(leaf_items, ensure_ascii=False),
+        json.dumps(guardrail_items, ensure_ascii=False),
+    )
 
 
 def _is_expected_no_evidence_row(row: dict[str, str]) -> bool:

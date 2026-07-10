@@ -26,14 +26,16 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
         facets=(RequirementFacet.REQUIRES_COUNT, RequirementFacet.REQUIRES_PERCENTAGE),
         evidence_kinds=(EvidenceKind.MANAGEMENT_MECHANISM,),
         semantic_group=SemanticGroup.ANTI_CORRUPTION_RISK,
-        missing_items=("接受腐败风险评估的运营点总数", "接受腐败风险评估的运营点百分比"),
+        rationale="PDF 第21页披露公司根据不同业务单位的特点、重要性和风险程度制定审计策略，可支撑腐败风险评估机制方向；但未披露接受腐败风险评估的运营点总数、运营点统计口径和覆盖百分比，因此判定为 partially_disclosed。",
+        missing_items=("接受腐败风险评估的运营点总数", "运营点定义或统计口径", "接受腐败风险评估的运营点百分比"),
     ),
     "GRI 205-1-b": RequirementEvidenceContract(
         requirement_id="GRI 205-1-b",
         facets=(RequirementFacet.REQUIRES_IMPACT_TYPE,),
         evidence_kinds=(EvidenceKind.MANAGEMENT_MECHANISM,),
         semantic_group=SemanticGroup.ANTI_CORRUPTION_RISK,
-        missing_items=("重大腐败风险类型", "风险涉及的业务环节或地点"),
+        rationale="PDF 第21页披露按风险程度制定审计策略，并在审计中关注商业道德问题，可支撑腐败风险识别方向；但未披露实际识别出的重大腐败风险类型、高风险业务环节、地点或完整风险清单，因此判定为 partially_disclosed。",
+        missing_items=("识别出的重大腐败风险类型", "涉及重大腐败风险的高风险业务环节", "重大腐败风险涉及的运营地点或完整风险清单"),
     ),
     "GRI 302-1-a": RequirementEvidenceContract(
         requirement_id="GRI 302-1-a",
@@ -839,7 +841,8 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
         facets=(RequirementFacet.REQUIRES_COUNT, RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION),
         evidence_kinds=(EvidenceKind.KPI_VALUE,),
         semantic_group=SemanticGroup.OHS_KPI,
-        missing_items=("死亡率",),
+        rationale="PDF 第47页明确披露2024年员工因工死亡人数为1，可支撑死亡数量；但未披露员工工伤死亡率、计算使用的工作小时数分母及比率计算口径，因此判定为 partially_disclosed。",
+        missing_items=("员工因工伤死亡率", "死亡率计算使用的工作小时数分母", "死亡率计算口径及所采用的每20万或每100万工时基准"),
     ),
     "GRI 403-9-a-ii": RequirementEvidenceContract(
         requirement_id="GRI 403-9-a-ii",
@@ -1548,6 +1551,8 @@ _CONTRACTS: dict[str, RequirementEvidenceContract] = {
         facets=(RequirementFacet.REQUIRES_PERCENTAGE, RequirementFacet.REQUIRES_NEW_SUPPLIER_SCOPE),
         evidence_kinds=(EvidenceKind.KPI_VALUE,),
         semantic_group=SemanticGroup.SUPPLIER_ASSESSMENT,
+        rationale="PDF 第31页披露2024年完成85家供应商社会责任审核及A、B级审核结果，可支撑供应商社会标准审核方向；但未明确这些供应商是否为报告期新供应商，也未披露新供应商总数、经社会标准筛选的数量和百分比，因此判定为 partially_disclosed。",
+        missing_items=("报告期内新供应商总数或计算分母", "使用社会标准筛选的新供应商数量", "使用社会标准筛选的新供应商百分比"),
     ),
     "GRI 414-2-a": RequirementEvidenceContract(
         requirement_id="GRI 414-2-a",

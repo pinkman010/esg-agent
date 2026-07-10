@@ -417,7 +417,12 @@ def test_customer_privacy_complaint_requirement_rejects_general_product_or_data_
     assert result.assessment.verdict is AssessmentVerdict.UNKNOWN
     assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
     assert result.assessment.evidence == []
-    assert "客户隐私投诉数量" in result.assessment.missing_items
+    assert result.assessment.rationale == "报告未披露经证实的客户隐私投诉总数，也未分别披露外部方投诉和监管机构投诉数量；当前无有效 source evidence，因此判定为 unknown。"
+    assert result.assessment.missing_items[:3] == [
+        "经证实的客户隐私投诉总数",
+        "由外部方提出并经组织证实的投诉数量",
+        "监管机构提出的投诉数量",
+    ]
 
 
 def test_customer_privacy_complaint_requirement_accepts_direct_complaint_zero_statement(monkeypatch):
@@ -539,6 +544,52 @@ def test_profile_management_candidate_page_can_support_partial_when_keywords_mis
     assert result.assessment.evidence[0].metadata["profile_candidate_unmatched"] is True
     assert "审计策略" in result.assessment.evidence[0].evidence_preview
     assert "商业道德问题" in result.assessment.evidence[0].evidence_preview
+
+
+def test_contract_leaf_narrative_overrides_generic_ontology_narrative(monkeypatch):
+    expected_rationale = "leaf-specific rationale"
+    expected_missing_items = ("leaf missing item one", "leaf missing item two")
+
+    def fake_contract(requirement_id):
+        if requirement_id != "GRI TEST-leaf-narrative":
+            return None
+        return RequirementEvidenceContract(
+            requirement_id=requirement_id,
+            facets=(RequirementFacet.REQUIRES_COUNT, RequirementFacet.REQUIRES_PERCENTAGE),
+            evidence_kinds=(EvidenceKind.MANAGEMENT_MECHANISM,),
+            semantic_group=SemanticGroup.ANTI_CORRUPTION_RISK,
+            rationale=expected_rationale,
+            missing_items=expected_missing_items,
+        )
+
+    monkeypatch.setattr("src.agents.disclosure_agent.get_requirement_contract", fake_contract)
+    task = DisclosureTask(
+        task_id="task-leaf-narrative",
+        run_id="run-1",
+        report_id="report-1",
+        standard_id="GRI TEST",
+        standard_version="2021",
+        disclosure_id="GRI TEST",
+        requirement_id="GRI TEST-leaf-narrative",
+        requirement_text="operations assessed for corruption risks",
+        keywords=["反腐败", "风险程度"],
+        candidate_pages=[21],
+        candidate_pdf_pages=[21],
+        candidate_page_source="report_profile",
+    )
+    chunk = DocumentChunk(
+        chunk_id="chunk-leaf-narrative",
+        report_id="report-1",
+        text="公司根据业务特点和风险程度制定反腐败审计策略。",
+        source_page=21,
+        source_method=EvidenceSourceMethod.PDFPLUMBER,
+        source_file_hash="hash-1",
+    )
+
+    result = DisclosureAgent().analyze(task, [chunk], confirm_llm=False)
+
+    assert result.assessment.rationale == expected_rationale
+    assert result.assessment.missing_items == list(expected_missing_items)
 
 
 def test_disclosure_agent_uses_database_safe_recommendation_id_for_long_task_id():
