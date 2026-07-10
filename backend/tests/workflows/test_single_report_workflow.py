@@ -437,7 +437,7 @@ def test_single_report_workflow_supplements_candidate_pages_for_current_50_rules
     assert enriched[2].candidate_report_pages == [12]
 
 
-def test_single_report_workflow_applies_profile_section_route(tmp_path):
+def test_single_report_workflow_rejects_product_service_section_for_customer_privacy_complaints(tmp_path):
     pack_path = tmp_path / "gri_requirement_pack.json"
     pack_path.write_text(json.dumps({"requirements": []}), encoding="utf-8")
     profile_path = tmp_path / "profile.json"
@@ -494,9 +494,9 @@ def test_single_report_workflow_applies_profile_section_route(tmp_path):
 
     enriched = workflow._attach_report_index_candidates([], [task])
 
-    assert enriched[0].candidate_pdf_pages == [13, 14, 15]
-    assert enriched[0].candidate_report_pages == [22, 24, 26]
-    assert enriched[0].candidate_page_source == "report_profile_section"
+    assert enriched[0].candidate_pdf_pages == []
+    assert enriched[0].candidate_report_pages == []
+    assert enriched[0].candidate_page_source == "requirement_contract"
 
 
 def test_single_report_workflow_prefers_requirement_override_over_profile_section_route(tmp_path):

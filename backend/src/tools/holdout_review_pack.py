@@ -90,14 +90,19 @@ def build_review_pack_rows(route_improvement_csv: Path) -> list[dict[str, str]]:
     rows = _read_csv(route_improvement_csv)
     output: list[dict[str, str]] = []
     for row in rows:
+        expected_no_evidence = _is_expected_no_evidence_row(row)
+        issue_type = "acceptable" if expected_no_evidence else row.get("issue_type", "")
+        evidence_kind = "" if expected_no_evidence else row.get("evidence_kind", "")
         focus = "route_and_preview"
-        if row.get("issue_type") == "false_disclosed":
+        if expected_no_evidence:
+            focus = "no_evidence_boundary"
+        elif issue_type == "false_disclosed":
             focus = "false_disclosed_boundary"
         output.append(
             {
                 "requirement_id": row["requirement_id"],
-                "issue_type": row.get("issue_type", ""),
-                "evidence_kind": row.get("evidence_kind", ""),
+                "issue_type": issue_type,
+                "evidence_kind": evidence_kind,
                 "correct_pdf_pages": row.get("correct_pdf_pages", ""),
                 "suggested_profile_route": row.get("suggested_profile_route", ""),
                 "current_route_status": row.get("route_status", ""),
@@ -111,6 +116,15 @@ def build_review_pack_rows(route_improvement_csv: Path) -> list[dict[str, str]]:
             }
         )
     return output
+
+
+def _is_expected_no_evidence_row(row: dict[str, str]) -> bool:
+    return (
+        row.get("before_verdict") == "unknown"
+        and row.get("before_source_pdf_pages", "") in {"", "[]"}
+        and row.get("correct_pdf_pages", "") in {"", "[]"}
+        and row.get("profile_candidate_pdf_pages", "") in {"", "[]"}
+    )
 
 
 def write_review_pack_rows(rows: list[dict[str, str]], output_path: Path) -> None:

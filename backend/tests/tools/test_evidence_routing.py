@@ -159,6 +159,55 @@ def test_requirement_route_has_priority_over_section_route_for_goldwind_profile(
     assert route.candidate_pdf_pages == [31, 32]
 
 
+def test_goldwind_supplier_assessment_route_adds_semantic_metric_aliases():
+    profile = load_report_profile(Path("data/reports/profiles/goldwind_2024.json"))
+    router = EvidenceRouter(report_profile=profile)
+    task = make_task("GRI 414-1-a", "GRI 414-1").model_copy(
+        update={
+            "requirement_text": "new suppliers screened using social criteria",
+            "keywords": ["supplier", "social"],
+        }
+    )
+
+    route = router.route(task)
+
+    assert "供应商社会责任审核" in route.metric_terms
+    assert "社会责任审核率" in route.metric_terms
+
+
+def test_goldwind_ohs_fatality_route_adds_semantic_metric_aliases():
+    profile = load_report_profile(Path("data/reports/profiles/goldwind_2024.json"))
+    router = EvidenceRouter(report_profile=profile)
+    task = make_task("GRI 403-9-a-i", "GRI 403-9").model_copy(
+        update={
+            "requirement_text": "number and rate of fatalities as a result of work-related injury",
+            "keywords": ["fatalities", "work-related injury"],
+        }
+    )
+
+    route = router.route(task)
+
+    assert "员工因工死亡人数" in route.metric_terms
+    assert "因工死亡人数" in route.metric_terms
+
+
+def test_goldwind_anti_corruption_route_adds_management_metric_aliases():
+    profile = load_report_profile(Path("data/reports/profiles/goldwind_2024.json"))
+    router = EvidenceRouter(report_profile=profile)
+    task = make_task("GRI 205-1-a", "GRI 205-1").model_copy(
+        update={
+            "requirement_text": "operations assessed for risks related to corruption",
+            "keywords": ["corruption", "risk"],
+        }
+    )
+
+    route = router.route(task)
+
+    assert "审计策略" in route.metric_terms
+    assert "风险程度" in route.metric_terms
+    assert "商业道德问题" in route.metric_terms
+
+
 def test_section_route_only_provides_candidates_for_unrouted_topic():
     profile = load_report_profile(Path("data/reports/profiles/goldwind_2024.json"))
     router = EvidenceRouter(report_profile=profile)
@@ -176,7 +225,7 @@ def test_section_route_only_provides_candidates_for_unrouted_topic():
     assert "和谐社区关系" in route.metric_terms
 
 
-def test_topic_section_route_handles_goldwind_product_and_customer_topics():
+def test_topic_section_route_does_not_map_customer_privacy_to_product_section():
     profile = load_report_profile(Path("data/reports/profiles/goldwind_2024.json"))
     router = EvidenceRouter(report_profile=profile)
     task = make_task("GRI 418-1-a", "GRI 418-1").model_copy(
@@ -188,6 +237,5 @@ def test_topic_section_route_handles_goldwind_product_and_customer_topics():
 
     route = router.route(task)
 
-    assert route.source == "report_profile_section"
-    assert route.candidate_pdf_pages
-    assert "产品服务与研发创新" in route.metric_terms
+    assert route.source == "empty"
+    assert route.candidate_pdf_pages == []

@@ -2,25 +2,25 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 让 Goldwind holdout 中已生成 profile route 的漏检项稳定命中 evidence，并把 205/414/403 的边界判定推进到可人工复核的 `partially_disclosed`。
+**Goal:** 让 Goldwind holdout 中已生成 profile route 的重点漏检项稳定命中 evidence，并生成下一轮人工复核包。
 
-**Architecture:** 本阶段不新增 Goldwind per-ID contract，不改 GRI 标准页码规则。改造集中在 route handoff diagnostics、bounded retrieval、KPI/段落行级匹配和 ontology partial matrix；profile route 只提供候选页，最终 verdict 仍由 evidence kind、semantic group、facet 和 guardrail 决定。
+**Architecture:** 本阶段不新增 Goldwind per-ID contract，不把 Goldwind 固定页码写入通用 GRI 规则。改造集中在 profile route handoff、bounded retrieval、KPI/段落行级匹配、ontology partial matrix 和 review pack 输出；每轮自动验证后停在人工复核点。
 
-**Tech Stack:** Python 3.11、pytest、`SingleReportWorkflow`、`EvidenceRouter`、`retrieve_evidence`、`kpi_row_matcher`、`EvidenceKind`、`SemanticGroup`、`first_pass_quality`、`review_csv_audit`。
+**Tech Stack:** Python 3.11、pytest、`SingleReportWorkflow`、`EvidenceRouter`、`retrieve_evidence`、`kpi_row_matcher`、`EvidenceKind`、`SemanticGroup`、`first_pass_quality`、`review_csv_audit`、`regenerate_review_csv`。
 
 ---
 
 ## 背景结论
 
-本轮人工复核 `tmp/review/holdout_goldwind_2024_review_pack.csv` 后，5 行结论为：
+人工复核 `tmp/review/holdout_goldwind_2024_review_pack.csv` 后，当前 5 个 gold case 的处理口径为：
 
-- `GRI 205-1-a`：应命中 PDF 第 21 页，建议 `partially_disclosed`，当前问题为 route 已有但关键词未命中管理机制。
-- `GRI 205-1-b`：应命中 PDF 第 21 页，建议 `partially_disclosed`，当前问题为 route 已有但关键词未命中管理机制。
-- `GRI 414-1-a`：应命中 PDF 第 31-32 页，建议 `partially_disclosed`，当前问题为供应商社会责任审核 KPI/段落未命中。
-- `GRI 403-9-a-i`：应命中 PDF 第 37 和 PDF 第 47 页，建议 `partially_disclosed`，当前问题为工伤死亡人数命中不足，且缺死亡率。
-- `GRI 418-1-a`：当前 `unknown` 合理，不能用一般信息安全、数据或个人隐私泄露零事件支撑客户隐私投诉数量及来源分类。
+- `GRI 205-1-a`：应命中 PDF 第 21 页，建议 `partially_disclosed`。证据是反腐败审计、风险管理和商业道德机制；缺运营点总数和百分比。
+- `GRI 205-1-b`：应命中 PDF 第 21 页，建议 `partially_disclosed`。证据是反腐败机制和审计策略；缺重大腐败风险类型、地点、业务环节或评估结果。
+- `GRI 414-1-a`：应命中 PDF 第 31-32 页，建议 `partially_disclosed`。证据是供应商社会责任审核和审核率；缺“新供应商”分母、数量和百分比。
+- `GRI 403-9-a-i`：应命中 PDF 第 37 或 47 页，建议 `partially_disclosed`。证据是员工因工死亡人数；缺死亡率。
+- `GRI 418-1-a`：当前 `unknown` 合理。一般信息安全、数据或隐私泄露零事件不能支撑客户隐私投诉数量及来源分类。
 
-当前自动指标：
+当前质量基线：
 
 - `global_fallback_count=0`。
 - `global_no_index_count=4`。
@@ -28,6 +28,7 @@
 - `profile_route_hit_count=53`。
 - `false_disclosed_count=0`。
 - Goldwind 最大 PDF 页码为 52。
+- Envision 577 重生成 gate 已可执行，且当前严格 diff 为 0。
 
 ## 硬边界
 
@@ -51,23 +52,25 @@
 - Goldwind GRI index PDF 50/51 被标为 `substantive evidence`。
 - `GRI 418-1-a` 从 `unknown` 升为 `partially_disclosed` 或 `disclosed`。
 - `GRI 205-1-a`、`GRI 205-1-b`、`GRI 414-1-a`、`GRI 403-9-a-i` 任一条被自动升为 `disclosed`。
-- Envision 577 regression 出现 requirement 数量变化。
-- Envision 577 regression 出现非预期 verdict、review_status、source page、evidence_type、quality_flags、OCR/VLM 字段变化。
+- Envision 577 regeneration gate 出现 requirement 数量变化。
+- Envision 577 regeneration gate 出现非预期 verdict、review_status、source page、evidence_type、quality_flags、OCR/VLM 字段变化。
 - 需要新增 Goldwind per-ID contract 才能继续。
 - focused tests 失败且不能通过小范围修复解决。
 
 ## 文件职责
 
-- `backend/src/tools/retrieval.py`：负责 bounded evidence 命中；本阶段增加 route diagnostics 与管理机制/段落宽松匹配。
-- `backend/src/tools/kpi_row_matcher.py`：负责 KPI 行级匹配；本阶段支持中文指标相近匹配和数值在指标前后的场景。
-- `backend/src/tools/evidence.py`：负责 preview 生成；本阶段让 route/evidence kind 的锚点优先进入 `evidence_preview`。
-- `backend/src/standards/evidence_ontology.py`：负责 matrix verdict；本阶段给反腐败风险评估、供应商评估和 OHS 工伤 KPI 增加 partial 边界。
+- `backend/src/tools/holdout_review_pack.py`：输出 route handoff、profile candidate、evidence hit 状态和人工复核包。
+- `backend/src/tools/holdout_recall_diagnosis.py`：把人工 gold case 转成结构化诊断表。
+- `backend/src/tools/retrieval.py`：bounded evidence 命中。增加 profile route 下的中文管理机制和 metric terms 段落匹配。
+- `backend/src/tools/kpi_row_matcher.py`：KPI/段落行匹配。支持中文连续文本中“指标附近数值”。
+- `backend/src/tools/evidence.py`：preview 锚点生成。让 route/evidence kind 的锚点优先进入 `evidence_preview`。
+- `backend/src/standards/evidence_ontology.py`：matrix verdict。为反腐败风险评估、供应商评估和 OHS KPI 增加保守 partial 边界。
 - `backend/src/standards/evidence_contracts.py`：只允许补 semantic metadata、facet、evidence kind，不允许新增 Goldwind candidate pages。
-- `backend/src/tools/holdout_review_pack.py`：负责人工复核包；本阶段补充 route handoff 字段和 after-rerun 字段。
+- `backend/tests/tools/test_holdout_review_pack.py`：覆盖 route handoff 字段和 review pack 状态。
 - `backend/tests/tools/test_retrieval.py`：覆盖 bounded retrieval 命中管理机制和拒绝 global fallback。
 - `backend/tests/tools/test_kpi_row_matcher.py`：覆盖供应商审核、工伤死亡人数等 KPI/段落行匹配。
 - `backend/tests/standards/test_evidence_ontology.py`：覆盖 partial matrix 和 418 guardrail。
-- `backend/tests/tools/test_holdout_review_pack.py`：覆盖 review pack 的 route/evidence hit 状态。
+- `backend/tests/standards/test_evidence_contracts.py`：覆盖 semantic metadata。
 - `docs/DEVELOPMENT.md`：记录本轮指标、产物和人工复核停止点。
 
 ## 产物
@@ -78,10 +81,13 @@
 - `tmp/review/holdout_goldwind_2024_route_improvement.csv`
 - `tmp/review/holdout_goldwind_2024_review_pack.csv`
 - `tmp/review/holdout_goldwind_2024_evidence_hit_summary.json`
+- `tmp/review/current_577_review_regenerated.csv`
+- `tmp/review/current_577_review_regenerated_audit.json`
+- `tmp/review/current_577_review_regeneration_diff_summary.json`
 
 ---
 
-### Task 1: 给 Unknown 行保留 Route Handoff Diagnostics
+## Task 1: 锁定 Route Handoff Diagnostics
 
 **Files:**
 - Modify: `backend/src/tools/holdout_review_pack.py`
@@ -132,44 +138,35 @@ def test_route_improvement_marks_profile_route_without_evidence_as_keyword_miss(
     assert rows[0]["route_failure_reason"] == "candidate_pages_present_keyword_miss"
 ```
 
-- [ ] **Step 2: 运行测试确认失败**
+- [ ] **Step 2: 运行测试确认失败或确认已覆盖**
 
 Run:
 
 ```powershell
-uv run --no-sync pytest --basetemp ..\tmp\pytest-route-diagnostics tests/tools/test_holdout_review_pack.py::test_route_improvement_marks_profile_route_without_evidence_as_keyword_miss -q
+cd backend
+uv run --no-sync pytest --basetemp ../tmp/pytest-route-diagnostics tests/tools/test_holdout_review_pack.py::test_route_improvement_marks_profile_route_without_evidence_as_keyword_miss -q
 ```
 
-Expected: FAIL，原因是 `route_failure_reason` 尚未输出或字段未保留。
+Expected: 若测试已通过，记录为已有能力；若失败，按 Step 3 实现。
 
 - [ ] **Step 3: 实现 route handoff 字段**
 
-在 `backend/src/tools/holdout_review_pack.py` 中：
+在 `backend/src/tools/holdout_review_pack.py` 中确保 `ROUTE_IMPROVEMENT_COLUMNS` 包含：
 
 ```python
-ROUTE_IMPROVEMENT_COLUMNS = [
-    "requirement_id",
-    "issue_type",
-    "evidence_kind",
-    "correct_pdf_pages",
-    "suggested_profile_route",
-    "route_failure_reason",
-    "before_verdict",
-    "before_review_status",
-    "before_source_pdf_pages",
-    "before_candidate_pdf_pages",
-    "before_candidate_page_source",
-    "profile_candidate_pdf_pages",
-    "route_status",
-    "evidence_preview",
-]
+"route_failure_reason",
+"before_candidate_page_source",
+"profile_candidate_pdf_pages",
+"route_status",
 ```
 
-在 `build_route_improvement_rows()` 输出中增加：
+确保 `build_route_improvement_rows()` 输出：
 
 ```python
 "route_failure_reason": diagnosis.get("route_failure_reason", ""),
 "before_candidate_page_source": _first_non_empty(rows, "candidate_page_source"),
+"profile_candidate_pdf_pages": profile_candidate_pages,
+"route_status": _route_status(candidate_pages, source_pages, correct_pages, profile_candidate_pages),
 ```
 
 - [ ] **Step 4: 运行测试确认通过**
@@ -177,21 +174,15 @@ ROUTE_IMPROVEMENT_COLUMNS = [
 Run:
 
 ```powershell
-uv run --no-sync pytest --basetemp ..\tmp\pytest-route-diagnostics tests/tools/test_holdout_review_pack.py -q
+cd backend
+uv run --no-sync pytest --basetemp ../tmp/pytest-route-diagnostics tests/tools/test_holdout_review_pack.py -q
 ```
 
 Expected: PASS。
 
-- [ ] **Step 5: 提交**
-
-```powershell
-git add backend/src/tools/holdout_review_pack.py backend/tests/tools/test_holdout_review_pack.py
-git commit -m "feat: improve holdout route diagnostics"
-```
-
 ---
 
-### Task 2: 增强 Bounded Retrieval 的管理机制命中
+## Task 2: 增强 Bounded Retrieval 的管理机制命中
 
 **Files:**
 - Modify: `backend/src/tools/retrieval.py`
@@ -238,46 +229,49 @@ def test_retrieve_evidence_matches_management_mechanism_terms_on_profile_route()
     assert "反腐败" in evidence[0].evidence_preview
 ```
 
-- [ ] **Step 2: 运行测试确认失败**
+- [ ] **Step 2: 运行测试确认失败或确认已覆盖**
 
 Run:
 
 ```powershell
-uv run --no-sync pytest --basetemp ..\tmp\pytest-management-retrieval tests/tools/test_retrieval.py::test_retrieve_evidence_matches_management_mechanism_terms_on_profile_route -q
+cd backend
+uv run --no-sync pytest --basetemp ../tmp/pytest-management-retrieval tests/tools/test_retrieval.py::test_retrieve_evidence_matches_management_mechanism_terms_on_profile_route -q
 ```
 
-Expected: FAIL，原因是当前 keyword 只看英文 requirement keywords，中文管理机制词不参与普通段落匹配。
+Expected: 若测试已通过，记录为已有能力；若失败，按 Step 3 实现。
 
 - [ ] **Step 3: 实现 metric terms 参与普通段落匹配**
 
-在 `backend/src/tools/retrieval.py` 的 `_keyword_matches()` 中，把关键词合并为：
+在 `backend/src/tools/retrieval.py` 的 keyword 匹配路径中合并：
 
 ```python
-keywords = [keyword.lower() for keyword in [*task.keywords, *kpi_metric_terms] if keyword]
+terms = [*task.keywords, *task.kpi_metric_terms]
+keywords = [term.lower() for term in terms if term]
 ```
 
-并保留 KPI table 分支的优先级：如果 `kpi_metric_terms` 与 `kpi_table_pages` 命中行级 KPI，仍优先返回 KPI row evidence。
+同时保持：
+
+```python
+if task.candidate_pages:
+    bounded_chunks = [chunk for chunk in chunks if chunk.source_page in set(task.candidate_pages)]
+```
+
+避免命中候选页以外内容。
 
 - [ ] **Step 4: 运行测试确认通过**
 
 Run:
 
 ```powershell
-uv run --no-sync pytest --basetemp ..\tmp\pytest-management-retrieval tests/tools/test_retrieval.py::test_retrieve_evidence_matches_management_mechanism_terms_on_profile_route -q
+cd backend
+uv run --no-sync pytest --basetemp ../tmp/pytest-management-retrieval tests/tools/test_retrieval.py::test_retrieve_evidence_matches_management_mechanism_terms_on_profile_route -q
 ```
 
 Expected: PASS。
 
-- [ ] **Step 5: 提交**
-
-```powershell
-git add backend/src/tools/retrieval.py backend/tests/tools/test_retrieval.py
-git commit -m "feat: improve bounded management evidence retrieval"
-```
-
 ---
 
-### Task 3: 增强 Goldwind KPI/段落行匹配
+## Task 3: 增强 Goldwind KPI/段落行匹配
 
 **Files:**
 - Modify: `backend/src/tools/kpi_row_matcher.py`
@@ -327,19 +321,20 @@ def test_match_kpi_rows_matches_ohs_fatality_count_without_rate():
     assert "因工死亡人数" in matches[0].preview
 ```
 
-- [ ] **Step 3: 运行测试确认失败**
+- [ ] **Step 3: 运行测试确认失败或确认已覆盖**
 
 Run:
 
 ```powershell
-uv run --no-sync pytest --basetemp ..\tmp\pytest-kpi-goldwind tests/tools/test_kpi_row_matcher.py -q
+cd backend
+uv run --no-sync pytest --basetemp ../tmp/pytest-kpi-goldwind tests/tools/test_kpi_row_matcher.py -q
 ```
 
-Expected: 至少一个新增测试 FAIL，原因是 `_match_metric_line()` 对中文连续文本和“数值在指标附近”支持不足。
+Expected: 若新增测试通过，记录为已有能力；若失败，按 Step 4 实现。
 
 - [ ] **Step 4: 实现中文附近数值匹配**
 
-在 `backend/src/tools/kpi_row_matcher.py` 中，将 `_match_metric_line()` 改为：
+在 `backend/src/tools/kpi_row_matcher.py` 中确保 metric 命中时取前后窗口：
 
 ```python
 def _match_metric_line(text: str, term: str, year_columns: list[str]) -> tuple[str | None, str | None, str | None] | None:
@@ -377,21 +372,15 @@ def _infer_unit(text: str) -> str | None:
 Run:
 
 ```powershell
-uv run --no-sync pytest --basetemp ..\tmp\pytest-kpi-goldwind tests/tools/test_kpi_row_matcher.py -q
+cd backend
+uv run --no-sync pytest --basetemp ../tmp/pytest-kpi-goldwind tests/tools/test_kpi_row_matcher.py -q
 ```
 
 Expected: PASS。
 
-- [ ] **Step 6: 提交**
-
-```powershell
-git add backend/src/tools/kpi_row_matcher.py backend/tests/tools/test_kpi_row_matcher.py
-git commit -m "feat: improve Chinese KPI row matching"
-```
-
 ---
 
-### Task 4: 增加 Partial Verdict Matrix 边界
+## Task 4: 增加 Partial Verdict Matrix 边界
 
 **Files:**
 - Modify: `backend/src/standards/evidence_ontology.py`
@@ -467,15 +456,16 @@ def test_customer_privacy_complaint_source_breakdown_stays_unknown_for_general_z
     assert "投诉来源分类" in result.missing_items
 ```
 
-- [ ] **Step 5: 运行测试确认失败**
+- [ ] **Step 5: 运行测试确认失败或确认已覆盖**
 
 Run:
 
 ```powershell
-uv run --no-sync pytest --basetemp ..\tmp\pytest-ontology-goldwind tests/standards/test_evidence_ontology.py -q
+cd backend
+uv run --no-sync pytest --basetemp ../tmp/pytest-ontology-goldwind tests/standards/test_evidence_ontology.py -q
 ```
 
-Expected: FAIL，原因是 `ANTI_CORRUPTION_RISK` 尚未定义或 matrix 缺规则。
+Expected: 若新增测试通过，记录为已有能力；若失败，按 Step 6 实现。
 
 - [ ] **Step 6: 实现 semantic group 和 matrix**
 
@@ -496,7 +486,11 @@ if semantic_group is SemanticGroup.ANTI_CORRUPTION_RISK:
             rationale="Anti-corruption management evidence is directionally relevant, but it does not disclose the total number and percentage of operations assessed or the significant corruption risks identified.",
             missing_items=("运营点总数和百分比", "重大腐败风险识别结果"),
         )
+```
 
+在 supplier / OHS / zero-event 既有分支中增加同等保守规则：
+
+```python
 if semantic_group is SemanticGroup.SUPPLIER_ASSESSMENT:
     if RequirementFacet.REQUIRES_PERCENTAGE in facets and EvidenceKind.KPI_VALUE in evidence_kinds:
         return OntologyVerdictResult(
@@ -504,15 +498,6 @@ if semantic_group is SemanticGroup.SUPPLIER_ASSESSMENT:
             review_status=ReviewStatus.NEEDS_MANUAL_REVIEW,
             rationale="Supplier assessment evidence is directionally relevant, but it does not directly disclose the required new-supplier percentage or denominator.",
             missing_items=("新供应商百分比", "新供应商分母"),
-        )
-
-if semantic_group is SemanticGroup.OHS_KPI:
-    if RequirementFacet.REQUIRES_COUNT in facets and RequirementFacet.REQUIRES_PERCENTAGE in facets and EvidenceKind.KPI_VALUE in evidence_kinds:
-        return OntologyVerdictResult(
-            verdict=AssessmentVerdict.PARTIALLY_DISCLOSED,
-            review_status=ReviewStatus.NEEDS_MANUAL_REVIEW,
-            rationale="OHS KPI evidence gives a count, but it does not disclose the required rate.",
-            missing_items=("比率",),
         )
 ```
 
@@ -529,11 +514,11 @@ if semantic_group is SemanticGroup.OHS_KPI:
 ),
 ```
 
-对 `GRI 205-1-b` 使用：
+`GRI 205-1-b` 使用：
 
 ```python
 semantic_group=SemanticGroup.ANTI_CORRUPTION_RISK,
-facets=(RequirementFacet.REQUIRES_RISK_LOCATION,),
+facets=(RequirementFacet.REQUIRES_IMPACT_TYPE,),
 evidence_kinds=(EvidenceKind.MANAGEMENT_MECHANISM,),
 ```
 
@@ -544,21 +529,15 @@ evidence_kinds=(EvidenceKind.MANAGEMENT_MECHANISM,),
 Run:
 
 ```powershell
-uv run --no-sync pytest --basetemp ..\tmp\pytest-ontology-goldwind tests/standards/test_evidence_ontology.py tests/standards/test_evidence_contracts.py -q
+cd backend
+uv run --no-sync pytest --basetemp ../tmp/pytest-ontology-goldwind tests/standards/test_evidence_ontology.py tests/standards/test_evidence_contracts.py -q
 ```
 
 Expected: PASS。
 
-- [ ] **Step 9: 提交**
-
-```powershell
-git add backend/src/standards/evidence_ontology.py backend/src/standards/evidence_contracts.py backend/tests/standards/test_evidence_ontology.py backend/tests/standards/test_evidence_contracts.py
-git commit -m "feat: add Goldwind recall partial ontology rules"
-```
-
 ---
 
-### Task 5: 重跑 Goldwind Holdout 并生成新 Review Pack
+## Task 5: 重跑 Goldwind Holdout 并生成 Review Pack
 
 **Files:**
 - Read/Write: `tmp/review/holdout_goldwind_2024_first_pass.csv`
@@ -572,7 +551,8 @@ git commit -m "feat: add Goldwind recall partial ontology rules"
 Run:
 
 ```powershell
-uv run --no-sync python ..\tmp\goldwind_holdout_remediation.py
+cd backend
+uv run --no-sync python ../tmp/goldwind_holdout_remediation.py
 ```
 
 Expected:
@@ -587,6 +567,7 @@ Expected:
 Run:
 
 ```powershell
+cd backend
 @'
 from pathlib import Path
 from src.tools.holdout_review_pack import (
@@ -618,6 +599,7 @@ Expected: 输出 `5 5`。
 Run:
 
 ```powershell
+cd backend
 @'
 import csv
 import json
@@ -658,6 +640,7 @@ Expected:
 Run:
 
 ```powershell
+cd backend
 @'
 import json
 from pathlib import Path
@@ -677,23 +660,15 @@ print(json.dumps(audit, ensure_ascii=False, indent=2))
 
 Expected: `first_pass.ok=true` 且 `reviewed.ok=true`。
 
-- [ ] **Step 5: 提交工具结果相关代码**
-
-如果 Task 5 只生成 `tmp/` 产物，不提交；如果修改了代码或测试，按实际文件提交：
-
-```powershell
-git status --short
-git add <changed-code-or-doc-files>
-git commit -m "feat: improve Goldwind evidence hit review pack"
-```
-
 ---
 
-### Task 6: Focused Tests 与 Regression Gate
+## Task 6: Focused Tests 与 Envision 577 Gate
 
 **Files:**
 - Read: `tmp/review/current_577_review_after_profile_routing.csv`
-- Read: `tmp/review/current_577_review_after_profile_routing_regression.csv`
+- Write: `tmp/review/current_577_review_regenerated.csv`
+- Write: `tmp/review/current_577_review_regenerated_audit.json`
+- Write: `tmp/review/current_577_review_regeneration_diff_summary.json`
 - Modify: `docs/DEVELOPMENT.md`
 
 - [ ] **Step 1: 跑 focused tests**
@@ -701,26 +676,38 @@ git commit -m "feat: improve Goldwind evidence hit review pack"
 Run:
 
 ```powershell
-uv run --no-sync pytest --basetemp ..\tmp\pytest-goldwind-evidence-hit tests/tools/test_retrieval.py tests/tools/test_kpi_row_matcher.py tests/tools/test_evidence.py tests/tools/test_evidence_routing.py tests/tools/test_holdout_review_pack.py tests/standards/test_evidence_ontology.py tests/standards/test_evidence_contracts.py -q
+cd backend
+uv run --no-sync pytest --basetemp ../tmp/pytest-goldwind-evidence-hit tests/tools/test_retrieval.py tests/tools/test_kpi_row_matcher.py tests/tools/test_evidence.py tests/tools/test_evidence_routing.py tests/tools/test_holdout_review_pack.py tests/standards/test_evidence_ontology.py tests/standards/test_evidence_contracts.py -q
 ```
 
 Expected: PASS。
 
-- [ ] **Step 2: 跑现有 Envision 577 regression diff**
+- [ ] **Step 2: 跑 Envision 577 regeneration gate**
 
 Run:
 
 ```powershell
-uv run --no-sync python -m src.tools.first_pass_quality ..\tmp\review\current_577_review_after_profile_routing.csv ..\tmp\review\current_577_review_after_profile_routing_regression.csv
+cd backend
+uv run --no-sync python -m src.tools.regenerate_review_csv `
+  --report-id envision_2024 `
+  --pdf "data/reports/Envision Energy 2024-zh.pdf" `
+  --profile data/reports/profiles/envision_2024.json `
+  --output ../tmp/review/current_577_review_regenerated.csv `
+  --baseline ../tmp/review/current_577_review_after_profile_routing.csv `
+  --audit-output ../tmp/review/current_577_review_regenerated_audit.json `
+  --diff-summary-output ../tmp/review/current_577_review_regeneration_diff_summary.json `
+  --report-total-pages 78
 ```
 
 Expected:
 
+- unique requirements = 577
+- compilation-like requirements = 0
+- audit ok = true
 - `after_rules_delta_disclosed=0`
 - `after_rules_delta_partial=0`
 - `after_rules_delta_unknown=0`
-- `false_disclosed_count=0`
-- `wrong_source_page_count=0`
+- strict source/evidence diff = 0
 
 - [ ] **Step 3: 扫描 docs 绝对路径**
 
@@ -737,14 +724,7 @@ Expected: `no absolute paths found`。
 在 `docs/DEVELOPMENT.md` 增加记录：
 
 ```markdown
-- Goldwind evidence hit 改造完成：针对 `GRI 205-1-a`、`GRI 205-1-b`、`GRI 414-1-a`、`GRI 403-9-a-i`、`GRI 418-1-a` 生成新一轮 `tmp/review/holdout_goldwind_2024_review_pack.csv`。本轮目标是验证 profile route handoff、bounded retrieval、KPI/段落行级匹配和 partial matrix 边界；`GRI 418-1-a` 保持 unknown guardrail。Goldwind audit 通过，未出现 `global_fallback`、页码越界或 false disclosed；当前停止点为人工复核 review pack。Envision 577 使用现有 regression 产物做 diff gate，未发现 verdict/count delta；后续仍需沉淀正式 577 重新生成入口。
-```
-
-- [ ] **Step 5: 提交文档**
-
-```powershell
-git add docs/DEVELOPMENT.md
-git commit -m "docs: record Goldwind evidence hit gate"
+- Goldwind evidence hit 改造完成：针对 `GRI 205-1-a`、`GRI 205-1-b`、`GRI 414-1-a`、`GRI 403-9-a-i`、`GRI 418-1-a` 生成新一轮 `tmp/review/holdout_goldwind_2024_review_pack.csv`。本轮目标是验证 profile route handoff、bounded retrieval、KPI/段落行级匹配和 partial matrix 边界；`GRI 418-1-a` 保持 unknown guardrail。Goldwind audit 通过，未出现 `global_fallback`、页码越界或 false disclosed；当前停止点为人工复核 review pack。Envision 577 regeneration gate 通过，577 requirement 数量不变，verdict/review/source/evidence/page/quality/OCR-VLM 字段无回退。
 ```
 
 ---
@@ -781,6 +761,10 @@ git commit -m "docs: record Goldwind evidence hit gate"
 - `tmp/review/holdout_goldwind_2024_review_pack.csv` 已生成且包含 5 个目标 requirement。
 - `tmp/review/holdout_goldwind_2024_evidence_hit_summary.json` 已生成。
 - Focused tests 通过。
+- Envision 577 regeneration gate 通过且 strict diff 为 0。
 - docs 不包含本机绝对路径。
 - 最终停在人工作业点，不自动进入下一阶段。
 
+## 执行建议
+
+建议 inline 执行。原因是本计划会反复刷新同一批 Goldwind holdout 临时产物和 Envision 577 gate 产物，并且禁止新增 Goldwind per-ID contract；并行执行会增加状态冲突和误判风险。

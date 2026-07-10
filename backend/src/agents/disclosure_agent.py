@@ -7,7 +7,7 @@ from src.standards.compilation_guardrails import get_compilation_guardrails
 from src.standards.evidence_contracts import get_requirement_contract
 from src.standards.evidence_ontology import EvidenceKind, RequirementFacet, SemanticGroup, evaluate_ontology_verdict
 from src.standards.no_evidence_guardrails import get_no_evidence_guardrail
-from src.tools.evidence import build_kpi_evidence_preview, chunk_to_evidence
+from src.tools.evidence import build_evidence_preview, build_kpi_evidence_preview, chunk_to_evidence
 from src.tools.guardrails import build_guarded_assessment
 from src.tools.ids import database_safe_id
 from src.tools.retrieval import retrieve_evidence
@@ -29,6 +29,8 @@ class DisclosureAgent:
         evidence = self._supplement_requirement_specific_evidence(task, chunks, retrieve_evidence(task, chunks, limit=10))
         evidence = self._filter_invalid_evidence(task, evidence)
         evidence = self._supplement_profile_management_evidence_after_filter(task, chunks, evidence)
+        self._mark_requirement_specific_quality_flags(task, evidence)
+        self._mark_requirement_specific_previews(task, evidence)
         verdict, rationale, missing_items = self._classify_rule_based(task, evidence)
         assessment = build_guarded_assessment(
             task,
@@ -158,7 +160,10 @@ class DisclosureAgent:
         if task.requirement_id == "GRI 2-7-e":
             return []
         evidence = self._filter_requirement_specific_pages(task, evidence)
+        evidence = self._filter_supplier_social_screening_evidence(task, evidence)
+        evidence = self._filter_customer_privacy_complaint_evidence(task, evidence)
         self._mark_requirement_specific_quality_flags(task, evidence)
+        self._mark_requirement_specific_previews(task, evidence)
         self._mark_omission_note_evidence(task, evidence)
         self._mark_index_statement_evidence(task, evidence)
         if task.requirement_id == "GRI 2-2-c-ii":
@@ -166,6 +171,44 @@ class DisclosureAgent:
         if task.requirement_id == "GRI 2-2-c-iii":
             return [item for item in evidence if self._has_2_2_c_iii_sufficient_evidence(item.source_text)]
         return evidence
+
+    def _filter_customer_privacy_complaint_evidence(
+        self,
+        task: DisclosureTask,
+        evidence: list[EvidenceItem],
+    ) -> list[EvidenceItem]:
+        if task.requirement_id != "GRI 418-1-a":
+            return evidence
+        return [item for item in evidence if self._has_customer_privacy_complaint_evidence(item.source_text)]
+
+    def _filter_supplier_social_screening_evidence(
+        self,
+        task: DisclosureTask,
+        evidence: list[EvidenceItem],
+    ) -> list[EvidenceItem]:
+        if task.requirement_id != "GRI 414-1-a":
+            return evidence
+        social_criteria_terms = (
+            "社会责任",
+            "社会评价",
+            "社会标准",
+            "劳动者权益",
+            "人权",
+            "健康和安全",
+            "商业道德",
+            "social responsibility",
+            "social criteria",
+            "labor rights",
+            "labour rights",
+            "human rights",
+            "health and safety",
+            "business ethics",
+        )
+        return [
+            item
+            for item in evidence
+            if any(term in item.source_text.lower() for term in social_criteria_terms)
+        ]
 
     def _supplement_profile_management_evidence_after_filter(
         self,
@@ -413,6 +456,42 @@ class DisclosureAgent:
                 item.metadata.setdefault("evidence_kind", evidence_kind.value)
                 item.evidence_preview = build_kpi_evidence_preview(item.source_text, task.keywords)
 
+    def _mark_requirement_specific_previews(self, task: DisclosureTask, evidence: list[EvidenceItem]) -> None:
+        contract = get_requirement_contract(task.requirement_id)
+        if contract is None:
+            return
+        if contract.semantic_group is SemanticGroup.ANTI_CORRUPTION_RISK:
+            terms = ["业务单位", "风险程度", "审计策略", "商业道德问题", "反舞弊培训", "反腐败"]
+            preview_builder = build_evidence_preview
+            window_before = 100
+            window_after = 220
+        elif (
+            contract.semantic_group is SemanticGroup.SUPPLIER_ASSESSMENT
+            and RequirementFacet.REQUIRES_NEW_SUPPLIER_SCOPE in contract.facets
+        ):
+            terms = ["供应商社会责任审核", "社会责任审核率", "供应商社会责任", "社会评价"]
+            preview_builder = build_kpi_evidence_preview
+            window_before = 0
+            window_after = 180
+        elif (
+            contract.semantic_group is SemanticGroup.OHS_KPI
+            and RequirementFacet.REQUIRES_COUNT in contract.facets
+            and "fatalit" in task.requirement_text.lower()
+        ):
+            terms = ["员工因工死亡人数", "因工死亡人数", "工伤死亡人数"]
+            preview_builder = build_kpi_evidence_preview
+            window_before = 0
+            window_after = 180
+        else:
+            return
+        for item in evidence:
+            item.evidence_preview = preview_builder(
+                item.source_text,
+                terms,
+                window_before=window_before,
+                window_after=window_after,
+            )
+
     def _mark_omission_note_evidence(self, task: DisclosureTask, evidence: list[EvidenceItem]) -> None:
         omission_terms = (
             "从略披露",
@@ -631,6 +710,12 @@ class DisclosureAgent:
                 AssessmentVerdict.UNKNOWN,
                 "No valid report evidence explains whether or how the consolidation approach differs across disclosures.",
                 ["多实体信息合并方法", "合并方法差异说明"],
+            )
+        if task.requirement_id == "GRI 418-1-a" and not bounded_evidence:
+            return (
+                AssessmentVerdict.UNKNOWN,
+                "No valid report evidence discloses substantiated customer privacy complaints.",
+                ["客户隐私投诉数量", "投诉来源分类"],
             )
         if not bounded_evidence:
             return None, None, []

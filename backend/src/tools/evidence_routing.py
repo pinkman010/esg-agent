@@ -3,6 +3,7 @@ from dataclasses import dataclass, field
 from src.domain.models import DisclosureTask
 from src.reports.profile import ReportProfile
 from src.standards.evidence_contracts import get_requirement_contract
+from src.standards.evidence_ontology import RequirementFacet, SemanticGroup
 
 
 TOPIC_SECTION_MAP = {
@@ -29,7 +30,6 @@ TOPIC_SECTION_MAP = {
     "414": "可持续产业链",
     "416": "产品服务与研发创新",
     "417": "产品服务与研发创新",
-    "418": "产品服务与研发创新",
 }
 
 
@@ -53,11 +53,16 @@ class EvidenceRouter:
 
         if profile_route is not None:
             pages = self._valid_pages(profile_route.candidate_pdf_pages)
+            metric_terms = self._metric_terms_with_semantic_aliases(
+                list(profile_route.metric_terms),
+                task,
+                contract,
+            )
             return EvidenceRoute(
                 candidate_pdf_pages=pages,
                 candidate_report_pages=self._report_pages(pages),
                 kpi_table_pages=self._valid_pages(profile_route.kpi_table_pages),
-                metric_terms=list(profile_route.metric_terms),
+                metric_terms=metric_terms,
                 source="report_profile",
                 reasons=[f"profile:{self.report_profile.report_id}"] if self.report_profile else [],
             )
@@ -155,3 +160,34 @@ class EvidenceRouter:
         disclosure_id = task.disclosure_id.removeprefix("GRI ").strip()
         topic = disclosure_id.split("-", 1)[0]
         return TOPIC_SECTION_MAP.get(topic)
+
+    def _metric_terms_with_semantic_aliases(self, terms: list[str], task: DisclosureTask, contract) -> list[str]:
+        aliases: list[str] = []
+        if contract is not None and contract.semantic_group is SemanticGroup.ANTI_CORRUPTION_RISK:
+            aliases.extend(["反腐败", "审计策略", "风险程度", "商业道德问题", "反舞弊"])
+        if (
+            contract is not None
+            and contract.semantic_group is SemanticGroup.SUPPLIER_ASSESSMENT
+            and RequirementFacet.REQUIRES_NEW_SUPPLIER_SCOPE in contract.facets
+        ):
+            aliases.extend(["供应商社会责任审核", "社会责任审核率", "社会评价", "社会标准"])
+        if (
+            contract is not None
+            and contract.semantic_group is SemanticGroup.OHS_KPI
+            and RequirementFacet.REQUIRES_COUNT in contract.facets
+            and "fatalit" in task.requirement_text.lower()
+        ):
+            aliases.extend(["员工因工死亡人数", "因工死亡人数", "工伤死亡人数"])
+        return _dedupe_terms([*terms, *aliases])
+
+
+def _dedupe_terms(terms: list[str]) -> list[str]:
+    seen: set[str] = set()
+    deduped: list[str] = []
+    for term in terms:
+        normalized = term.strip()
+        if not normalized or normalized in seen:
+            continue
+        seen.add(normalized)
+        deduped.append(normalized)
+    return deduped

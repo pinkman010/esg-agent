@@ -222,6 +222,23 @@ uv run --no-sync python -m src.tools.regenerate_review_csv `
 
 产物写入 `tmp/review/`，不提交。
 
+## Review CSV 与诊断字段分层
+
+新增 review、routing 或 holdout 字段前，必须先说明字段所属层级和消费者。默认不把诊断字段升为正式证据 schema。
+
+字段分层：
+
+- 正式证据字段：可进入产品 schema、数据库或前端 review UI。包括 `source_pdf_page`、`source_report_page`、`page_label`、`evidence_type`、`evidence_preview`、`quality_flags`、`requires_ocr`、`requires_vlm`、`needs_ocr_or_vlm`。
+- 复核导出字段：服务人工复核 CSV，可出现在 review export，但不一定进入核心数据库列。包括 `rationale`、`missing_items`、`candidate_pdf_pages`、`candidate_report_pages`、`retrieval_strategy`。
+- 路由诊断字段：只允许进入 `*_diagnosis.csv`、`*_review_pack.csv`、`*_quality_summary.json` 等临时诊断产物，不进入正式 review CSV 或产品 schema。包括 `route_status`、`route_failure_reason`、`profile_candidate_pdf_pages`、`before_*`、`manual_label`、`suggested_verdict`、`issue_type`、`correct_pdf_pages`。
+- ontology/internal metadata：默认内部使用，不升为顶层字段，除非前端筛选、审计统计或多人复核明确需要。包括 `semantic_group`、`facets`、`evidence_kinds`、`candidate_page_source`、`kpi_metric_terms`、`decision_source`。
+
+约束：
+
+- 不继续向主 review CSV 无边界加列。
+- 新增诊断信息优先放入单独诊断文件。
+- 下一轮 `preview anchor` 和 `section route guardrail` 改造不得新增顶层字段，优先复用 `evidence_preview`、`retrieval_strategy`、`evidence_type` 和现有诊断产物。
+
 ## 7. OpenAPI 类型生成
 
 前端 API 类型通过 FastAPI OpenAPI 自动生成。
@@ -269,6 +286,10 @@ pnpm generate:api
 - Goldwind holdout recall 改造完成：新增 recall 诊断表 `tmp/review/holdout_goldwind_2024_recall_diagnosis.csv`；profile builder 从 Goldwind GRI 索引抽取 requirement route，并增加双页拼版页码换算、章节 route 和 KPI 行级 preview。当前 `profile_route_hit_count` 从 40 提升到 53，`global_no_index_count` 从 53 降到 23，`false_disclosed_count=0`，`wrong_source_page_count=0`，`global_fallback_count=0`；`tmp/review/holdout_goldwind_2024_first_pass.csv`、`tmp/review/holdout_goldwind_2024_reviewed.csv`、`tmp/review/holdout_goldwind_2024_audit.json` 均通过 gate。Envision 577 regression 产物 `tmp/review/current_577_review_after_profile_routing_regression.csv` audit 通过，577 requirement 数量不变，verdict/review/source/evidence/page/quality/OCR-VLM 字段无回退。
 - Goldwind route review pack 已生成：新增 `tmp/review/holdout_goldwind_2024_route_improvement.csv`、`tmp/review/holdout_goldwind_2024_review_pack.csv`、`tmp/review/holdout_goldwind_2024_route_improvement_summary.json`。本轮接入 `report_profile_section` 到 workflow，并给 Goldwind profile 增加“产品服务与研发创新”章节；`global_no_index_count` 从 23 降到 4，`global_fallback_count=0`，Goldwind 最大 source/candidate PDF 页码均为 52，first-pass/reviewed audit 均通过。route improvement 共 5 行，其中 4 行为 `candidate_without_evidence`，1 行为 `missing_candidate`；当前停止点为人工复核 `tmp/review/holdout_goldwind_2024_review_pack.csv`。focused tests 通过；现有 Envision 577 profile routing regression diff 为 0。本轮未找到可复用的 Envision 577 重新生成脚本，因此只验证历史 regression 产物，后续应沉淀正式 regression 生成入口。
 - Goldwind recall 诊断扩充完成：新增 `backend/data/holdout/goldwind_2024_recall_gold.json`，当前保存 5 条已人工复核的 gold case，并生成 `tmp/review/holdout_goldwind_2024_recall_diagnosis.csv`。新增 `preview_sample_audit` 工具并生成 `tmp/review/holdout_goldwind_2024_preview_sample.csv`，本轮 4 条抽样均为 `missing_anchor`，对应当前仍缺有效 source 或 source 错页的诊断样本，不改变 verdict。最终 `profile_route_hit_count=53`、`global_no_index_count=23`、`false_disclosed_count=0`、`wrong_source_page_count=0`、`global_fallback_count=0`；Goldwind first-pass/reviewed audit 通过，Envision 577 regression 无 requirement 数量变化，无 verdict/review/source/evidence/page/quality/OCR-VLM 回退。
+- Goldwind evidence hit 改造完成：针对 `GRI 205-1-a`、`GRI 205-1-b`、`GRI 414-1-a`、`GRI 403-9-a-i`、`GRI 418-1-a` 生成新一轮 `tmp/review/holdout_goldwind_2024_review_pack.csv`，并生成 `tmp/review/holdout_goldwind_2024_evidence_hit_summary.json`。本轮目标是验证 profile route handoff、bounded retrieval、KPI/段落行级匹配和 partial matrix 边界；`GRI 418-1-a` 保持 unknown guardrail。Goldwind first-pass/reviewed audit 通过，`global_fallback_count=0`、`global_no_index_count=4`、`profile_route_hit_count=535`、`false_disclosed_count=0`，Goldwind 最大 source/candidate PDF 页码均为 52。5 个目标项均为 `candidate_with_evidence`，其中 `GRI 205-1-a`、`GRI 205-1-b`、`GRI 403-9-a-i`、`GRI 414-1-a` 为 `partially_disclosed`，`GRI 418-1-a` 保持 `unknown`；当前停止点为人工复核 review pack。Envision 577 regeneration gate 通过，577 requirement 数量不变，verdict/review/source/evidence/page/quality/OCR-VLM 字段无回退。
+- Goldwind preview anchor 与 section guardrail 改造完成：`GRI 205-1-a`、`GRI 205-1-b` 的 preview 锚到反舞弊培训、业务单位、风险程度、审计策略和商业道德问题；`GRI 414-1-a` 锚到供应商社会责任审核、85 家审核和审核率；`GRI 403-9-a-i` 锚到员工因工死亡人数 KPI；`GRI 418-1-a` 不再通过 `report_profile_section` 映射到产品服务章节，产品服务页和一般数据/隐私泄露表述均不能形成 source evidence，保持 `unknown + needs_manual_review`。未新增主 review CSV 顶层字段，诊断信息仍写入 `tmp/review/holdout_goldwind_2024_review_pack.csv` 和 `tmp/review/holdout_goldwind_2024_evidence_hit_summary.json`。验证：focused tests 通过 132 项；Goldwind first-pass/reviewed audit 通过，`global_fallback_count=0`、`global_no_index_count=5`、`false_disclosed_count=0`、最大 source/candidate PDF 页码 52；Envision 577 regeneration gate audit 通过，按 requirement 聚合后 verdict/review/source/candidate/quality flags 无差异。当前停止点为人工复核更新后的 Goldwind review pack。
+- Goldwind KPI row anchor 精细化完成：`GRI 403-9-a-i` 的 preview 现在从 `员工因工死亡人数 人 1 0 1` 开始，不再带入 AA1000 或审验声明前置文本；`GRI 414-1-a` 的 preview 现在从供应商社会责任审核上下文开始，直接显示 85 家审核、83 家 A 级、97.6% 占比等关键行级信息。`GRI 418-1-a` 仍保持无 source evidence。验证：focused tests 通过 133 项；Goldwind first-pass/reviewed audit 通过；Envision 577 regeneration gate audit 通过，按 requirement 聚合后 verdict/review/source/candidate/quality flags 无差异。
+- Goldwind leaf-level evidence promotion guardrail 完成：`GRI 414-1-a` 仍保留 profile candidate `[31, 32]`，但只允许包含社会责任、劳工人权、健康安全或商业道德锚点的页面晋升为 substantive evidence，Goldwind PDF 第 32 页绿色供应链内容仅作 candidate，source evidence 仅保留 PDF 第 31 页。对 `unknown + no source evidence + no expected route` 的 holdout 诊断行清理历史 `evidence_kind` 和 `false_disclosed` 状态，`GRI 418-1-a` 现为 `acceptable` 且 `evidence_kind` 为空。验证：相关单测 122 项通过；Goldwind first-pass/reviewed audit 均为 0 错误；Envision 577 regeneration gate `ok=true`，verdict delta 为 0，`false_disclosed` / `wrong_source_page` / `unknown_leakage` 均为 0。
 
 ### 2026-07-04
 

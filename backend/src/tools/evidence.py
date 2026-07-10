@@ -18,7 +18,8 @@ def chunk_to_evidence(
     if retrieval_metadata:
         metadata.update(retrieval_metadata)
     metadata_preview = _metadata_preview(metadata)
-    evidence_preview = metadata_preview or build_evidence_preview(chunk.text, task.keywords)
+    preview_keywords = [*task.keywords, *list(metadata.get("kpi_metric_terms") or [])]
+    evidence_preview = metadata_preview or build_evidence_preview(chunk.text, preview_keywords)
 
     return EvidenceItem(
         evidence_id=evidence_id_for(task.task_id, chunk.chunk_id),
@@ -85,7 +86,7 @@ def build_kpi_evidence_preview(
             window_start = max(0, index - window_before)
             window_end = min(len(normalized), index + len(term) + window_after)
             preview = normalized[window_start:window_end].strip()
-            if window_start > 0:
+            if window_start > 0 and window_before > 0:
                 preview = f"...{preview}"
             if window_end < len(normalized):
                 preview = f"{preview}..."
@@ -151,10 +152,11 @@ def _window_around_match(text: str, match_index: int, window_before: int, window
     return preview.strip()
 
 
-def _preview_score(preview: str, keywords: list[str]) -> tuple[int, int, int, int]:
+def _preview_score(preview: str, keywords: list[str]) -> tuple[int, int, int, int, int]:
     preview_lower = preview.lower()
     keyword_hits = sum(1 for keyword in keywords if keyword.strip() and keyword.lower() in preview_lower)
+    keyword_specificity = sum(len(keyword.strip()) for keyword in keywords if keyword.strip() and keyword.lower() in preview_lower)
     has_email = 1 if re.search(r"[\w.+-]+@[\w.-]+", preview) else 0
     has_date = 1 if re.search(r"20\d{2}\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日", preview) else 0
     has_numeric = 1 if re.search(r"\d", preview) else 0
-    return (has_email, has_date, keyword_hits, has_numeric)
+    return (keyword_hits, keyword_specificity, has_email, has_date, has_numeric)

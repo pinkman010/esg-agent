@@ -256,7 +256,11 @@ def test_ohs_count_without_rate_stays_partial_when_rate_facet_is_required(monkey
     chunk = DocumentChunk(
         chunk_id="chunk-ohs-fatality",
         report_id="report-1",
-        text="2024年，员工因工死亡人数为1，重大安全事故数为0，安全培训总学时约为441630小时。",
+        text=(
+            "AA1000审验标准 v3 三、审验机构责任 职业病发病次数 次 0 0 0 "
+            "重大安全事故 次 0 0 0 员工因工死亡人数 人 1 0 1 "
+            "因工伤损失工作日数 日 170 334 213 安全培训时数 小时 441,630"
+        ),
         source_page=37,
         source_method=EvidenceSourceMethod.PDFPLUMBER,
         source_file_hash="hash-1",
@@ -267,11 +271,115 @@ def test_ohs_count_without_rate_stays_partial_when_rate_facet_is_required(monkey
     assert result.assessment.verdict is AssessmentVerdict.PARTIALLY_DISCLOSED
     assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
     assert "完整口径或方法说明" in result.assessment.missing_items
+    assert "员工因工死亡人数 人 1" in result.assessment.evidence[0].evidence_preview
+    assert result.assessment.evidence[0].evidence_preview.startswith("员工因工死亡人数")
+    assert "AA1000" not in result.assessment.evidence[0].evidence_preview
+
+
+def test_supplier_assessment_preview_prefers_social_audit_count_row(monkeypatch):
+    def fake_contract(requirement_id):
+        if requirement_id != "GRI TEST-supplier-screening":
+            return None
+        return RequirementEvidenceContract(
+            requirement_id=requirement_id,
+            facets=(RequirementFacet.REQUIRES_PERCENTAGE, RequirementFacet.REQUIRES_NEW_SUPPLIER_SCOPE),
+            evidence_kinds=(EvidenceKind.KPI_VALUE,),
+            semantic_group=SemanticGroup.SUPPLIER_ASSESSMENT,
+        )
+
+    monkeypatch.setattr("src.agents.disclosure_agent.get_requirement_contract", fake_contract)
+    task = DisclosureTask(
+        task_id="task-supplier-screening",
+        run_id="run-1",
+        report_id="report-1",
+        standard_id="GRI TEST",
+        standard_version="2021",
+        disclosure_id="GRI TEST",
+        requirement_id="GRI TEST-supplier-screening",
+        requirement_text="percentage of new suppliers screened using social criteria.",
+        keywords=["供应商", "社会责任审核"],
+        candidate_pages=[31],
+        candidate_pdf_pages=[31],
+        candidate_page_source="report_profile",
+    )
+    chunk = DocumentChunk(
+        chunk_id="chunk-supplier-screening",
+        report_id="report-1",
+        text=(
+            "供应链采购合规自查标准识别风险并提出整改措施，规避供应链管理潜在风险。"
+            "公司根据2022年和2023年供应商社会责任审核结果，识别不同供应商的社会责任风险等级，"
+            "制定2024年供应商社会责任审核方案。"
+            "2024年，公司聘请独立第三方，完成85家风电机组零部件供应商社会责任审核，"
+            "其中A级供应商数量为83家（占比97.6%），B级供应商数量为2家（占比2.4%）。"
+        ),
+        source_page=31,
+        source_method=EvidenceSourceMethod.PDFPLUMBER,
+        source_file_hash="hash-1",
+    )
+
+    result = DisclosureAgent().analyze(task, [chunk], confirm_llm=False)
+
+    assert result.assessment.verdict is AssessmentVerdict.PARTIALLY_DISCLOSED
+    assert "完成85家风电机组零部件供应商社会责任审核" in result.assessment.evidence[0].evidence_preview
+    assert "97.6%" in result.assessment.evidence[0].evidence_preview
+    assert not result.assessment.evidence[0].evidence_preview.startswith("...")
+
+
+def test_supplier_social_screening_keeps_environment_page_candidate_only(monkeypatch):
+    def fake_contract(requirement_id):
+        if requirement_id != "GRI 414-1-a":
+            return None
+        return RequirementEvidenceContract(
+            requirement_id=requirement_id,
+            facets=(RequirementFacet.REQUIRES_PERCENTAGE, RequirementFacet.REQUIRES_NEW_SUPPLIER_SCOPE),
+            evidence_kinds=(EvidenceKind.KPI_VALUE,),
+            semantic_group=SemanticGroup.SUPPLIER_ASSESSMENT,
+        )
+
+    monkeypatch.setattr("src.agents.disclosure_agent.get_requirement_contract", fake_contract)
+    task = DisclosureTask(
+        task_id="task-supplier-social-screening",
+        run_id="run-1",
+        report_id="goldwind-2024",
+        standard_id="GRI 414",
+        standard_version="2016",
+        disclosure_id="GRI 414-1",
+        requirement_id="GRI 414-1-a",
+        requirement_text="percentage of new suppliers that were screened using social criteria.",
+        keywords=["supplier", "social criteria", "供应商", "审核评价"],
+        candidate_pages=[31, 32],
+        candidate_pdf_pages=[31, 32],
+        candidate_page_source="report_profile",
+    )
+    chunks = [
+        DocumentChunk(
+            chunk_id="chunk-social",
+            report_id="goldwind-2024",
+            text="2024年完成85家供应商社会责任审核，其中A级83家，B级2家。",
+            source_page=31,
+            source_method=EvidenceSourceMethod.PDFPLUMBER,
+            source_file_hash="hash-1",
+        ),
+        DocumentChunk(
+            chunk_id="chunk-environment",
+            report_id="goldwind-2024",
+            text="绿色供应链开展审核评价，主要零部件供应商绿色审核覆盖率100%。",
+            source_page=32,
+            source_method=EvidenceSourceMethod.PDFPLUMBER,
+            source_file_hash="hash-1",
+        ),
+    ]
+
+    result = DisclosureAgent().analyze(task, chunks, confirm_llm=False)
+
+    assert task.candidate_pdf_pages == [31, 32]
+    assert [item.source_pdf_page for item in result.assessment.evidence] == [31]
+    assert result.assessment.verdict is AssessmentVerdict.PARTIALLY_DISCLOSED
 
 
 def test_customer_privacy_complaint_requirement_rejects_general_product_or_data_security_evidence(monkeypatch):
     def fake_contract(requirement_id):
-        if requirement_id != "GRI TEST-privacy-complaints":
+        if requirement_id != "GRI 418-1-a":
             return None
         return RequirementEvidenceContract(
             requirement_id=requirement_id,
@@ -285,10 +393,10 @@ def test_customer_privacy_complaint_requirement_rejects_general_product_or_data_
         task_id="task-privacy-complaints",
         run_id="run-1",
         report_id="report-1",
-        standard_id="GRI TEST",
+        standard_id="GRI 418",
         standard_version="2021",
-        disclosure_id="GRI TEST",
-        requirement_id="GRI TEST-privacy-complaints",
+        disclosure_id="GRI 418-1",
+        requirement_id="GRI 418-1-a",
         requirement_text="substantiated complaints concerning breaches of customer privacy.",
         keywords=["客户隐私", "投诉"],
         candidate_pages=[13],
@@ -308,6 +416,7 @@ def test_customer_privacy_complaint_requirement_rejects_general_product_or_data_
 
     assert result.assessment.verdict is AssessmentVerdict.UNKNOWN
     assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+    assert result.assessment.evidence == []
     assert "客户隐私投诉数量" in result.assessment.missing_items
 
 
@@ -413,7 +522,11 @@ def test_profile_management_candidate_page_can_support_partial_when_keywords_mis
     chunk = DocumentChunk(
         chunk_id="chunk-anti-corruption",
         report_id="report-1",
-        text="商业道德章节披露审计委员会领导审计监察部开展反腐败工作，并制定反舞弊管理制度。",
+        text=(
+            "商业道德章节披露审计委员会领导审计监察部开展反腐败工作。"
+            "公司根据不同业务单位的业务特点、重要性、风险程度制定审计策略，"
+            "审计中会重点关注商业道德问题。"
+        ),
         source_page=21,
         source_method=EvidenceSourceMethod.PDFPLUMBER,
         source_file_hash="hash-1",
@@ -424,6 +537,8 @@ def test_profile_management_candidate_page_can_support_partial_when_keywords_mis
     assert result.assessment.verdict is AssessmentVerdict.PARTIALLY_DISCLOSED
     assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
     assert result.assessment.evidence[0].metadata["profile_candidate_unmatched"] is True
+    assert "审计策略" in result.assessment.evidence[0].evidence_preview
+    assert "商业道德问题" in result.assessment.evidence[0].evidence_preview
 
 
 def test_disclosure_agent_uses_database_safe_recommendation_id_for_long_task_id():

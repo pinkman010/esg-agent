@@ -116,3 +116,18 @@ def test_build_review_pack_rows_marks_manual_review_need(tmp_path: Path):
 
     assert rows[0]["manual_check_required"] == "true"
     assert rows[0]["manual_check_focus"] == "route_and_preview"
+
+
+def test_build_review_pack_rows_clears_stale_diagnosis_when_unknown_has_no_evidence(tmp_path: Path):
+    route_improvement = tmp_path / "routes.csv"
+    route_improvement.write_text(
+        "requirement_id,issue_type,evidence_kind,correct_pdf_pages,suggested_profile_route,before_verdict,before_review_status,before_source_pdf_pages,before_candidate_pdf_pages,profile_candidate_pdf_pages,route_status,evidence_preview\n"
+        "GRI 418-1-a,false_disclosed,explicit_zero_statement,[],[],unknown,needs_manual_review,[],[],[],missing_candidate,\n",
+        encoding="utf-8",
+    )
+
+    rows = build_review_pack_rows(route_improvement)
+
+    assert rows[0]["issue_type"] == "acceptable"
+    assert rows[0]["evidence_kind"] == ""
+    assert rows[0]["manual_check_focus"] == "no_evidence_boundary"

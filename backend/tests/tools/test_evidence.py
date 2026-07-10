@@ -1,6 +1,6 @@
 from src.domain.enums import EvidenceSourceMethod
 from src.domain.models import DisclosureTask, DocumentChunk
-from src.tools.evidence import build_kpi_evidence_preview, chunk_to_evidence
+from src.tools.evidence import build_evidence_preview, build_kpi_evidence_preview, chunk_to_evidence
 
 
 def test_build_kpi_evidence_preview_prefers_target_metric_row():
@@ -17,6 +17,23 @@ def test_build_kpi_evidence_preview_prefers_target_metric_row():
 
     assert "范围二 - 基于位置(tCO2e) 57,897.05" in preview
     assert "总耗水量" not in preview
+
+
+def test_build_evidence_preview_prefers_anti_corruption_audit_strategy_anchor():
+    text = (
+        "公司设有举报渠道和信息安全管理机制。"
+        "审计委员会领导审计监察部开展反腐败制度建设，"
+        "并根据不同业务单位的业务特点、重要性、风险程度制定审计策略，"
+        "在审计中重点关注商业道德问题。"
+        "报告期内，公司开展反舞弊培训。"
+    )
+
+    preview = build_evidence_preview(text, ["业务单位", "风险程度", "审计策略", "商业道德问题"])
+
+    assert "业务单位" in preview
+    assert "风险程度" in preview
+    assert "审计策略" in preview
+    assert "商业道德问题" in preview
 
 
 def test_chunk_to_evidence_preview_prefers_kpi_row_preview():
