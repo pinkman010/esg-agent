@@ -4,7 +4,7 @@
 
 ## 项目状态
 
-分析技术闭环已跑通：后端 API、PostgreSQL schema、PDF 解析、577 条 eligible GRI requirement、披露分析 workflow、证据路由、基础人工复核、导出和审计日志均已有实现。当前阶段转向企业产品闭环，重点建设报告生命周期、高风险队列、三栏复核工作台、追加式审计、整改任务和版本化输出。
+企业产品闭环已进入人工验收阶段：报告生命周期、577 条 eligible GRI requirement 后台分析、七阶段进度、固定高风险队列、三栏复核工作台、追加式审计、整改任务和版本化输出均已实现。分析引擎继续保留 Envision 577 回归和 Goldwind holdout 泛化门禁。
 
 ## 仓库结构
 
@@ -102,3 +102,7 @@ pnpm typecheck
 pnpm test
 pnpm build
 ```
+
+当前数据库 head 为 `0008_export_versions`。正式输出要求全部高风险项完成复核；草稿可随时生成，并明确标记系统待确认范围。完整产品验收说明见 `docs/DEVELOPMENT.md` 的“企业产品闭环验收”章节。
+
+当前处于人工产品验收停止点。已知风险和尚未实现的规划接口统一记录在 `docs/DEVELOPMENT.md`，开始验收前应先阅读该章节。

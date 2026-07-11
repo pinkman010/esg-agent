@@ -8,7 +8,7 @@
 
 **技术栈：** Next.js App Router、TypeScript、Tailwind CSS、shadcn/ui、TanStack Query、TanStack Table、FastAPI、Pydantic v2、PostgreSQL、SQLAlchemy 2.0、Alembic。
 
-**执行状态：** Task 1-10 的设计材料已完成，当前停在人工审批点；未进入代码、API 或数据库实现。
+**执行状态：** 已完成。设计于 2026-07-11 获得人工批准，后续阶段 0-8 已执行；本文件保留为设计校准历史，当前实现与验收状态以 `README.md`、`docs/DESIGN.md` 和 `docs/DEVELOPMENT.md` 为准。
 
 ---
 
@@ -33,7 +33,9 @@
 
 第一版保留跨企业、跨报告格式的证据识别泛化能力，不建设多租户、复杂权限、顾问项目空间、同行对标、多标准混合分析或开放式风险规则配置。
 
-### 1.2 当前实现事实
+### 1.2 设计冻结时的实现事实
+
+以下内容记录设计冻结时的历史基线，不代表当前实现状态：
 
 - 后端已能解析报告、建立 run、生成 eligible GRI task、保存 assessment/evidence/recommendation、执行基础人工复核并导出 JSON/CSV。
 - Envision 577 条回归链路已经跑通；Goldwind 验证了 report profile、KPI 行匹配和跨报告路由能力。
@@ -428,10 +430,10 @@ GET  /api/exports/{export_id}
 
 **创建：** `docs/plan/product-closure-implementation-plan.md`
 
-- [ ] 按可独立验收的纵向切片拆分：报告列表与确认、进度与部分失败、风险队列、复核快照与审计、三栏工作台、整改、版本化输出。
-- [ ] 每个切片列出精确后端、前端、迁移和测试文件。
+- [ ] 按可独立验收的纵向阶段拆分：报告列表与确认、进度与部分失败、风险队列、复核快照与审计、三栏工作台、整改、版本化输出。
+- [ ] 每个阶段列出精确后端、前端、迁移和测试文件。
 - [ ] 每个行为修改采用 TDD，先列失败测试和验证命令。
-- [ ] 第一轮实现不得同时启动全部切片，必须给出依赖顺序和提交边界。
+- [ ] 第一轮实现不得同时启动全部阶段，必须给出依赖顺序和提交边界。
 - [ ] 将 holdout 泛化验证安排在产品闭环后，不继续扩展 Goldwind per-ID 规则。
 
 ### Task 9：文档一致性检查
@@ -462,7 +464,7 @@ GET  /api/exports/{export_id}
 4. 系统 assessment 与人工 review snapshot 的保存方式；
 5. API 资源和写操作边界；
 6. 数据库新增表与迁移范围；
-7. 第一轮编码切片及优先级。
+7. 第一轮编码阶段及优先级。
 
 执行过程中遇到以下情况也必须提前停止：
 

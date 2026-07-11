@@ -133,6 +133,54 @@ pnpm dev
 - 前端 Vitest。
 - 前端 build。
 
+## 7. 企业产品闭环验收
+
+当前 Alembic head：`0008_export_versions`。迁移覆盖报告 metadata、分析阶段、风险快照、人工复核快照、整改任务和版本化输出。
+
+核心产品 API：
+
+- `POST /api/reports/upload`、`POST /api/reports/{report_id}/confirm-metadata`
+- `POST /api/reports/{report_id}/analyze`、`GET /api/runs/{run_id}/stages`
+- `GET /api/reports/{report_id}/dashboard`、`GET /api/reports/{report_id}/review-queue`
+- `POST /api/assessments/{assessment_id}/review-decisions`
+- `POST /api/reports/{report_id}/actions`、`PATCH /api/actions/{action_id}`
+- `POST /api/reports/{report_id}/exports/draft`、`POST /api/reports/{report_id}/exports/formal`
+
+正式输出门禁：全部高风险 assessment 必须已有有效 review snapshot。草稿不受该门禁限制，但输出 manifest 会记录草稿标识、高风险复核范围、run、engine version 和 risk rule version。正式版本使用递增版本号，旧正式版本标记为 superseded，文件 manifest 保存路径、大小和 SHA256。
+
+产品闭环自动验收命令：
+
+```powershell
+docker compose up -d postgres
+
+cd backend
+uv run --no-sync alembic upgrade head
+uv run --no-sync pytest -q
+
+cd ../frontend
+pnpm typecheck
+pnpm test
+pnpm build
+```
+
+API 端到端测试 `backend/tests/api/test_product_closure_e2e.py` 覆盖上传、metadata 确认、577 计数、七阶段进度、高风险队列、人工复核、整改、草稿门禁和正式输出。人工产品验收重点检查：报告列表、分析进度、dashboard、三栏复核、完整核查表、整改任务、版本化输出，以及“高风险复核已完成”表述未暗示 577 条全部人工确认。
+
+旧 `review_decisions` 已完成两个连续阶段的数据映射兼容测试，但旧 API、旧前端工作台和旧导出仍有调用者，因此暂不删除。完成调用迁移后，应以独立 migration 验证 upgrade/downgrade，再申请清理。
+
+### 当前验收风险与后续项
+
+- 重复上传相同 PDF 时，后端正确返回 `409 duplicate_report` 和已有 `report_id`，前端当前只显示通用状态码；应改为“报告已存在 + 打开已有报告”。
+- 同一报告已有 running run 时，分析接口尚未阻止再次启动，需要增加并发门禁。
+- 批量复核、独立 report/assessment reopen、report 级审计、单 export metadata 和文件下载 API 尚未实现；这些接口在 `docs/product/api-contract.md` 标记为规划中。
+- `actions_xlsx` 尚未按整改任务字段生成完整任务清单，当前验收只覆盖核查表 XLSX、管理层摘要 PDF 和打印 HTML。
+- 旧 `/api/review/*`、旧 `/api/exports/runs/*`、`/api/audit/runs` 和对应旧前端页面仍承担兼容用途，不能删除 `review_decisions`。
+- Goldwind 100 条人工 gold gate 的 `unknown_leakage_count=2`，但 `false_disclosed_count=0`、`wrong_source_page_count=0`；该风险不阻塞 MVP 人工验收。
+- 开发库包含多次 Envision regeneration 记录，报告列表会出现重复开发数据；正式验收应使用明确选择的报告，生产初始化应使用空库。
+- Codex 内置浏览器控制在本机发生两次桌面应用闪退。自动页面截图改用独立无头 Edge；人工验收使用普通浏览器，不再启用 Codex 内置浏览器。
+- 外部模型和 OCR/VLM 默认关闭，只有用户明确批准后才能启用。
+
+当前自动门禁：后端 444 项测试通过；前端 17 项测试、typecheck 和 production build 通过；Envision 577 audit 通过且 verdict delta=0；数据库 head 为 `0008_export_versions`。下一步为人工产品验收，发现问题后按阻塞程度进入修复和回归。
+
 review CSV 生成后必须执行硬门禁自查：
 
 ```powershell
@@ -190,7 +238,7 @@ uv run --no-sync python -m src.tools.first_pass_quality ../tmp/review/current_55
 
 该工具按 `requirement_id` 聚合首行，并支持人工复核字段：`manual_label`、`correct_pdf_pages`、`suggested_verdict`、`issue_type`。输出指标包括 first-pass recall、false disclosed、wrong source page、unknown leakage 和 after-rules delta。
 
-## Envision 577 Review CSV Regeneration Gate
+## 8. Envision 577 Review CSV Regeneration Gate
 
 用途：从 Envision 2024 源报告、report profile 和当前规则重新生成 577 条 eligible GRI assessment review CSV，并与已批准 baseline 比较。
 
@@ -222,7 +270,7 @@ uv run --no-sync python -m src.tools.regenerate_review_csv `
 
 产物写入 `tmp/review/`，不提交。
 
-## Review CSV 与诊断字段分层
+## 9. Review CSV 与诊断字段分层
 
 新增 review、routing 或 holdout 字段前，必须先说明字段所属层级和消费者。默认不把诊断字段升为正式证据 schema。
 
@@ -239,7 +287,7 @@ uv run --no-sync python -m src.tools.regenerate_review_csv `
 - 新增诊断信息优先放入单独诊断文件。
 - 下一轮 `preview anchor` 和 `section route guardrail` 改造不得新增顶层字段，优先复用 `evidence_preview`、`retrieval_strategy`、`evidence_type` 和现有诊断产物。
 
-## 7. OpenAPI 类型生成
+## 10. OpenAPI 类型生成
 
 前端 API 类型通过 FastAPI OpenAPI 自动生成。
 
@@ -258,7 +306,16 @@ pnpm generate:api
 
 生成前需要后端在 `http://localhost:8000` 提供 `/openapi.json`。
 
-## 8. 开发日志
+## 11. 开发日志
+
+### 2026-07-11
+
+- 企业 ESG 产品闭环阶段 0-8 自动门禁完成，进入人工产品验收停止点。
+- 新增 `0003` 至 `0008` migrations，覆盖 report metadata、分析阶段、风险、复核快照、整改任务和版本化输出。
+- API 端到端测试覆盖上传、确认、577 计数、七阶段进度、高风险复核、整改、草稿和正式输出；后端全量 444 项测试通过。
+- 前端普通入口收敛为首页和 ESG 报告，核心业务文案中文化；17 项测试、typecheck 和 production build 通过。
+- Envision 577 零回归；Goldwind 100 条人工 gold recall 为 96.08%，无 false disclosed 和 wrong source page，保留 2 条 unknown leakage。
+- 旧 `review_decisions` 两个兼容周期数据映射通过，但仍有调用者，清理延期。
 
 ### 2026-07-05
 

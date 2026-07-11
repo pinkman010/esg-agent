@@ -158,7 +158,7 @@ API 只通过 repository/service 组装该视图，避免前端合并历史。
 6. 回填现有 report/run 默认状态和版本；
 7. 将现有 review_decisions 转为 review snapshot，保留原表；
 8. 切换 API 写路径；
-9. 新写路径启用后，将旧 `review_decisions` 标记 deprecated，并开始两个连续切片验收周期；每轮验证历史记录映射、只读查询和新旧结果一致性；
+9. 新写路径启用后，将旧 `review_decisions` 标记 deprecated，并开始两个连续阶段验收周期；每轮验证历史记录映射、只读查询和新旧结果一致性；
 10. 两轮均通过且备份、行数、主键关联和字段映射一致后，在独立 Alembic revision 中清理旧表。任一检查失败时停止清理并保留旧表。
 
 每步独立 Alembic revision，支持前滚和结构回滚。包含数据回填的 revision 在 downgrade 时不得静默丢失人工记录，应阻止 downgrade 并提示先导出备份。
@@ -166,16 +166,12 @@ API 只通过 repository/service 组装该视图，避免前端合并历史。
 ## 7. 兼容周期定义
 
 - 兼容周期从替代表或替代写路径实际启用开始计算，不从设计批准或 migration 文件创建开始计算。
-- 一个周期对应一个后续切片的完整自动验收，包括 migration、repository、API 和历史数据一致性测试。
-- `review_snapshots` 在切片 4 启用后，切片 5 和切片 6 可作为两个连续兼容周期；均通过后，最早在切片 7 执行独立清理。
+- 一个周期对应一个后续阶段的完整自动验收，包括 migration、repository、API 和历史数据一致性测试。
+- `review_snapshots` 在阶段 4 启用后，阶段 5 和阶段 6 可作为两个连续兼容周期；均通过后，最早在阶段 7 执行独立清理。
 - 清理前必须生成数据库备份或可复现导出，并验证旧记录全部映射到新快照；发现无法映射记录属于停止条件。
 
-## 8. 尚未实施
+## 8. 当前实施状态
 
-本文件是设计输入。人工批准前：
+截至 2026-07-11，`0003_report_metadata_and_status` 至 `0008_export_versions` 已实现并完成 upgrade/downgrade/upgrade 验证，当前数据库 head 为 `0008_export_versions`。新写路径使用 `review_snapshots` 和 `review_change_events`，风险、整改和输出分别写入独立表。
 
-- 不修改 `backend/src/db/models.py`；
-- 不修改 repository；
-- 不创建 Alembic revision；
-- 不更新 OpenAPI；
-- 不回填本地数据库。
+旧 `review_decisions` 已完成阶段 5、阶段 6 两个连续兼容周期，3 条旧记录与 3 条 `legacy_import` snapshot 映射一致。由于旧 API、旧前端工作台和旧导出仍有调用者，尚未满足清理条件，旧表继续保留。后续清理必须先迁移调用者，再使用独立 Alembic revision 验证 upgrade/downgrade。
