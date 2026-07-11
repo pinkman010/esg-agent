@@ -3,6 +3,7 @@ from src.domain.enums import AssessmentVerdict, EvidenceSourceMethod, PageQualit
 from src.domain.models import DisclosureTask, DocumentChunk
 from src.standards.evidence_contracts import RequirementEvidenceContract
 from src.standards.evidence_ontology import EvidenceKind, RequirementFacet, SemanticGroup
+from src.tools.retrieval import retrieve_evidence
 
 
 def make_task():
@@ -45,6 +46,110 @@ def test_disclosure_agent_marks_missing_evidence_for_manual_review_and_recommend
     assert result.assessment.verdict is AssessmentVerdict.UNKNOWN
     assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
     assert result.recommendations[0].requirement_id == "GRI TEST-1-a"
+
+
+def test_profile_candidate_wrong_ohs_metric_remains_candidate_only(monkeypatch):
+    def fake_contract(requirement_id):
+        if requirement_id != "GRI TEST-hours-worked":
+            return None
+        return RequirementEvidenceContract(
+            requirement_id=requirement_id,
+            facets=(RequirementFacet.REQUIRES_COUNT,),
+            evidence_kinds=(EvidenceKind.KPI_VALUE,),
+            semantic_group=SemanticGroup.OHS_KPI,
+        )
+
+    monkeypatch.setattr("src.agents.disclosure_agent.get_requirement_contract", fake_contract)
+    task = DisclosureTask(
+        task_id="task-hours-worked",
+        run_id="run-1",
+        report_id="report-1",
+        standard_id="GRI",
+        standard_version="2021",
+        disclosure_id="GRI 403-9",
+        requirement_id="GRI TEST-hours-worked",
+        requirement_text="number of hours worked for employees",
+        keywords=["时数"],
+        candidate_pages=[47],
+        candidate_pdf_pages=[47],
+        candidate_page_source="report_profile",
+    )
+    chunk = DocumentChunk(
+        chunk_id="chunk-training-hours",
+        report_id="report-1",
+        text="员工安全培训时数 441630 小时",
+        source_page=47,
+        source_method=EvidenceSourceMethod.PDFPLUMBER,
+        source_file_hash="hash-1",
+    )
+
+    result = DisclosureAgent().analyze(task, [chunk], confirm_llm=False)
+
+    assert result.assessment.verdict is AssessmentVerdict.UNKNOWN
+    assert result.assessment.evidence == []
+
+
+def test_disclosure_agent_uses_leaf_specific_missing_items_without_neighbor_leaf_content():
+    task = DisclosureTask(
+        task_id="task-404-2-a-leaf",
+        run_id="run-1",
+        report_id="goldwind",
+        standard_id="GRI",
+        standard_version="2016",
+        disclosure_id="GRI 404-2",
+        requirement_id="GRI 404-2-a",
+        requirement_text="programs for upgrading employee skills and transition assistance programs",
+        keywords=["培训", "员工发展"],
+        candidate_pages=[36],
+        candidate_pdf_pages=[36],
+        candidate_page_source="report_profile",
+    )
+    chunk = DocumentChunk(
+        chunk_id="chunk-employee-development",
+        report_id="goldwind",
+        text="公司建立员工发展和技能提升培训项目，覆盖专业能力和管理能力。",
+        source_page=36,
+        source_method=EvidenceSourceMethod.PDFPLUMBER,
+        source_file_hash="hash-1",
+    )
+
+    result = DisclosureAgent().analyze(task, [chunk], confirm_llm=False)
+
+    assert result.assessment.verdict is AssessmentVerdict.PARTIALLY_DISCLOSED
+    assert result.assessment.missing_items == ["员工技能提升项目的内容和覆盖范围", "持续就业能力支持说明"]
+    assert all("转型援助" not in item for item in result.assessment.missing_items)
+
+
+def test_report_profile_route_bypasses_legacy_envision_fixed_page_map():
+    task = DisclosureTask(
+        task_id="task-energy-profile",
+        run_id="run-1",
+        report_id="goldwind",
+        standard_id="GRI",
+        standard_version="2016",
+        disclosure_id="GRI 302-1",
+        requirement_id="GRI 302-1-a",
+        requirement_text="fuel consumption within the organization from non-renewable sources",
+        candidate_pages=[26],
+        candidate_pdf_pages=[26],
+        candidate_page_source="report_profile",
+        kpi_table_pages=[26],
+        kpi_metric_terms=["汽油"],
+        kpi_year_columns=["2024年"],
+    )
+    chunk = DocumentChunk(
+        chunk_id="chunk-energy-profile",
+        report_id="goldwind",
+        text="指标 单位 2024年 汽油 千升 3213.63 柴油 千升 1905.28",
+        source_page=26,
+        source_method=EvidenceSourceMethod.PDFPLUMBER,
+        source_file_hash="hash-1",
+    )
+
+    result = DisclosureAgent().analyze(task, [chunk], confirm_llm=False)
+
+    assert result.assessment.verdict is AssessmentVerdict.PARTIALLY_DISCLOSED
+    assert [item.source_page for item in result.assessment.evidence] == [26]
 
 
 def test_disclosure_agent_applies_ontology_matrix_before_generic_disclosed(monkeypatch):
@@ -3946,3 +4051,70 @@ def test_no_evidence_guardrail_blocks_general_training_from_security_personnel_l
     assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
     assert result.assessment.evidence == []
     assert "安保人员人权政策培训比例" in result.assessment.missing_items
+
+
+def test_report_profile_evidence_overrides_legacy_no_evidence_guardrail():
+    task = DisclosureTask(
+        task_id="task-GRI-404-1-a-i",
+        run_id="run-1",
+        report_id="goldwind",
+        standard_id="GRI 404",
+        standard_version="2016",
+        disclosure_id="GRI 404-1",
+        requirement_id="GRI 404-1-a-i",
+        requirement_text="gender;",
+        keywords=["gender"],
+        candidate_pages=[46],
+        candidate_pdf_pages=[46],
+        candidate_page_source="report_profile",
+        kpi_table_pages=[46],
+        kpi_metric_terms=["按性别划分", "男性", "女性", "人均培训小时数"],
+    )
+    chunk = DocumentChunk(
+        chunk_id="chunk-GRI-404-1-a-i-46",
+        report_id="goldwind",
+        text="员工培训 人均培训小时数 47.3 按性别划分 男性 51.0 女性 34.5",
+        source_page=46,
+        source_method=EvidenceSourceMethod.PDFPLUMBER,
+        source_file_hash="hash-1",
+    )
+
+    result = DisclosureAgent().analyze(task, [chunk], confirm_llm=False)
+
+    assert result.assessment.evidence
+    assert result.assessment.verdict is not AssessmentVerdict.UNKNOWN
+
+
+def test_profile_kpi_anchor_matches_pdf_spacing_and_slash_noise():
+    task = DisclosureTask(
+        task_id="task-GRI-308-2-b",
+        run_id="run-1",
+        report_id="envision",
+        standard_id="GRI 308",
+        standard_version="2016",
+        disclosure_id="GRI 308-2",
+        requirement_id="GRI 308-2-b",
+        requirement_text="number of suppliers identified as having significant actual and potential negative environmental impacts",
+        keywords=["suppliers", "negative environmental impacts"],
+        candidate_pages=[67],
+        candidate_pdf_pages=[67],
+        candidate_page_source="report_profile",
+        kpi_table_pages=[67],
+        kpi_metric_terms=["具有重大实际或潜在负面环境影响的供应商数量"],
+    )
+    chunk = DocumentChunk(
+        chunk_id="chunk-GRI-308-2-b-67",
+        report_id="envision",
+        text="具有重大实际/ 潜在负面环境影响的供应 0 0 0 商数量（个）",
+        source_page=67,
+        source_method=EvidenceSourceMethod.PDFPLUMBER,
+        source_file_hash="hash-1",
+    )
+
+    retrieved = retrieve_evidence(task, [chunk])
+    assert retrieved
+    assert retrieved[0].metadata["kpi_row_label"] == "具有重大实际或潜在负面环境影响的供应商数量"
+
+    result = DisclosureAgent().analyze(task, [chunk], confirm_llm=False)
+
+    assert result.assessment.verdict is AssessmentVerdict.DISCLOSED

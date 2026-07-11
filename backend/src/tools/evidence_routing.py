@@ -178,6 +178,13 @@ class EvidenceRouter:
             and "fatalit" in task.requirement_text.lower()
         ):
             aliases.extend(["员工因工死亡人数", "因工死亡人数", "工伤死亡人数"])
+        if contract is not None and contract.semantic_group is SemanticGroup.BREAKDOWN_DIMENSION:
+            if RequirementFacet.REQUIRES_GENDER_BREAKDOWN in contract.facets:
+                aliases.extend(["按性别划分", "男性", "女性", "人均培训小时数"])
+            if RequirementFacet.REQUIRES_EMPLOYEE_CATEGORY_BREAKDOWN in contract.facets:
+                aliases.extend(["按层级划分", "高级管理层", "中基层管理", "基层员工", "人均培训小时数"])
+        if contract is not None and contract.semantic_group is SemanticGroup.COMMUNITY_PROGRAM:
+            aliases.extend(["环境影响评价", "环境影响评估", "环境监测", "环境风险评估"])
         return _dedupe_terms([*terms, *aliases])
 
 

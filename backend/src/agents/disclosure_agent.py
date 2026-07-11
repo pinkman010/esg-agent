@@ -7,7 +7,9 @@ from src.standards.compilation_guardrails import get_compilation_guardrails
 from src.standards.evidence_contracts import get_requirement_contract
 from src.standards.evidence_ontology import EvidenceKind, RequirementFacet, SemanticGroup, evaluate_ontology_verdict
 from src.standards.no_evidence_guardrails import get_no_evidence_guardrail
+from src.standards.leaf_sufficiency import get_leaf_sufficiency_rule
 from src.tools.evidence import build_evidence_preview, build_kpi_evidence_preview, chunk_to_evidence
+from src.tools.evidence_promotion import EvidencePromotionContext, evaluate_evidence_promotion
 from src.tools.guardrails import build_guarded_assessment
 from src.tools.ids import database_safe_id
 from src.tools.retrieval import retrieve_evidence
@@ -29,9 +31,12 @@ class DisclosureAgent:
         evidence = self._supplement_requirement_specific_evidence(task, chunks, retrieve_evidence(task, chunks, limit=10))
         evidence = self._filter_invalid_evidence(task, evidence)
         evidence = self._supplement_profile_management_evidence_after_filter(task, chunks, evidence)
+        evidence = self._apply_evidence_promotion_gate(task, evidence)
         self._mark_requirement_specific_quality_flags(task, evidence)
         self._mark_requirement_specific_previews(task, evidence)
         verdict, rationale, missing_items = self._classify_rule_based(task, evidence)
+        verdict, rationale = self._apply_evidence_promotion_verdict_cap(evidence, verdict, rationale)
+        missing_items = self._apply_leaf_sufficiency_missing_items(task, verdict, missing_items)
         assessment = build_guarded_assessment(
             task,
             evidence=evidence,
@@ -69,6 +74,79 @@ class DisclosureAgent:
             assessment.review_status = ReviewStatus.NOT_REQUIRED
         recommendations = self._build_recommendations(task, assessment)
         return DisclosureAgentResult(assessment=assessment, recommendations=recommendations)
+
+    def _apply_leaf_sufficiency_missing_items(
+        self,
+        task: DisclosureTask,
+        verdict: AssessmentVerdict | None,
+        missing_items: list[str],
+    ) -> list[str]:
+        if verdict is AssessmentVerdict.DISCLOSED:
+            return missing_items
+        rule = get_leaf_sufficiency_rule(task.requirement_id)
+        if rule is None:
+            return missing_items
+        return list(rule.missing_item_templates)
+
+    def _apply_evidence_promotion_gate(
+        self,
+        task: DisclosureTask,
+        evidence: list[EvidenceItem],
+    ) -> list[EvidenceItem]:
+        contract = get_requirement_contract(task.requirement_id)
+        if contract is None:
+            return evidence
+        evidence_kind = contract.evidence_kinds[0] if contract.evidence_kinds else None
+        promoted: list[EvidenceItem] = []
+        for item in evidence:
+            matched_terms = tuple(
+                term
+                for term in [*task.kpi_metric_terms, *task.keywords]
+                if term and term.lower() in item.source_text.lower()
+            )
+            decision = evaluate_evidence_promotion(
+                EvidencePromotionContext(
+                    requirement_id=task.requirement_id,
+                    requirement_text=task.requirement_text,
+                    semantic_group=contract.semantic_group,
+                    facets=contract.facets,
+                    evidence_kind=evidence_kind,
+                    matched_terms=matched_terms,
+                    kpi_row_label=item.metadata.get("kpi_row_label"),
+                    kpi_row_unit=item.metadata.get("kpi_row_unit"),
+                    kpi_row_value=item.metadata.get("kpi_row_value"),
+                    source_text=item.source_text,
+                    profile_candidate_unmatched=bool(item.metadata.get("profile_candidate_unmatched")),
+                )
+            )
+            item.metadata["promotion_reason"] = decision.reason
+            item.metadata["promotion_max_verdict"] = decision.max_verdict.value
+            if decision.promote:
+                promoted.append(item)
+        return promoted
+
+    def _apply_evidence_promotion_verdict_cap(
+        self,
+        evidence: list[EvidenceItem],
+        verdict: AssessmentVerdict | None,
+        rationale: str | None,
+    ) -> tuple[AssessmentVerdict | None, str | None]:
+        if verdict is not AssessmentVerdict.DISCLOSED:
+            return verdict, rationale
+        promotion_caps = {
+            item.metadata.get("promotion_max_verdict")
+            for item in evidence
+            if item.metadata.get("promotion_max_verdict")
+        }
+        if (
+            AssessmentVerdict.PARTIALLY_DISCLOSED.value in promotion_caps
+            and AssessmentVerdict.DISCLOSED.value not in promotion_caps
+        ):
+            return (
+                AssessmentVerdict.PARTIALLY_DISCLOSED,
+                "Evidence is directionally relevant, but the leaf-level promotion gate limits it to partial disclosure.",
+            )
+        return verdict, rationale
 
     def _apply_compilation_guardrails(self, task: DisclosureTask, assessment: DisclosureAssessment) -> None:
         if assessment.verdict is AssessmentVerdict.DISCLOSED:
@@ -234,7 +312,7 @@ class DisclosureAgent:
         evidence: list[EvidenceItem],
     ) -> list[EvidenceItem]:
         guardrail = get_no_evidence_guardrail(task.requirement_id)
-        if guardrail is not None:
+        if guardrail is not None and not (self._uses_report_profile_route(task) and task.candidate_pages):
             return []
 
         contract = get_requirement_contract(task.requirement_id)
@@ -245,6 +323,9 @@ class DisclosureAgent:
             if contract.allowed_pages and task.candidate_pages and not self._uses_report_profile_route(task):
                 return [item for item in filtered if item.source_page in contract.allowed_pages]
             evidence = filtered
+
+        if self._uses_report_profile_route(task):
+            return evidence
 
         allowed_pages_by_requirement = self._requirement_specific_allowed_pages()
         requirements_without_valid_evidence = {

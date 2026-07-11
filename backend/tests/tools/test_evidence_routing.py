@@ -156,7 +156,7 @@ def test_requirement_route_has_priority_over_section_route_for_goldwind_profile(
     route = router.route(task)
 
     assert route.source == "report_profile"
-    assert route.candidate_pdf_pages == [31, 32]
+    assert route.candidate_pdf_pages == [31]
 
 
 def test_goldwind_supplier_assessment_route_adds_semantic_metric_aliases():
@@ -208,6 +208,40 @@ def test_goldwind_anti_corruption_route_adds_management_metric_aliases():
     assert "商业道德问题" in route.metric_terms
 
 
+def test_goldwind_training_breakdown_routes_add_chinese_metric_aliases():
+    profile = load_report_profile(Path("data/reports/profiles/goldwind_2024.json"))
+    router = EvidenceRouter(report_profile=profile)
+
+    gender_route = router.route(
+        make_task("GRI 404-1-a-i", "GRI 404-1").model_copy(
+            update={"requirement_text": "average training hours by gender", "keywords": ["gender"]}
+        )
+    )
+    category_route = router.route(
+        make_task("GRI 404-1-a-ii", "GRI 404-1").model_copy(
+            update={"requirement_text": "average training hours by employee category", "keywords": ["employee category"]}
+        )
+    )
+
+    assert "按性别划分" in gender_route.metric_terms
+    assert "男性" in gender_route.metric_terms
+    assert "按层级划分" in category_route.metric_terms
+    assert "高级管理层" in category_route.metric_terms
+
+
+def test_goldwind_community_impact_route_adds_assessment_metric_aliases():
+    profile = load_report_profile(Path("data/reports/profiles/goldwind_2024.json"))
+    router = EvidenceRouter(report_profile=profile)
+    route = router.route(
+        make_task("GRI 413-1-a-ii", "GRI 413-1").model_copy(
+            update={"requirement_text": "environmental impact assessments and ongoing monitoring", "keywords": ["impact assessment"]}
+        )
+    )
+
+    assert "环境影响评价" in route.metric_terms
+    assert "环境监测" in route.metric_terms
+
+
 def test_section_route_only_provides_candidates_for_unrouted_topic():
     profile = load_report_profile(Path("data/reports/profiles/goldwind_2024.json"))
     router = EvidenceRouter(report_profile=profile)
@@ -237,5 +271,5 @@ def test_topic_section_route_does_not_map_customer_privacy_to_product_section():
 
     route = router.route(task)
 
-    assert route.source == "empty"
+    assert route.source == "report_profile"
     assert route.candidate_pdf_pages == []

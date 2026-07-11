@@ -6,8 +6,28 @@ from src.reports.profile import (
     IndexNotePageProfile,
     PageNumbering,
     ReportProfile,
+    ReportKpiTableProfile,
+    ReportRequirementRoute,
     ReportSectionProfile,
 )
+
+
+def calibrate_requirement_routes(
+    profile: ReportProfile,
+    reviewed_pages: dict[str, list[int]],
+) -> ReportProfile:
+    routes = dict(profile.requirement_routes)
+    kpi_pages = set(profile.kpi_pdf_pages)
+    for requirement_id, raw_pages in reviewed_pages.items():
+        pages = sorted({page for page in raw_pages if 1 <= page <= profile.total_pdf_pages})
+        existing = routes.get(requirement_id)
+        metric_terms = list(existing.metric_terms) if existing is not None else []
+        routes[requirement_id] = ReportRequirementRoute(
+            candidate_pdf_pages=pages,
+            kpi_table_pages=sorted(set(pages) & kpi_pages),
+            metric_terms=metric_terms,
+        )
+    return profile.model_copy(update={"requirement_routes": routes})
 
 
 def build_initial_profile(
@@ -33,6 +53,8 @@ def build_initial_profile(
         total_pdf_pages=total_pdf_pages,
         page_numbering=page_numbering,
     )
+    kpi_tables = _kpi_tables(pages, page_numbering, report_year)
+    kpi_pdf_pages = {page for table in kpi_tables for page in table.pdf_pages}
     return ReportProfile(
         report_id=report_id,
         company_name=company_name,
@@ -41,10 +63,11 @@ def build_initial_profile(
         total_pdf_pages=total_pdf_pages,
         page_numbering=page_numbering,
         gri_index={"pdf_pages": sorted(set(index_pages))},
+        kpi_tables=kpi_tables,
         sections=_sections(pages, page_numbering, total_pdf_pages),
         index_note_pages=_index_note_pages(pages, page_numbering),
         assurance_pages=_assurance_pages(pages, page_numbering),
-        requirement_routes=_requirement_routes(disclosure_routes, requirements or []),
+        requirement_routes=_requirement_routes(disclosure_routes, requirements or [], kpi_pdf_pages),
     )
 
 
@@ -149,6 +172,7 @@ def _report_page_to_pdf_page(report_page: int, page_numbering: PageNumbering, *,
 def _requirement_routes(
     disclosure_routes: dict[str, list[int]],
     requirements: list[DisclosureRequirement],
+    kpi_pdf_pages: set[int],
 ) -> dict[str, dict]:
     routes: dict[str, dict] = {}
     topic_routes = _topic_routes(disclosure_routes)
@@ -159,10 +183,37 @@ def _requirement_routes(
             continue
         routes[requirement.requirement_id] = {
             "candidate_pdf_pages": candidate_pages,
-            "kpi_table_pages": [],
+            "kpi_table_pages": sorted(set(candidate_pages) & kpi_pdf_pages),
             "metric_terms": requirement.keywords,
         }
     return routes
+
+
+def _kpi_tables(
+    pages: list[PageExtraction],
+    page_numbering: PageNumbering,
+    report_year: int,
+) -> list[ReportKpiTableProfile]:
+    tables: list[ReportKpiTableProfile] = []
+    year_pattern = re.compile(r"20\d{2}年?")
+    for page in pages:
+        normalized = " ".join(page.text.split())
+        year_columns = sorted(set(year_pattern.findall(normalized)), reverse=True)
+        has_metric_headers = "指标" in normalized and "单位" in normalized
+        if not has_metric_headers or str(report_year) not in normalized:
+            continue
+        report_page = page_numbering.report_page_for_pdf_page(page.page_number)
+        tables.append(
+            ReportKpiTableProfile(
+                name=f"KPI table PDF {page.page_number}",
+                pdf_pages=[page.page_number],
+                report_pages=[report_page] if report_page is not None else [],
+                quality_flags=[flag.value for flag in page.quality_flags],
+                year_columns=year_columns,
+                known_metric_terms=[],
+            )
+        )
+    return tables
 
 
 def _topic_routes(disclosure_routes: dict[str, list[int]]) -> dict[str, list[int]]:

@@ -137,3 +137,23 @@ def test_match_kpi_rows_matches_ohs_fatality_count_without_rate():
     assert matches
     assert matches[0].source_page == 37
     assert "因工死亡人数" in matches[0].preview
+
+
+def test_kpi_row_match_exposes_scope_and_value_type_metadata():
+    chunk = DocumentChunk(
+        chunk_id="goldwind-p26",
+        report_id="goldwind",
+        text="指标 单位 2024年 2023年 范围三温室气体排放量 tCO2e 12345 12000",
+        source_page=26,
+        source_method=EvidenceSourceMethod.PDFPLUMBER,
+        source_file_hash="hash",
+        quality_flags=[PageQualityFlag.COMPLEX_TABLE],
+    )
+
+    matches = match_kpi_rows([chunk], ["范围三温室气体排放量"], year_columns=["2024年"])
+
+    assert len(matches) == 1
+    assert matches[0].matched_term == "范围三温室气体排放量"
+    assert matches[0].scope_tokens == ("scope_3",)
+    assert matches[0].value_type == "emissions"
+    assert matches[0].year_column == "2024年"

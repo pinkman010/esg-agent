@@ -6,6 +6,8 @@ from src.tools.kpi_row_matcher import match_kpi_rows
 
 def retrieve_evidence(task: DisclosureTask, chunks: list[DocumentChunk], limit: int = 5) -> list[EvidenceItem]:
     excluded_page_set = set(task.excluded_pdf_pages)
+    if task.candidate_page_source and task.candidate_page_source.startswith("report_profile") and not task.candidate_pages:
+        return []
     if task.candidate_pages:
         candidate_page_set = set(task.candidate_pages)
         retrieval_metadata = {
@@ -67,7 +69,7 @@ def _keyword_matches(
         kpi_chunks = [
             chunk
             for chunk in chunks
-            if chunk.source_page in kpi_table_pages and PageQualityFlag.COMPLEX_TABLE in chunk.quality_flags
+            if chunk.source_page in kpi_table_pages
         ]
         row_matches = match_kpi_rows(
             kpi_chunks,
@@ -75,8 +77,9 @@ def _keyword_matches(
             year_columns=list(retrieval_metadata.get("kpi_year_columns") or ["2024"]),
         )
         if row_matches:
-            return [
-                chunk_to_evidence(
+            evidence_items: list[EvidenceItem] = []
+            for match in row_matches[:limit]:
+                item = chunk_to_evidence(
                     task,
                     match.chunk,
                     retrieval_metadata={
@@ -86,10 +89,16 @@ def _keyword_matches(
                         "kpi_row_value": match.value,
                         "kpi_year_column": match.year_column,
                         "kpi_row_preview": match.preview,
+                        "kpi_matched_term": match.matched_term,
+                        "kpi_scope_tokens": list(match.scope_tokens),
+                        "kpi_value_type": match.value_type,
+                        "evidence_identity": f"kpi:{match.row_label}",
                     },
                 )
-                for match in row_matches[:limit]
-            ]
+                if PageQualityFlag.COMPLEX_TABLE not in item.quality_flags:
+                    item.quality_flags.append(PageQualityFlag.COMPLEX_TABLE)
+                evidence_items.append(item)
+            return evidence_items
 
     keywords = [keyword.lower() for keyword in [*task.keywords, *kpi_metric_terms] if keyword]
     matches: list[EvidenceItem] = []

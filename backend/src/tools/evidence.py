@@ -21,8 +21,11 @@ def chunk_to_evidence(
     preview_keywords = [*task.keywords, *list(metadata.get("kpi_metric_terms") or [])]
     evidence_preview = metadata_preview or build_evidence_preview(chunk.text, preview_keywords)
 
+    evidence_identity = str(metadata.get("evidence_identity") or "").strip()
+    identity_chunk_id = f"{chunk.chunk_id}:{evidence_identity}" if evidence_identity else chunk.chunk_id
+
     return EvidenceItem(
-        evidence_id=evidence_id_for(task.task_id, chunk.chunk_id),
+        evidence_id=evidence_id_for(task.task_id, identity_chunk_id),
         run_id=task.run_id,
         report_id=task.report_id,
         source_text=chunk.text,

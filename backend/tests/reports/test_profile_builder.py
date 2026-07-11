@@ -1,5 +1,84 @@
+from src.domain.enums import PageQualityFlag
 from src.domain.models import DisclosureRequirement, PageExtraction
-from src.reports.profile_builder import build_initial_profile
+from src.reports.profile_builder import build_initial_profile, calibrate_requirement_routes
+
+
+def test_profile_builder_detects_kpi_table_pages_and_routes_them_to_requirements():
+    pages = [
+        PageExtraction(
+            report_id="goldwind",
+            page_number=25,
+            text="环境关键绩效 指标 单位 2024年 2023年 范围一温室气体排放量 tCO2e 123 120",
+            table_count=1,
+            quality_flags=[PageQualityFlag.COMPLEX_TABLE],
+        ),
+        PageExtraction(
+            report_id="goldwind",
+            page_number=50,
+            text="GRI 内容索引 披露项 305-1 P46",
+        ),
+    ]
+    requirements = [
+        DisclosureRequirement(
+            standard_id="GRI",
+            standard_version="2021",
+            disclosure_id="GRI 305-1",
+            requirement_id="GRI 305-1-a",
+            requirement_text="gross direct Scope 1 GHG emissions",
+            keywords=["范围一温室气体排放量"],
+        )
+    ]
+
+    profile = build_initial_profile(
+        report_id="goldwind",
+        company_name="Goldwind",
+        report_year=2024,
+        pdf_file="goldwind.pdf",
+        total_pdf_pages=52,
+        pages=pages,
+        report_index_pdf_page=50,
+        report_index_report_page=96,
+        requirements=requirements,
+    )
+
+    assert profile.kpi_pdf_pages == [25]
+    assert profile.requirement_routes["GRI 305-1-a"].kpi_table_pages == [25]
+
+
+def test_profile_calibration_applies_reviewed_pages_without_changing_metric_terms():
+    profile = build_initial_profile(
+        report_id="goldwind",
+        company_name="Goldwind",
+        report_year=2024,
+        pdf_file="goldwind.pdf",
+        total_pdf_pages=52,
+        pages=[
+            PageExtraction(
+                report_id="goldwind",
+                page_number=26,
+                text="指标 单位 2024年 范围3 万吨二氧化碳当量 672.11",
+            ),
+            PageExtraction(report_id="goldwind", page_number=50, text="GRI 内容索引 披露项 305-3 P46"),
+        ],
+        report_index_pdf_page=50,
+        report_index_report_page=96,
+        requirements=[
+            DisclosureRequirement(
+                standard_id="GRI",
+                standard_version="2021",
+                disclosure_id="GRI 305-3",
+                requirement_id="GRI 305-3-a",
+                requirement_text="Scope 3 emissions",
+                keywords=["范围3"],
+            )
+        ],
+    )
+
+    calibrated = calibrate_requirement_routes(profile, {"GRI 305-3-a": [26], "GRI 418-1-a": []})
+
+    assert calibrated.requirement_routes["GRI 305-3-a"].candidate_pdf_pages == [26]
+    assert calibrated.requirement_routes["GRI 305-3-a"].metric_terms == ["范围3"]
+    assert calibrated.requirement_routes["GRI 418-1-a"].candidate_pdf_pages == []
 
 
 def test_profile_builder_uses_gri_index_and_page_offset():

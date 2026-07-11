@@ -1,4 +1,4 @@
-from src.domain.enums import EvidenceSourceMethod
+from src.domain.enums import EvidenceSourceMethod, PageQualityFlag
 from src.domain.models import DisclosureTask, DocumentChunk
 from src.tools.evidence import chunk_to_evidence
 from src.tools.retrieval import retrieve_evidence
@@ -325,3 +325,95 @@ def test_retrieve_evidence_matches_management_mechanism_terms_on_profile_route()
     assert evidence[0].source_page == 21
     assert evidence[0].metadata["retrieval_strategy"] == "index_page_bounded"
     assert "反腐败" in evidence[0].evidence_preview
+
+
+def test_retrieve_evidence_uses_profile_kpi_page_without_pdf_table_lines():
+    task = DisclosureTask(
+        task_id="task-scope-1",
+        run_id="run-1",
+        report_id="goldwind",
+        standard_id="GRI",
+        standard_version="2021",
+        disclosure_id="GRI 305-1",
+        requirement_id="GRI 305-1-a",
+        requirement_text="gross direct Scope 1 GHG emissions",
+        candidate_pages=[25],
+        candidate_pdf_pages=[25],
+        candidate_page_source="report_profile",
+        kpi_table_pages=[25],
+        kpi_metric_terms=["范围1"],
+        kpi_year_columns=["2024年"],
+    )
+    chunk = DocumentChunk(
+        chunk_id="p25",
+        report_id="goldwind",
+        text="指标 单位 2024年 2023年 范围1 吨二氧化碳当量 17,334.13 20,006.67",
+        source_page=25,
+        source_method=EvidenceSourceMethod.PDFPLUMBER,
+        source_file_hash="hash",
+        quality_flags=[PageQualityFlag.DIGITAL_TEXT],
+    )
+
+    evidence = retrieve_evidence(task, [chunk])
+
+    assert len(evidence) == 1
+    assert evidence[0].metadata["kpi_row_label"] == "范围1"
+    assert PageQualityFlag.COMPLEX_TABLE in evidence[0].quality_flags
+
+
+def test_retrieve_evidence_assigns_unique_ids_to_multiple_kpi_rows_in_one_chunk():
+    task = DisclosureTask(
+        task_id="task-ohs-kpis",
+        run_id="run-1",
+        report_id="goldwind",
+        standard_id="GRI",
+        standard_version="2021",
+        disclosure_id="GRI 403-9",
+        requirement_id="GRI 403-9-a",
+        requirement_text="work-related injury KPIs",
+        candidate_pages=[47],
+        candidate_page_source="report_profile",
+        kpi_table_pages=[47],
+        kpi_metric_terms=["员工因工死亡人数", "安全培训时数"],
+        kpi_year_columns=["2024年"],
+    )
+    chunk = DocumentChunk(
+        chunk_id="p47",
+        report_id="goldwind",
+        text="指标 单位 2024年 员工因工死亡人数 人 1 安全培训时数 小时 441630",
+        source_page=47,
+        source_method=EvidenceSourceMethod.PDFPLUMBER,
+        source_file_hash="hash",
+    )
+
+    evidence = retrieve_evidence(task, [chunk])
+
+    assert len(evidence) == 2
+    assert len({item.evidence_id for item in evidence}) == 2
+
+
+def test_explicit_empty_report_profile_route_does_not_fall_back_globally():
+    task = DisclosureTask(
+        task_id="task-empty-profile-route",
+        run_id="run-1",
+        report_id="goldwind",
+        standard_id="GRI",
+        standard_version="2021",
+        disclosure_id="GRI 401-3",
+        requirement_id="GRI 401-3-c",
+        requirement_text="employees returned after parental leave by gender",
+        keywords=["员工"],
+        candidate_pages=[],
+        candidate_pdf_pages=[],
+        candidate_page_source="report_profile",
+    )
+    chunk = DocumentChunk(
+        chunk_id="unrelated-employee-page",
+        report_id="goldwind",
+        text="员工总数和培训数据",
+        source_page=40,
+        source_method=EvidenceSourceMethod.PDFPLUMBER,
+        source_file_hash="hash",
+    )
+
+    assert retrieve_evidence(task, [chunk]) == []
