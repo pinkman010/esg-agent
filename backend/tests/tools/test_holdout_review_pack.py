@@ -1,6 +1,11 @@
 from pathlib import Path
 
-from src.tools.holdout_review_pack import build_review_pack_rows, build_route_improvement_rows, write_review_pack_rows
+from src.tools.holdout_review_pack import (
+    build_review_pack_rows,
+    build_route_improvement_rows,
+    build_stratified_review_pack_rows,
+    write_review_pack_rows,
+)
 
 
 def test_build_route_improvement_rows_joins_gold_and_first_pass(tmp_path: Path):
@@ -220,3 +225,79 @@ def test_build_review_pack_rows_clears_stale_diagnosis_when_unknown_has_no_evide
     assert rows[0]["issue_type"] == "acceptable"
     assert rows[0]["evidence_kind"] == ""
     assert rows[0]["manual_check_focus"] == "no_evidence_boundary"
+
+
+def test_build_stratified_review_pack_joins_selection_and_aggregates_evidence(tmp_path: Path):
+    first_pass = tmp_path / "first.csv"
+    first_pass.write_text(
+        "requirement_id,requirement_text,verdict,review_status,source_pdf_page,candidate_pdf_pages,evidence_type,evidence_preview,rationale,missing_items\n"
+        'GRI 414-1-a,new supplier screening,partially_disclosed,needs_manual_review,31,"[31, 32]",substantive,social audit KPI,directional evidence,"[""new supplier denominator""]"\n'
+        'GRI 414-1-a,new supplier screening,partially_disclosed,needs_manual_review,32,"[31, 32]",substantive,adjacent candidate,directional evidence,"[""new supplier denominator""]"\n'
+        "GRI 999-1-a,excluded requirement,unknown,needs_manual_review,,,,,,\n",
+        encoding="utf-8",
+    )
+    selection = tmp_path / "selection.csv"
+    selection.write_text(
+        "requirement_id,selection_bucket,semantic_group,evidence_kinds,route_status,candidate_page_source,selection_reason\n"
+        'GRI 414-1-a,partial_stratified,supplier_assessment,"[""kpi_value""]",candidate_with_evidence,report_profile,stratified\n',
+        encoding="utf-8",
+    )
+
+    rows = build_stratified_review_pack_rows(first_pass, selection)
+
+    assert len(rows) == 1
+    assert rows[0]["requirement_text"] == "new supplier screening"
+    assert rows[0]["candidate_pdf_pages"] == "[31, 32]"
+    assert rows[0]["source_pdf_pages"] == "[31, 32]"
+    assert rows[0]["evidence_type"] == '["substantive"]'
+    assert rows[0]["evidence_kind"] == '["kpi_value"]'
+    assert rows[0]["selection_bucket"] == "partial_stratified"
+    assert rows[0]["selection_reason"] == "stratified"
+
+
+def test_review_pack_preserves_targeted_selection_theme(tmp_path: Path):
+    first_pass = tmp_path / "first.csv"
+    first_pass.write_text(
+        "requirement_id,verdict,review_status,source_pdf_page,candidate_pdf_pages,candidate_page_source,evidence_preview\n"
+        'GRI 403-9-a-i,partially_disclosed,needs_manual_review,47,[47],report_profile,employee fatality count\n',
+        encoding="utf-8",
+    )
+    selection = tmp_path / "selection.csv"
+    selection.write_text(
+        "requirement_id,selection_bucket,selection_theme,semantic_group,evidence_kinds,route_status,candidate_page_source,selection_reason\n"
+        'GRI 403-9-a-i,targeted_50,ohs_kpi,ohs_kpi,[\"kpi_value\"],candidate_with_evidence,report_profile,targeted\n',
+        encoding="utf-8",
+    )
+
+    rows = build_stratified_review_pack_rows(
+        first_pass,
+        selection,
+        requirement_texts={"GRI 403-9-a-i": "number and rate of employee fatalities"},
+    )
+
+    assert rows[0]["selection_theme"] == "ohs_kpi"
+    assert rows[0]["requirement_text"] == "number and rate of employee fatalities"
+    assert rows[0]["correct_pdf_pages"] == ""
+    assert rows[0]["manual_label"] == ""
+
+
+def test_build_stratified_review_pack_clears_unknown_no_evidence_metadata(tmp_path: Path):
+    first_pass = tmp_path / "first.csv"
+    first_pass.write_text(
+        "requirement_id,requirement_text,verdict,review_status,source_pdf_page,candidate_pdf_pages,evidence_type,evidence_preview,rationale,missing_items\n"
+        "GRI 418-1-a,privacy complaints,unknown,needs_manual_review,,[],explicit_zero_statement,stale preview,no evidence,[]\n",
+        encoding="utf-8",
+    )
+    selection = tmp_path / "selection.csv"
+    selection.write_text(
+        "requirement_id,selection_bucket,semantic_group,evidence_kinds,route_status,candidate_page_source,selection_reason\n"
+        'GRI 418-1-a,boundary_guardrail,zero_event_compliance,"[""explicit_zero_statement""]",no_candidate,,zero-event boundary\n',
+        encoding="utf-8",
+    )
+
+    rows = build_stratified_review_pack_rows(first_pass, selection)
+
+    assert rows[0]["source_pdf_pages"] == "[]"
+    assert rows[0]["evidence_type"] == ""
+    assert rows[0]["evidence_kind"] == ""
+    assert rows[0]["evidence_preview"] == ""

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import csv
 import json
 from collections.abc import Mapping
@@ -37,10 +38,15 @@ REVIEW_PACK_COLUMNS = [
     "requirement_text",
     "verdict",
     "review_status",
+    "candidate_pdf_pages",
     "source_pdf_pages",
+    "evidence_type",
     "rationale",
     "missing_items",
     "guardrail_items",
+    "selection_bucket",
+    "selection_theme",
+    "selection_reason",
     "issue_type",
     "evidence_kind",
     "correct_pdf_pages",
@@ -134,10 +140,14 @@ def build_review_pack_rows(route_improvement_csv: Path) -> list[dict[str, str]]:
                 "requirement_text": row.get("requirement_text", ""),
                 "verdict": row.get("verdict", ""),
                 "review_status": row.get("review_status", ""),
+                "candidate_pdf_pages": row.get("before_candidate_pdf_pages", "[]"),
                 "source_pdf_pages": row.get("source_pdf_pages", "[]"),
+                "evidence_type": row.get("evidence_type", ""),
                 "rationale": row.get("rationale", ""),
                 "missing_items": leaf_missing_items,
                 "guardrail_items": guardrail_items,
+                "selection_bucket": row.get("selection_bucket", ""),
+                "selection_reason": row.get("selection_reason", ""),
                 "issue_type": issue_type,
                 "evidence_kind": evidence_kind,
                 "correct_pdf_pages": row.get("correct_pdf_pages", ""),
@@ -150,6 +160,75 @@ def build_review_pack_rows(route_improvement_csv: Path) -> list[dict[str, str]]:
                 "suggested_verdict": "",
                 "review_note": "",
                 "evidence_preview": row.get("evidence_preview", ""),
+            }
+        )
+    return output
+
+
+def build_stratified_review_pack_rows(
+    first_pass_csv: Path,
+    selection_csv: Path,
+    requirement_texts: Mapping[str, str] | None = None,
+) -> list[dict[str, str]]:
+    first_rows = _group_by_requirement(_read_csv(first_pass_csv))
+    selection_rows = _read_csv(selection_csv)
+    output: list[dict[str, str]] = []
+    for selection in selection_rows:
+        requirement_id = selection["requirement_id"]
+        rows = first_rows.get(requirement_id, [])
+        if not rows:
+            raise ValueError(f"selected requirement missing from first-pass CSV: {requirement_id}")
+        source_pages = sorted(
+            {
+                page
+                for row in rows
+                for page in _parse_page_values(row.get("source_pdf_page", ""))
+            }
+        )
+        candidate_pages = sorted(
+            {
+                page
+                for row in rows
+                for page in _parse_page_values(row.get("candidate_pdf_pages", ""))
+            }
+        )
+        evidence_types = sorted(
+            {(row.get("evidence_type") or "").strip() for row in rows} - {""}
+        )
+        leaf_missing_items, guardrail_items = _split_missing_items(
+            requirement_id,
+            _first_non_empty(rows, "missing_items"),
+        )
+        verdict = _first_non_empty(rows, "verdict")
+        no_evidence = verdict == "unknown" and not source_pages
+        output.append(
+            {
+                "requirement_id": requirement_id,
+                "requirement_text": _first_non_empty(rows, "requirement_text")
+                or (requirement_texts or {}).get(requirement_id, ""),
+                "verdict": verdict,
+                "review_status": _first_non_empty(rows, "review_status"),
+                "candidate_pdf_pages": json.dumps(candidate_pages, ensure_ascii=False),
+                "source_pdf_pages": json.dumps(source_pages, ensure_ascii=False),
+                "evidence_type": "" if no_evidence else json.dumps(evidence_types, ensure_ascii=False),
+                "rationale": _first_non_empty(rows, "rationale"),
+                "missing_items": leaf_missing_items,
+                "guardrail_items": guardrail_items,
+                "selection_bucket": selection.get("selection_bucket", ""),
+                "selection_theme": selection.get("selection_theme", ""),
+                "selection_reason": selection.get("selection_reason", ""),
+                "issue_type": "",
+                "evidence_kind": "" if no_evidence else selection.get("evidence_kinds", "[]"),
+                "correct_pdf_pages": "",
+                "suggested_profile_route": "",
+                "current_route_status": selection.get("route_status", ""),
+                "manual_check_required": "true",
+                "manual_check_focus": "no_evidence_boundary" if no_evidence else "evidence_and_verdict",
+                "manual_label": "",
+                "correct_source_pdf_pages": "",
+                "suggested_verdict": "",
+                "review_note": "",
+                "evidence_preview": "" if no_evidence else _first_non_empty(rows, "evidence_preview"),
             }
         )
     return output
@@ -211,6 +290,24 @@ def _first_non_empty(rows: list[dict[str, str]], field: str) -> str:
     return ""
 
 
+def _parse_page_values(raw: str) -> list[int]:
+    text = (raw or "").strip()
+    if not text:
+        return []
+    try:
+        parsed = json.loads(text)
+    except json.JSONDecodeError:
+        parsed = text
+    values = parsed if isinstance(parsed, list) else [parsed]
+    pages: list[int] = []
+    for value in values:
+        try:
+            pages.append(int(value))
+        except (TypeError, ValueError):
+            continue
+    return pages
+
+
 def _profile_candidate_pages(report_profile_path: Path | None) -> dict[str, str]:
     if report_profile_path is None:
         return {}
@@ -239,3 +336,29 @@ def _route_status(
     if correct and not correct.intersection(source_pages):
         return "wrong_source"
     return "candidate_with_evidence"
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Build a stratified holdout review pack.")
+    parser.add_argument("first_pass_csv", type=Path)
+    parser.add_argument("selection_csv", type=Path)
+    parser.add_argument("output_csv", type=Path)
+    args = parser.parse_args()
+
+    from src.standards.gri import GRIAdapter
+
+    checklist_path = Path(__file__).resolve().parents[2] / "data" / "manifests" / "gri_requirement_checklist.json"
+    requirement_texts = {
+        requirement.requirement_id: requirement.requirement_text
+        for requirement in GRIAdapter(checklist_path).load_requirements()
+    }
+    rows = build_stratified_review_pack_rows(
+        args.first_pass_csv,
+        args.selection_csv,
+        requirement_texts=requirement_texts,
+    )
+    write_review_pack_rows(rows, args.output_csv)
+
+
+if __name__ == "__main__":
+    main()
