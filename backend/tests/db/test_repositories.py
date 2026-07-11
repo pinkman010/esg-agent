@@ -4,9 +4,10 @@ from sqlalchemy.orm import sessionmaker
 from src.db.base import Base
 from src.db.models import DisclosureTaskRecord, DocumentChunkRecord, DocumentPageRecord, RecommendationRecord
 from src.db.repositories import Repository
-from src.domain.enums import AssessmentVerdict, EvidenceSourceMethod, PageQualityFlag, ReviewStatus, RunStatus
+from src.domain.enums import AssessmentVerdict, EvidenceSourceMethod, PageQualityFlag, ReportStatus, ReviewStatus, RunStatus
 from src.domain.models import (
     AnalysisRun,
+    AnalysisStageEvent,
     DisclosureAssessment,
     DisclosureTask,
     DocumentChunk,
@@ -140,6 +141,78 @@ def test_repository_persists_report_run_assessment_evidence_and_review():
 
         repo.create_audit_event("run-1", "review_decision_saved", {"decision_id": "decision-1"})
         assert repo.count_audit_events("run-1") == 1
+    finally:
+        session.close()
+        reset_database(engine)
+        engine.dispose()
+
+
+def test_repository_lists_and_confirms_report_metadata():
+    engine, session = make_session()
+    try:
+        repo = Repository(session)
+        repo.create_report(
+            Report(
+                report_id="report-1",
+                original_filename="report.pdf",
+                stored_path="backend/data/runtime/uploads/report.pdf",
+                file_hash="hash-1",
+                page_count=10,
+                status=ReportStatus.UPLOADED,
+                metadata_detected={"report_year": 2024},
+            )
+        )
+
+        reports, total = repo.list_reports(page=1, page_size=10)
+        assert total == 1
+        assert reports[0].status == ReportStatus.UPLOADED
+        assert repo.find_report_by_hash("hash-1").report_id == "report-1"
+
+        confirmed = repo.confirm_report_metadata(
+            "report-1",
+            company_name="测试公司",
+            report_year=2024,
+            language="zh-CN",
+        )
+
+        assert confirmed.status == ReportStatus.READY_FOR_ANALYSIS
+        assert confirmed.company_name == "测试公司"
+        assert confirmed.metadata_confirmed_at is not None
+    finally:
+        session.close()
+        reset_database(engine)
+        engine.dispose()
+
+
+def test_repository_appends_analysis_stage_events_and_creates_retry_run():
+    engine, session = make_session()
+    try:
+        repo = Repository(session)
+        repo.create_report(Report(report_id="report-1", original_filename="report.pdf", stored_path="x", file_hash="hash-1"))
+        repo.create_run(
+            AnalysisRun(
+                run_id="run-1",
+                report_id="report-1",
+                status=RunStatus.PARTIALLY_COMPLETED,
+                eligible_requirement_count=2,
+                succeeded_requirement_count=1,
+                failed_requirement_count=1,
+                failure_summary={"failed_requirement_ids": ["GRI 2-1-b"]},
+            )
+        )
+        repo.append_analysis_stage_event(
+            AnalysisStageEvent(run_id="run-1", stage_code="pdf_parsing", status="running", completed_units=0, total_units=1)
+        )
+        repo.append_analysis_stage_event(
+            AnalysisStageEvent(run_id="run-1", stage_code="pdf_parsing", status="completed", completed_units=1, total_units=1)
+        )
+
+        stages = repo.list_latest_analysis_stages("run-1")
+        retry = repo.create_retry_run("run-1", reason="retry failed requirements")
+
+        assert stages[0].status == "completed"
+        assert retry.parent_run_id == "run-1"
+        assert retry.failure_summary["retry_requirement_ids"] == ["GRI 2-1-b"]
     finally:
         session.close()
         reset_database(engine)

@@ -1,10 +1,45 @@
 from enum import StrEnum
 
 
+class ReportStatus(StrEnum):
+    UPLOADED = "uploaded"
+    METADATA_DETECTED = "metadata_detected"
+    AWAITING_CONFIRMATION = "awaiting_confirmation"
+    READY_FOR_ANALYSIS = "ready_for_analysis"
+    ANALYZING = "analyzing"
+    ANALYSIS_COMPLETED = "analysis_completed"
+    PARTIALLY_COMPLETED = "partially_completed"
+    ANALYSIS_FAILED = "analysis_failed"
+    HIGH_RISK_REVIEW_COMPLETED = "high_risk_review_completed"
+    FORMALLY_EXPORTED = "formally_exported"
+    REOPENED = "reopened"
+    ARCHIVED = "archived"
+
+
+class RiskLevel(StrEnum):
+    HIGH = "high"
+    MEDIUM = "medium"
+    LOW = "low"
+
+
+class ActionStatus(StrEnum):
+    OPEN = "open"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+    CANCELLED = "cancelled"
+
+
+class ActionPriority(StrEnum):
+    HIGH = "high"
+    MEDIUM = "medium"
+    LOW = "low"
+
+
 class RunStatus(StrEnum):
     PENDING = "pending"
     RUNNING = "running"
     COMPLETED = "completed"
+    PARTIALLY_COMPLETED = "partially_completed"
     FAILED = "failed"
 
 
@@ -14,6 +49,14 @@ class ReviewStatus(StrEnum):
     APPROVED = "approved"
     REJECTED = "rejected"
     CORRECTED = "corrected"
+
+
+class ReviewOperation(StrEnum):
+    APPROVE = "approve"
+    MODIFY = "modify"
+    INVALIDATE_EVIDENCE = "invalidate_evidence"
+    REOPEN = "reopen"
+    LEGACY_IMPORT = "legacy_import"
 
 
 class AssessmentVerdict(StrEnum):

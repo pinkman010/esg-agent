@@ -6,8 +6,10 @@ from sqlalchemy import select
 
 from src.db.models import AuditEventRecord
 from src.db.repositories import Repository
-from src.domain.enums import AssessmentVerdict, EvidenceSourceMethod, PageQualityFlag, ReviewStatus, RunStatus
+from src.domain.enums import AssessmentVerdict, EvidenceSourceMethod, PageQualityFlag, ReportStatus, ReviewOperation, ReviewStatus, RunStatus
 from src.domain.models import AnalysisRun, DisclosureAssessment, EvidenceItem, Report, ReviewDecision
+from src.services.risk_service import calculate_and_store_risk
+from src.services.review_service import ReviewService
 
 
 def seed_export_data(session):
@@ -50,6 +52,7 @@ def seed_export_data(session):
     )
     repo.save_assessment(assessment)
     repo.save_evidence_item("assessment-1", assessment.evidence[0])
+    calculate_and_store_risk(repo, assessment, trigger_event="analysis_completed")
     repo.save_review_decision(ReviewDecision(decision_id="decision-1", run_id="run-1", assessment_id="assessment-1", review_status=ReviewStatus.APPROVED, reviewer_note="Checked."))
 
 
@@ -97,3 +100,48 @@ async def test_export_api_returns_json_and_csv(api_client, api_session):
         "review_json_exported",
         "review_csv_exported",
     ]
+
+
+async def test_versioned_draft_and_formal_exports(api_client, api_session):
+    seed_export_data(api_session)
+
+    draft = await api_client.post(
+        "/api/reports/report-1/exports/draft",
+        json={"formats": ["assessment_xlsx", "management_pdf", "print_html"], "created_by": "张三"},
+    )
+    blocked = await api_client.post(
+        "/api/reports/report-1/exports/formal",
+        json={"formats": ["assessment_xlsx"], "created_by": "张三"},
+    )
+    ReviewService(Repository(api_session)).record(
+        "assessment-1",
+        operation_type=ReviewOperation.APPROVE,
+        reviewer_name="张三",
+        reason_code="system_result_confirmed",
+    )
+    formal = await api_client.post(
+        "/api/reports/report-1/exports/formal",
+        json={"formats": ["assessment_xlsx"], "created_by": "张三"},
+    )
+    second_formal = await api_client.post(
+        "/api/reports/report-1/exports/formal",
+        json={"formats": ["assessment_xlsx"], "created_by": "张三"},
+    )
+    listed = await api_client.get("/api/reports/report-1/exports")
+
+    assert draft.status_code == 200
+    assert draft.json()["is_draft"] is True
+    assert draft.json()["review_scope"]["draft_label"] is True
+    assert len(draft.json()["file_manifest"]) == 3
+    assert blocked.status_code == 409
+    assert blocked.json()["detail"] == {"code": "high_risk_review_incomplete", "remaining": 1}
+    assert formal.status_code == 200
+    assert formal.json()["version_number"] == 1
+    assert formal.json()["is_draft"] is False
+    assert second_formal.status_code == 200
+    assert second_formal.json()["version_number"] == 2
+    assert second_formal.json()["supersedes_export_id"] == formal.json()["export_id"]
+    assert len(listed.json()) == 3
+    first_formal = next(item for item in listed.json() if item["export_id"] == formal.json()["export_id"])
+    assert first_formal["status"] == "superseded"
+    assert Repository(api_session).get_report("report-1").status is ReportStatus.FORMALLY_EXPORTED

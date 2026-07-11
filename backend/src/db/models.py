@@ -1,6 +1,6 @@
-from datetime import datetime
+from datetime import date, datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String, Text, func
+from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Index, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -15,6 +15,15 @@ class ReportRecord(Base):
     stored_path: Mapped[str] = mapped_column(Text, nullable=False)
     file_hash: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
     page_count: Mapped[int | None] = mapped_column(Integer)
+    company_name: Mapped[str | None] = mapped_column(String(255))
+    report_year: Mapped[int | None] = mapped_column(Integer)
+    language: Mapped[str | None] = mapped_column(String(32))
+    status: Mapped[str] = mapped_column(String(32), default="uploaded", nullable=False, index=True)
+    metadata_detected: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
+    metadata_confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    reopened_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    reopen_reason: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     runs: Mapped[list["AnalysisRunRecord"]] = relationship(back_populates="report", cascade="all, delete-orphan")
@@ -30,8 +39,31 @@ class AnalysisRunRecord(Base):
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     error_message: Mapped[str | None] = mapped_column(Text)
+    parent_run_id: Mapped[str | None] = mapped_column(ForeignKey("analysis_runs.run_id"), index=True)
+    engine_version: Mapped[str] = mapped_column(String(64), default="rules-v1", nullable=False)
+    risk_rule_version: Mapped[str] = mapped_column(String(64), default="risk-v1", nullable=False)
+    eligible_requirement_count: Mapped[int] = mapped_column(Integer, default=577, nullable=False)
+    succeeded_requirement_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    failed_requirement_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    failure_summary: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
 
     report: Mapped[ReportRecord] = relationship(back_populates="runs")
+
+
+class AnalysisStageEventRecord(Base):
+    __tablename__ = "analysis_stage_events"
+
+    stage_event_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    run_id: Mapped[str] = mapped_column(ForeignKey("analysis_runs.run_id", ondelete="CASCADE"), nullable=False, index=True)
+    stage_code: Mapped[str] = mapped_column(String(64), nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False)
+    completed_units: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    total_units: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    error_summary: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+Index("ix_analysis_stage_latest", AnalysisStageEventRecord.run_id, AnalysisStageEventRecord.stage_code, AnalysisStageEventRecord.created_at.desc())
 
 
 class DocumentPageRecord(Base):
@@ -111,6 +143,19 @@ class AssessmentRecord(Base):
     evidence_items: Mapped[list["EvidenceItemRecord"]] = relationship(back_populates="assessment", cascade="all, delete-orphan")
 
 
+class AssessmentRiskRecord(Base):
+    __tablename__ = "assessment_risks"
+
+    risk_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    assessment_id: Mapped[str] = mapped_column(ForeignKey("assessments.assessment_id", ondelete="CASCADE"), nullable=False, index=True)
+    snapshot_id: Mapped[str | None] = mapped_column(String(64))
+    risk_level: Mapped[str] = mapped_column(String(16), nullable=False, index=True)
+    reason_codes: Mapped[list[str]] = mapped_column(JSONB, default=list, nullable=False)
+    risk_rule_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    trigger_event: Mapped[str] = mapped_column(String(64), nullable=False)
+    calculated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
 class EvidenceItemRecord(Base):
     __tablename__ = "evidence_items"
 
@@ -159,6 +204,80 @@ class ReviewDecisionRecord(Base):
     review_status: Mapped[str] = mapped_column(String(64), nullable=False)
     reviewer_note: Mapped[str] = mapped_column(Text, default="", nullable=False)
     decided_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+class ReviewSnapshotRecord(Base):
+    __tablename__ = "review_snapshots"
+
+    snapshot_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    assessment_id: Mapped[str] = mapped_column(ForeignKey("assessments.assessment_id", ondelete="CASCADE"), nullable=False, index=True)
+    run_id: Mapped[str] = mapped_column(ForeignKey("analysis_runs.run_id", ondelete="CASCADE"), nullable=False, index=True)
+    sequence: Mapped[int] = mapped_column(Integer, nullable=False)
+    previous_snapshot_id: Mapped[str | None] = mapped_column(ForeignKey("review_snapshots.snapshot_id"))
+    operation_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    reviewer_name: Mapped[str] = mapped_column(String(128), nullable=False)
+    reason_code: Mapped[str] = mapped_column(String(64), nullable=False)
+    reviewer_note: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    reviewed_verdict: Mapped[str | None] = mapped_column(String(64))
+    evidence_pages: Mapped[list[int] | None] = mapped_column(JSONB)
+    evidence_preview: Mapped[str | None] = mapped_column(Text)
+    rationale: Mapped[str | None] = mapped_column(Text)
+    missing_items: Mapped[list[str] | None] = mapped_column(JSONB)
+    is_batch_operation: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    batch_id: Mapped[str | None] = mapped_column(String(64))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    __table_args__ = (Index("uq_review_snapshot_sequence", "assessment_id", "sequence", unique=True),)
+
+
+class ReviewChangeEventRecord(Base):
+    __tablename__ = "review_change_events"
+
+    change_event_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    snapshot_id: Mapped[str] = mapped_column(ForeignKey("review_snapshots.snapshot_id", ondelete="CASCADE"), nullable=False, index=True)
+    field_name: Mapped[str] = mapped_column(String(64), nullable=False)
+    old_value: Mapped[object | None] = mapped_column(JSONB)
+    new_value: Mapped[object | None] = mapped_column(JSONB)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+class ImprovementActionRecord(Base):
+    __tablename__ = "improvement_actions"
+
+    action_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    report_id: Mapped[str] = mapped_column(ForeignKey("reports.report_id", ondelete="CASCADE"), nullable=False, index=True)
+    assessment_id: Mapped[str] = mapped_column(ForeignKey("assessments.assessment_id", ondelete="CASCADE"), nullable=False, index=True)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    priority: Mapped[str] = mapped_column(String(16), nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    owner_name: Mapped[str | None] = mapped_column(String(128))
+    due_date: Mapped[date | None] = mapped_column(Date)
+    recommendation_text: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    completion_note: Mapped[str | None] = mapped_column(Text)
+    created_by: Mapped[str] = mapped_column(String(128), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+
+class ExportVersionRecord(Base):
+    __tablename__ = "export_versions"
+
+    export_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    report_id: Mapped[str] = mapped_column(ForeignKey("reports.report_id", ondelete="CASCADE"), nullable=False, index=True)
+    run_id: Mapped[str] = mapped_column(ForeignKey("analysis_runs.run_id", ondelete="CASCADE"), nullable=False, index=True)
+    version_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False)
+    is_draft: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    file_hash: Mapped[str] = mapped_column(String(128), nullable=False)
+    engine_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    risk_rule_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    requirement_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    review_scope: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
+    file_manifest: Mapped[list[dict]] = mapped_column(JSONB, default=list, nullable=False)
+    supersedes_export_id: Mapped[str | None] = mapped_column(ForeignKey("export_versions.export_id"))
+    created_by: Mapped[str] = mapped_column(String(128), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
 
 
 class AuditEventRecord(Base):

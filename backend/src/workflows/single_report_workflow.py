@@ -5,8 +5,9 @@ from uuid import uuid4
 from src.agents.disclosure_agent import DisclosureAgent
 from src.db.repositories import Repository
 from src.domain.enums import PageQualityFlag, RunStatus
-from src.domain.models import AnalysisRun, DisclosureTask, PageExtraction
+from src.domain.models import AnalysisRun, AnalysisStageEvent, DisclosureTask, PageExtraction
 from src.reports.profile import ReportProfile, load_report_profile
+from src.services.risk_service import calculate_and_store_risk
 from src.standards.evidence_contracts import get_requirement_contract
 from src.standards.gri_report_index import build_report_index
 from src.tools.evidence_routing import EvidenceRouter
@@ -42,16 +43,19 @@ class SingleReportWorkflow:
         confirm_llm: bool,
         enable_ocr: bool = False,
         ocr_pages: list[int] | None = None,
+        run_id: str | None = None,
+        requirement_ids: set[str] | None = None,
     ) -> AnalysisRun:
-        run_id = f"run-{uuid4().hex}"
-        self.repository.create_run(
-            AnalysisRun(
-                run_id=run_id,
-                report_id=report_id,
-                status=RunStatus.PENDING,
-                confirm_llm=confirm_llm,
+        run_id = run_id or f"run-{uuid4().hex}"
+        if self.repository.get_run(run_id) is None:
+            self.repository.create_run(
+                AnalysisRun(
+                    run_id=run_id,
+                    report_id=report_id,
+                    status=RunStatus.PENDING,
+                    confirm_llm=confirm_llm,
+                )
             )
-        )
         self.repository.update_run_status(run_id, RunStatus.RUNNING)
         self.repository.create_audit_event(
             run_id,
@@ -60,6 +64,11 @@ class SingleReportWorkflow:
         )
 
         try:
+            self._stage(run_id, "file_validation", "running", 0, 1)
+            if pdf_path.suffix.lower() != ".pdf":
+                raise ValueError("report file must be PDF")
+            self._stage(run_id, "file_validation", "completed", 1, 1)
+            self._stage(run_id, "pdf_parsing", "running", 0, 1)
             parsed = self.parser.parse_pdf(
                 pdf_path,
                 report_id=report_id,
@@ -75,28 +84,95 @@ class SingleReportWorkflow:
                         source_file_hash=source_file_hash,
                         ocr_pages=selected_ocr_pages,
                     )
+            self._stage(run_id, "pdf_parsing", "completed", 1, 1)
             self.repository.create_audit_event(
                 run_id,
                 "parse_completed",
                 {"page_count": parsed.page_count, "chunk_count": len(parsed.chunks)},
             )
             self.repository.save_pages_and_chunks(parsed.pages, parsed.chunks)
+            self._stage(run_id, "report_structure", "running", 0, 1)
             tasks = self.standard_adapter.build_tasks(run_id=run_id, report_id=report_id)
+            if requirement_ids is not None:
+                tasks = [task for task in tasks if task.requirement_id in requirement_ids]
             tasks = self._attach_report_index_candidates(parsed.pages, tasks)
+            self._stage(run_id, "report_structure", "completed", 1, 1)
+            self._stage(run_id, "requirement_matching", "completed", len(tasks), len(tasks))
+            self._stage(run_id, "evidence_assessment", "running", 0, len(tasks))
+            succeeded = 0
+            failed_ids: list[str] = []
             for task in tasks:
                 self.repository.save_disclosure_task(task)
-                result = self.disclosure_agent.analyze(task, parsed.chunks, confirm_llm=confirm_llm)
-                self._attach_evidence_page_fields(result.assessment.evidence, task)
-                self.repository.save_assessment(result.assessment)
-                for evidence in result.assessment.evidence:
-                    self.repository.save_evidence_item(result.assessment.assessment_id, evidence)
-                for recommendation in result.recommendations:
-                    self.repository.save_recommendation(recommendation)
+                try:
+                    result = self.disclosure_agent.analyze(task, parsed.chunks, confirm_llm=confirm_llm)
+                    self._attach_evidence_page_fields(result.assessment.evidence, task)
+                    self.repository.save_assessment(result.assessment)
+                    for evidence in result.assessment.evidence:
+                        self.repository.save_evidence_item(result.assessment.assessment_id, evidence)
+                    for recommendation in result.recommendations:
+                        self.repository.save_recommendation(recommendation)
+                    calculate_and_store_risk(
+                        self.repository,
+                        result.assessment,
+                        trigger_event="analysis_completed",
+                    )
+                    succeeded += 1
+                except Exception as exc:
+                    failed_ids.append(task.requirement_id)
+                    self.repository.create_audit_event(
+                        run_id,
+                        "requirement_analysis_failed",
+                        {"requirement_id": task.requirement_id, "error": str(exc)},
+                    )
+                self._stage(run_id, "evidence_assessment", "running", succeeded + len(failed_ids), len(tasks))
+            self._stage(
+                run_id,
+                "evidence_assessment",
+                "partially_failed" if failed_ids else "completed",
+                len(tasks),
+                len(tasks),
+            )
+            self._stage(run_id, "risk_classification", "completed", len(tasks), len(tasks))
+            self._stage(run_id, "result_summary", "completed", len(tasks), len(tasks))
             self.repository.create_audit_event(run_id, "analysis_completed", {"report_id": report_id})
-            return self.repository.update_run_status(run_id, RunStatus.COMPLETED)
+            status = RunStatus.COMPLETED
+            if failed_ids and succeeded:
+                status = RunStatus.PARTIALLY_COMPLETED
+            elif failed_ids:
+                status = RunStatus.FAILED
+            return self.repository.update_run_status(
+                run_id,
+                status,
+                error_message=None if status is not RunStatus.FAILED else "all requirements failed",
+                eligible_requirement_count=len(tasks),
+                succeeded_requirement_count=succeeded,
+                failed_requirement_count=len(failed_ids),
+                failure_summary={"failed_requirement_ids": failed_ids},
+            )
         except Exception as exc:
+            self._stage(run_id, "result_summary", "failed", 0, 1, str(exc))
             self.repository.create_audit_event(run_id, "analysis_failed", {"error": str(exc)})
             return self.repository.update_run_status(run_id, RunStatus.FAILED, error_message=str(exc))
+
+    def _stage(
+        self,
+        run_id: str,
+        stage_code: str,
+        status: str,
+        completed_units: int,
+        total_units: int,
+        error_summary: str | None = None,
+    ) -> None:
+        self.repository.append_analysis_stage_event(
+            AnalysisStageEvent(
+                run_id=run_id,
+                stage_code=stage_code,
+                status=status,
+                completed_units=completed_units,
+                total_units=total_units,
+                error_summary=error_summary,
+            )
+        )
 
     def _explicit_ocr_pages(self, enable_ocr: bool, ocr_pages: list[int] | None) -> list[int] | None:
         if not enable_ocr:

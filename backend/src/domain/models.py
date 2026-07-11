@@ -1,13 +1,18 @@
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any
 
 from pydantic import BaseModel, Field, model_validator
 
 from src.domain.enums import (
     AssessmentVerdict,
+    ActionPriority,
+    ActionStatus,
     EvidenceSourceMethod,
     PageQualityFlag,
+    ReportStatus,
+    RiskLevel,
     ReviewStatus,
+    ReviewOperation,
     RunStatus,
 )
 
@@ -18,6 +23,15 @@ class Report(BaseModel):
     stored_path: str
     file_hash: str
     page_count: int | None = None
+    company_name: str | None = None
+    report_year: int | None = Field(default=None, ge=1900, le=2100)
+    language: str | None = None
+    status: ReportStatus = ReportStatus.UPLOADED
+    metadata_detected: dict[str, Any] = Field(default_factory=dict)
+    metadata_confirmed_at: datetime | None = None
+    updated_at: datetime | None = None
+    reopened_at: datetime | None = None
+    reopen_reason: str | None = None
     created_at: datetime | None = None
 
 
@@ -29,6 +43,35 @@ class AnalysisRun(BaseModel):
     started_at: datetime | None = None
     completed_at: datetime | None = None
     error_message: str | None = None
+    parent_run_id: str | None = None
+    engine_version: str = "rules-v1"
+    risk_rule_version: str = "risk-v1"
+    eligible_requirement_count: int = Field(default=577, ge=0)
+    succeeded_requirement_count: int = Field(default=0, ge=0)
+    failed_requirement_count: int = Field(default=0, ge=0)
+    failure_summary: dict[str, Any] = Field(default_factory=dict)
+
+
+class AnalysisStageEvent(BaseModel):
+    stage_event_id: int | None = None
+    run_id: str
+    stage_code: str
+    status: str
+    completed_units: int = Field(default=0, ge=0)
+    total_units: int = Field(default=0, ge=0)
+    error_summary: str | None = None
+    created_at: datetime | None = None
+
+
+class AssessmentRisk(BaseModel):
+    risk_id: str
+    assessment_id: str
+    snapshot_id: str | None = None
+    risk_level: RiskLevel
+    reason_codes: list[str] = Field(default_factory=list)
+    risk_rule_version: str = "risk-v1"
+    trigger_event: str
+    calculated_at: datetime | None = None
 
 
 class PageExtraction(BaseModel):
@@ -178,3 +221,66 @@ class ReviewDecision(BaseModel):
     review_status: ReviewStatus
     reviewer_note: str = ""
     decided_at: datetime | None = None
+
+
+class ReviewSnapshot(BaseModel):
+    snapshot_id: str
+    assessment_id: str
+    run_id: str
+    sequence: int = Field(ge=1)
+    previous_snapshot_id: str | None = None
+    operation_type: ReviewOperation
+    reviewer_name: str
+    reason_code: str
+    reviewer_note: str = ""
+    reviewed_verdict: AssessmentVerdict | None = None
+    evidence_pages: list[int] | None = None
+    evidence_preview: str | None = None
+    rationale: str | None = None
+    missing_items: list[str] | None = None
+    is_batch_operation: bool = False
+    batch_id: str | None = None
+    created_at: datetime | None = None
+
+
+class ReviewChangeEvent(BaseModel):
+    change_event_id: int | None = None
+    snapshot_id: str
+    field_name: str
+    old_value: Any = None
+    new_value: Any = None
+    created_at: datetime | None = None
+
+
+class ImprovementAction(BaseModel):
+    action_id: str
+    report_id: str
+    assessment_id: str
+    title: str
+    priority: ActionPriority = ActionPriority.MEDIUM
+    status: ActionStatus = ActionStatus.OPEN
+    owner_name: str | None = None
+    due_date: date | None = None
+    recommendation_text: str = ""
+    completion_note: str | None = None
+    created_by: str
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+
+class ExportVersion(BaseModel):
+    export_id: str
+    report_id: str
+    run_id: str
+    version_number: int = Field(ge=0)
+    status: str
+    is_draft: bool
+    file_hash: str
+    engine_version: str
+    risk_rule_version: str
+    requirement_version: str = "gri-eligible-577-v1"
+    review_scope: dict[str, Any] = Field(default_factory=dict)
+    file_manifest: list[dict[str, Any]] = Field(default_factory=list)
+    supersedes_export_id: str | None = None
+    created_by: str
+    created_at: datetime | None = None

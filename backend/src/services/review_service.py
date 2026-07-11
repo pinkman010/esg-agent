@@ -1,0 +1,143 @@
+from typing import Any
+
+from src.db.repositories import Repository, new_id
+from src.domain.enums import AssessmentVerdict, ReportStatus, ReviewOperation, RiskLevel
+from src.domain.models import ReviewChangeEvent, ReviewSnapshot
+from src.services.risk_service import calculate_and_store_risk
+
+
+class ReviewService:
+    def __init__(self, repository: Repository):
+        self.repository = repository
+
+    def record(
+        self,
+        assessment_id: str,
+        *,
+        operation_type: ReviewOperation,
+        reviewer_name: str,
+        reason_code: str,
+        reviewer_note: str = "",
+        reviewed_verdict: AssessmentVerdict | None = None,
+        evidence_pages: list[int] | None = None,
+        evidence_preview: str | None = None,
+        rationale: str | None = None,
+        missing_items: list[str] | None = None,
+        expected_previous_snapshot_id: str | None = None,
+        is_batch_operation: bool = False,
+        batch_id: str | None = None,
+    ) -> ReviewSnapshot:
+        assessment = self.repository.get_assessment(assessment_id)
+        if assessment is None:
+            raise LookupError("assessment not found")
+        latest = self.repository.latest_review_snapshot(assessment_id)
+        if expected_previous_snapshot_id is not None and (
+            latest is None or latest.snapshot_id != expected_previous_snapshot_id
+        ):
+            raise RuntimeError("snapshot conflict")
+        if operation_type in {ReviewOperation.MODIFY, ReviewOperation.INVALIDATE_EVIDENCE, ReviewOperation.REOPEN} and not reviewer_note.strip():
+            raise ValueError("reviewer_note is required")
+        overrides = [reviewed_verdict, evidence_pages, evidence_preview, rationale, missing_items]
+        if operation_type is ReviewOperation.MODIFY and all(value is None for value in overrides):
+            raise ValueError("modify requires at least one changed field")
+
+        previous_values = self._effective_values(assessment, latest)
+        values = dict(previous_values)
+        supplied = {
+            "reviewed_verdict": reviewed_verdict,
+            "evidence_pages": evidence_pages,
+            "evidence_preview": evidence_preview,
+            "rationale": rationale,
+            "missing_items": missing_items,
+        }
+        for field, value in supplied.items():
+            if value is not None:
+                values[field] = value
+        if operation_type is ReviewOperation.APPROVE and values["reviewed_verdict"] is None:
+            values["reviewed_verdict"] = assessment.verdict
+
+        snapshot_id = new_id("snapshot")
+        snapshot = ReviewSnapshot(
+            snapshot_id=snapshot_id,
+            assessment_id=assessment_id,
+            run_id=assessment.run_id,
+            sequence=(latest.sequence + 1) if latest else 1,
+            previous_snapshot_id=latest.snapshot_id if latest else None,
+            operation_type=operation_type,
+            reviewer_name=reviewer_name.strip(),
+            reason_code=reason_code,
+            reviewer_note=reviewer_note,
+            reviewed_verdict=values["reviewed_verdict"],
+            evidence_pages=values["evidence_pages"],
+            evidence_preview=values["evidence_preview"],
+            rationale=values["rationale"],
+            missing_items=values["missing_items"],
+            is_batch_operation=is_batch_operation,
+            batch_id=batch_id,
+        )
+        changes = [
+            ReviewChangeEvent(
+                snapshot_id=snapshot_id,
+                field_name=field,
+                old_value=self._json_value(previous_values[field]),
+                new_value=self._json_value(value),
+            )
+            for field, value in values.items()
+            if self._json_value(previous_values[field]) != self._json_value(value)
+        ]
+        saved = self.repository.save_review_snapshot(snapshot, changes)
+        effective = assessment.model_copy(
+            update={
+                "verdict": values["reviewed_verdict"] or assessment.verdict,
+                "rationale": values["rationale"] or assessment.rationale,
+                "missing_items": values["missing_items"] if values["missing_items"] is not None else assessment.missing_items,
+                "evidence": [] if operation_type is ReviewOperation.INVALIDATE_EVIDENCE else assessment.evidence,
+            }
+        )
+        calculate_and_store_risk(
+            self.repository,
+            effective,
+            trigger_event=f"review_{operation_type.value}",
+            snapshot_id=saved.snapshot_id,
+        )
+        if operation_type is ReviewOperation.REOPEN:
+            self.repository.update_report_status(assessment.report_id, ReportStatus.REOPENED)
+        else:
+            self._advance_report_status(assessment.report_id, assessment.run_id)
+        return saved
+
+    def _advance_report_status(self, report_id: str, run_id: str) -> None:
+        assessments = self.repository.list_assessments_by_run(run_id)
+        assessment_ids = [item.assessment_id for item in assessments]
+        risks = self.repository.latest_risks_for_assessments(assessment_ids)
+        snapshots = self.repository.latest_snapshots_for_assessments(assessment_ids)
+        high_risk_ids = [
+            item.assessment_id
+            for item in assessments
+            if item.assessment_id not in risks or risks[item.assessment_id].risk_level is RiskLevel.HIGH
+        ]
+        reviewed_operations = {
+            ReviewOperation.APPROVE,
+            ReviewOperation.MODIFY,
+            ReviewOperation.LEGACY_IMPORT,
+        }
+        if high_risk_ids and all(
+            assessment_id in snapshots
+            and snapshots[assessment_id].operation_type in reviewed_operations
+            for assessment_id in high_risk_ids
+        ):
+            self.repository.update_report_status(report_id, ReportStatus.HIGH_RISK_REVIEW_COMPLETED)
+
+    @staticmethod
+    def _effective_values(assessment, latest: ReviewSnapshot | None) -> dict[str, Any]:
+        return {
+            "reviewed_verdict": latest.reviewed_verdict if latest else None,
+            "evidence_pages": latest.evidence_pages if latest else None,
+            "evidence_preview": latest.evidence_preview if latest else None,
+            "rationale": latest.rationale if latest else assessment.rationale,
+            "missing_items": latest.missing_items if latest else assessment.missing_items,
+        }
+
+    @staticmethod
+    def _json_value(value):
+        return value.value if isinstance(value, AssessmentVerdict) else value

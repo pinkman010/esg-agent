@@ -1,21 +1,36 @@
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from src.db.repositories import Repository
 from src.db.session import get_db_session
-from src.domain.enums import ReviewStatus
-from src.domain.models import AnalysisRun, DisclosureAssessment, ReviewDecision
+from src.domain.enums import AssessmentVerdict, ReviewOperation, ReviewStatus
+from src.domain.models import AnalysisRun, DisclosureAssessment, ReviewDecision, ReviewSnapshot
+from src.services.review_service import ReviewService
 
 router = APIRouter(prefix="/api/review", tags=["review"])
+assessment_router = APIRouter(prefix="/api/assessments", tags=["review"])
 
 
 class ReviewDecisionRequest(BaseModel):
     assessment_id: str
     review_status: ReviewStatus
     reviewer_note: str = ""
+
+
+class ReviewSnapshotRequest(BaseModel):
+    operation_type: ReviewOperation
+    reviewer_name: str
+    reason_code: str
+    reviewer_note: str = ""
+    reviewed_verdict: AssessmentVerdict | None = None
+    evidence_pages: list[int] | None = None
+    evidence_preview: str | None = None
+    rationale: str | None = None
+    missing_items: list[str] | None = None
+    expected_previous_snapshot_id: str | None = None
 
 
 def dump_model(model):
@@ -59,3 +74,29 @@ def save_review_decision(
         {"decision_id": decision.decision_id, "assessment_id": request.assessment_id},
     )
     return dump_model(decision)
+
+
+@assessment_router.post("/{assessment_id}/review-decisions", response_model=ReviewSnapshot)
+def save_review_snapshot(
+    assessment_id: str,
+    request: ReviewSnapshotRequest,
+    session: Session = Depends(get_db_session),
+) -> dict:
+    service = ReviewService(Repository(session))
+    try:
+        snapshot = service.record(assessment_id, **request.model_dump())
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return dump_model(snapshot)
+
+
+@assessment_router.get("/{assessment_id}/review-history", response_model=list[ReviewSnapshot])
+def review_history(assessment_id: str, session: Session = Depends(get_db_session)) -> list[dict]:
+    repo = Repository(session)
+    if repo.get_assessment(assessment_id) is None:
+        raise HTTPException(status_code=404, detail="assessment not found")
+    return [dump_model(snapshot) for snapshot in repo.list_review_snapshots(assessment_id)]

@@ -7,7 +7,7 @@ from sqlalchemy.orm import sessionmaker
 
 from src.agents.disclosure_agent import DisclosureAgent
 from src.db.base import Base
-from src.db.models import AssessmentRecord, AuditEventRecord, DisclosureTaskRecord, EvidenceItemRecord, RecommendationRecord
+from src.db.models import AnalysisStageEventRecord, AssessmentRecord, AuditEventRecord, DisclosureTaskRecord, EvidenceItemRecord, RecommendationRecord
 from src.db.repositories import Repository
 from src.domain.enums import EvidenceSourceMethod, RunStatus
 from src.domain.models import AnalysisRun, DisclosureRequirement, DocumentChunk, PageExtraction, Report
@@ -127,6 +127,35 @@ class FakeAdapter:
         return [requirement_to_task(self.load_requirements()[0], run_id, report_id)]
 
 
+class TwoTaskAdapter(FakeAdapter):
+    def load_requirements(self):
+        first = super().load_requirements()[0]
+        return [
+            first,
+            DisclosureRequirement(
+                standard_id="GRI 2",
+                standard_version="2021",
+                disclosure_id="GRI 2-1",
+                requirement_id="GRI 2-1-b",
+                requirement_text="report its legal form;",
+                keywords=["legal", "form"],
+            ),
+        ]
+
+    def build_tasks(self, run_id, report_id):
+        return [requirement_to_task(requirement, run_id, report_id) for requirement in self.load_requirements()]
+
+
+class SelectiveFailingAgent:
+    def __init__(self):
+        self.delegate = DisclosureAgent()
+
+    def analyze(self, task, chunks, confirm_llm=False):
+        if task.requirement_id == "GRI 2-1-b":
+            raise RuntimeError("leaf failed")
+        return self.delegate.analyze(task, chunks, confirm_llm=confirm_llm)
+
+
 def requirement_to_task(requirement, run_id, report_id):
     from src.domain.models import DisclosureTask
 
@@ -179,12 +208,36 @@ def test_single_report_workflow_completes_without_model_calls(repo_session):
 
     assert run.status is RunStatus.COMPLETED
     assert repo_session.scalar(select(AssessmentRecord).where(AssessmentRecord.run_id == run.run_id)).model_called is False
+
+
+def test_single_report_workflow_preserves_successful_results_when_one_requirement_fails(repo_session):
+    repo = Repository(repo_session)
+    seed_report(repo)
+    workflow = SingleReportWorkflow(repo, FakeParser(), TwoTaskAdapter(), SelectiveFailingAgent())
+
+    run = workflow.run("report-1", Path("report.pdf"), "hash-1", confirm_llm=False)
+
+    assert run.status is RunStatus.PARTIALLY_COMPLETED
+    assert run.eligible_requirement_count == 2
+    assert run.succeeded_requirement_count == 1
+    assert run.failed_requirement_count == 1
+    assert run.failure_summary["failed_requirement_ids"] == ["GRI 2-1-b"]
+    assert len(repo.list_assessments_by_run(run.run_id)) == 1
+    stage_events = repo_session.scalars(
+        select(AnalysisStageEventRecord).where(AnalysisStageEventRecord.run_id == run.run_id)
+    ).all()
+    assert any(event.stage_code == "evidence_assessment" and event.status == "partially_failed" for event in stage_events)
     event_types = repo_session.scalars(
         select(AuditEventRecord.event_type)
         .where(AuditEventRecord.run_id == run.run_id)
         .order_by(AuditEventRecord.audit_event_id)
     ).all()
-    assert event_types == ["analysis_started", "parse_completed", "analysis_completed"]
+    assert event_types == [
+        "analysis_started",
+        "parse_completed",
+        "requirement_analysis_failed",
+        "analysis_completed",
+    ]
 
 
 def test_single_report_workflow_does_not_request_ocr_by_default(repo_session):

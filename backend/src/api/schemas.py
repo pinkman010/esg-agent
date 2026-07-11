@@ -3,7 +3,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel
 
-from src.domain.enums import RunStatus
+from src.domain.enums import ReportStatus, RunStatus
 
 
 class ReportUploadResponse(BaseModel):
@@ -13,12 +13,109 @@ class ReportUploadResponse(BaseModel):
     status: Literal["uploaded"]
 
 
+class ReportResponse(BaseModel):
+    report_id: str
+    original_filename: str
+    file_hash: str
+    page_count: int | None = None
+    company_name: str | None = None
+    report_year: int | None = None
+    language: str | None = None
+    status: ReportStatus
+    metadata_detected: dict[str, Any]
+    metadata_confirmed_at: datetime | None = None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+
+class ReportListResponse(BaseModel):
+    items: list[ReportResponse]
+    page: int
+    page_size: int
+    total: int
+
+
+class ConfirmReportMetadataRequest(BaseModel):
+    company_name: str
+    report_year: int
+    language: str
+
+
 class AnalyzeResponse(BaseModel):
     run_id: str
     report_id: str
     status: RunStatus
     confirm_llm: bool
     error_message: str | None = None
+
+
+class AnalysisStageResponse(BaseModel):
+    stage_code: str
+    status: str
+    completed_units: int
+    total_units: int
+    error_summary: str | None = None
+    created_at: datetime | None = None
+
+
+class AssessmentListItem(BaseModel):
+    assessment_id: str
+    requirement_id: str
+    requirement_name_zh: str
+    gri_topic: str
+    system_verdict: str
+    reviewed_verdict: str | None = None
+    effective_verdict: str
+    risk_level: str
+    risk_reason_codes: list[str]
+    review_status: str
+    evidence_count: int
+    source_pdf_pages: list[int]
+    action_status: str | None = None
+
+
+class AssessmentListResponse(BaseModel):
+    items: list[AssessmentListItem]
+    page: int
+    page_size: int
+    total: int
+
+
+class ReportDashboardResponse(BaseModel):
+    report_id: str
+    run_id: str | None
+    verdict_counts: dict[str, int]
+    risk_counts: dict[str, int]
+    high_risk_total: int
+    high_risk_reviewed: int
+    failed_requirement_count: int
+
+
+class BusinessEvidenceItem(BaseModel):
+    evidence_id: str
+    source_pdf_page: int
+    source_report_page: int | None = None
+    page_label: str
+    evidence_preview: str
+    source_method: str
+    quality_flags: list[str]
+    bbox: dict[str, float] | None = None
+
+
+class AssessmentDetailResponse(BaseModel):
+    assessment_id: str
+    requirement_id: str
+    requirement_text: str
+    system_verdict: str
+    reviewed_verdict: str | None = None
+    effective_verdict: str
+    review_status: str
+    risk_level: str
+    risk_reason_codes: list[str]
+    rationale: str
+    missing_items: list[str]
+    evidence_items: list[BusinessEvidenceItem]
+    latest_snapshot_id: str | None = None
 
 
 class AuditEvent(BaseModel):
@@ -39,4 +136,3 @@ class AuditRun(BaseModel):
     completed_at: datetime | None = None
     error_message: str | None = None
     events: list[AuditEvent]
-
