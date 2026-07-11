@@ -1,327 +1,397 @@
-# esg-agent 从零构建设计规格
+# ESG-Agent 产品与技术设计规格
 
-## 1. 结论
+## 1. 产品结论
 
-本项目采用前后端单仓 Monorepo，从端到端纵切开始建设：上传 PDF、解析并入库、生成 GRI 条款任务、运行披露分析、展示结果、人工复核、导出 JSON/CSV。
+ESG-Agent 第一版面向企业 ESG 团队，提供单报告 GRI 核查闭环。系统对每份报告分析全部 577 条 eligible GRI requirement，保留跨企业、跨报告格式的识别泛化能力，并通过高风险队列组织人工复核。
 
-第一版目标是跑通真实闭环，不追求完整 GRI 覆盖、批量分析、登录权限、同行对标、舆情监测和多标准混合分析。
-
-## 2. 已确认技术选型
-
-| 类别 | 选型 | 结论 |
-| --- | --- | --- |
-| 仓库结构 | Monorepo | `backend`、`frontend`、`docs` 放在同一仓库 |
-| 后端语言 | Python 3.11 | 兼顾 PDF、数据处理、LLM SDK 和兼容性 |
-| 后端框架 | FastAPI | 自动 OpenAPI、文件上传、Pydantic 集成清晰 |
-| 数据校验 | Pydantic v2 | API 响应、领域对象、模型输出统一校验 |
-| 配置管理 | pydantic-settings | `.env` 和环境变量类型化 |
-| 数据库 | PostgreSQL + 预留 pgvector | 第一版存结构化数据，后续接向量检索 |
-| 数据访问 | SQLAlchemy 2.0 + Alembic | 兼顾迁移、事务、PostgreSQL 能力和扩展 |
-| PDF 处理 | 混合多路由管线 | 兼顾扫描件、数字原生 PDF、复杂表格和低质量页 |
-| 模型 SDK | OpenAI-compatible SDK | 通过薄适配层接 DeepSeek 和后续兼容模型 |
-| 模型调用策略 | 默认不调用模型 | 只有用户显式确认后才调用外部模型 |
-| 任务执行 | FastAPI 同步触发 + 后台任务表轮询 | 第一版用数据库记录运行状态，前端轮询 |
-| 前端框架 | Next.js App Router | 工作台式页面、路由和布局规范明确 |
-| 前端语言 | TypeScript | 降低前后端契约漂移 |
-| 样式组件 | Tailwind CSS + shadcn/ui | 适合克制、清晰、可定制的工作台 |
-| 表格 | TanStack Table | 支持条款、证据、复核列表的筛选和排序 |
-| 图表 | Recharts | 内部图表组件封装，后续可切 ECharts |
-| 数据获取 | TanStack Query | 支持任务轮询、缓存、mutation 和错误状态 |
-| API 类型同步 | OpenAPI 自动生成 TypeScript types | 依赖 FastAPI OpenAPI 输出 |
-| 测试 | pytest + Vitest/React Testing Library + build/typecheck | 覆盖后端核心逻辑和前端关键状态 |
-| 包管理 | 后端 uv，前端 pnpm | 锁文件明确，安装速度快 |
-| 本地服务 | Docker Compose 管 PostgreSQL；OCR/Tesseract 本机工具；前后端本机运行 | 数据库统一，开发迭代较快 |
-
-## 3. 第一版产品闭环
-
-用户流程：
+第一版用户流程：
 
 ```text
-上传 PDF
-  -> 保存原始文件、哈希和报告元数据
-  -> 页面预检测和解析任务入库
-  -> 用户显式确认是否调用模型
-  -> 构建 GRI 披露任务
-  -> DisclosureAgent 执行条款级分析
-  -> 保存判断、证据、建议和运行日志
-  -> 前端展示结果和证据
-  -> 人工复核
-  -> 导出 JSON/CSV
+报告列表或上传空状态
+→ 上传 PDF
+→ 自动识别企业、年度、语言和页数
+→ 用户确认报告信息
+→ 后台分析 577 条 eligible GRI requirement
+→ 展示业务阶段进度和部分失败
+→ 高风险队列优先人工复核
+→ 按 GRI 主题查看全部结果
+→ 形成整改任务
+→ 导出完整核查表、管理层摘要和改进任务清单
 ```
 
-第一版必须满足：
+第一版不建设多租户、复杂权限、顾问项目空间、多公司批量分析、同行对标、舆情监测、多标准混合分析或开放式风险规则配置。
 
-- 上传 PDF 后生成 `report_id`。
-- 分析运行生成 `run_id`。
-- 外部模型调用必须由 `confirm_llm=true` 控制。
-- 每条判断保留证据来源、页码、文件哈希、模型调用标记和复核状态。
-- 没有证据或证据质量不足时进入人工复核。
-- 前端所有核心指标来自后端 API。
+## 2. 核心产品原则
 
-## 4. 后端设计
+1. **分析完整：** 后端固定分析 577 条 eligible GRI requirement。
+2. **复核聚焦：** 前端以高风险队列为主，完整核查表为辅。
+3. **证据优先：** 每条结论必须能追溯到 PDF 页码和证据片段；无证据或证据质量不足时进入高风险。
+4. **系统与人工分离：** 系统 assessment 保持不可变，人工操作形成只追加 review snapshot。
+5. **范围诚实：** “高风险复核已完成”不表示全部 577 条已人工确认。
+6. **部分失败可用：** 单个 requirement 失败不丢弃其他结果；失败项进入高风险并支持重跑。
+7. **业务语言：** 普通界面显示中文业务名称，不暴露 profile、ontology、route、evidence kind 等内部实现。
+8. **输出可审计：** 草稿和正式版本区分，明确人工确认范围与系统待确认范围。
 
-后端使用 FastAPI，核心目录：
+## 3. 已确认技术选型
+
+| 类别 | 选型 |
+| --- | --- |
+| 仓库 | Monorepo：`backend`、`frontend`、`docs` |
+| 后端 | Python 3.11、FastAPI、Pydantic v2 |
+| 数据库 | PostgreSQL、SQLAlchemy 2.0、Alembic，预留 pgvector |
+| 前端 | Next.js App Router、TypeScript |
+| UI | Tailwind CSS、shadcn/ui、lucide icons |
+| 数据请求 | TanStack Query |
+| 表格 | TanStack Table |
+| 图表 | Recharts，通过业务组件封装 |
+| PDF | pypdf、pdfplumber、OCRmyPDF/Tesseract、Docling fallback、授权后 VLM 辅助 |
+| 模型 | OpenAI-compatible 薄适配层，默认不调用 |
+| 测试 | pytest、Vitest、React Testing Library、typecheck、build |
+| 包管理 | 后端 uv，前端 pnpm |
+
+保持当前 Next.js/FastAPI 技术栈。`esg-dashboard` 只作为信息架构、颜色语言和组件风格参考，不迁移其 Vite/React 技术栈。
+
+## 4. 页面信息架构
+
+### 4.1 路由
 
 ```text
-backend/
-  pyproject.toml
-  alembic.ini
-  src/
-    main.py
-    config/
-    domain/
-    db/
-    standards/
-    agents/
-    workflows/
-    services/
-    tools/
-    api/
-  tests/
+/reports                         报告列表与上传入口
+/reports/[reportId]/confirm      报告信息确认
+/reports/[reportId]/progress     分析阶段进度
+/reports/[reportId]/dashboard    报告仪表盘
+/reports/[reportId]/review       三栏人工复核工作台
+/reports/[reportId]/assessments  完整 GRI 核查表
+/reports/[reportId]/actions      整改任务清单
+/reports/[reportId]/exports      输出与版本记录
+/reports/[reportId]/audit        报告审计记录
 ```
 
-核心模块职责：
+报告列表是产品入口。首次使用显示上传空状态；已有报告时显示报告列表。用户可设置本地偏好，在进入产品时自动打开上次报告。
 
-- `domain/`：Pydantic 领域模型和枚举，表达报告、运行、任务、证据、判断、建议、复核。
-- `db/`：SQLAlchemy 表模型、session、repository 和 Alembic 迁移。
-- `standards/`：`StandardAdapter` 和 `GRIAdapter`。
-- `agents/`：`DisclosureAgent`，第一版只做披露分析。
-- `workflows/`：`SingleReportWorkflow`，串联上传后分析流程。
-- `services/`：PDF 处理、文档分块、复核存储、导出、审计日志。
-- `tools/`：检索、证据规范化、判断、护栏、模型客户端。
-- `api/`：`/api` 前缀下的 reports、runs、review、exports、health 接口。
+### 4.2 上传与确认
 
-## 5. 数据库设计方向
+上传后系统预检测：
 
-第一版使用 PostgreSQL。表结构围绕可追溯分析闭环设计：
+- 企业名称；
+- 报告年度；
+- 主要语言；
+- PDF 页数；
+- 文件名和 SHA256；
+- 文本可用性与扫描风险。
 
-- `reports`：原始文件、哈希、页数、解析状态。
-- `analysis_runs`：运行状态、是否允许模型、开始/结束时间、错误信息。
-- `document_pages`：页码、文本密度、图片占比、扫描页判断、质量标记。
-- `document_chunks`：分块文本、页码、坐标、来源方法、OCR/VLM 状态、质量标记。
-- `standard_requirements`：GRI 条款和要求。
-- `disclosure_tasks`：一次运行中的条款任务。
-- `assessments`：判断、理由、缺失项、模型调用标记、复核状态。
-- `evidence_items`：证据文本、页码、坐标、来源文件哈希、来源方法。
-- `recommendations`：建议和对应条款。
-- `review_decisions`：人工复核记录。
-- `audit_events`：上传、解析、模型调用、导出、复核等事件。
+用户确认企业、年度和语言后才能启动分析。自动识别值必须允许修改，修改写入审计事件。
 
-向量化预留：
+### 4.3 报告仪表盘
 
-- `document_chunks.embedding_status`
-- `document_chunks.embedding_model`
-- `document_chunks.embedding_vector` 第二阶段接 pgvector。
-- 第一版不生成真实 embedding。
+仪表盘显示：
 
-## 6. PDF 混合多路由管线
+- 分析状态和最新正式输出版本；
+- 577 条结果分布；
+- 高、中、低风险数量；
+- 高风险复核进度；
+- GRI 主题分布；
+- 部分失败与需要重跑的 requirement；
+- 待整改任务摘要。
 
-PDF 处理采用分级路由，不对所有页面默认全量 OCR。
+不得展示无来源的准确率或暗示系统结论已经全部人工确认。
+
+### 4.4 三栏复核工作台
+
+桌面端：
+
+- 左栏：风险队列、风险原因、GRI 主题、复核状态和搜索；
+- 中栏：requirement 中文名称、系统结果、人工结果、判断依据、缺失项、备注和操作；
+- 右栏：PDF 页面、证据片段、页码导航和证据有效性操作。
+
+窄屏端切换 `风险队列 / 核查详情 / PDF 证据` 三个视图。切换不丢失当前 requirement、未保存编辑内容或 PDF 页码。
+
+### 4.5 完整核查表
+
+完整核查表承载 577 条结果，必须分页并支持：
+
+- GRI 主题；
+- 风险等级；
+- 系统结论；
+- 人工结论；
+- 复核状态；
+- 证据状态；
+- 整改状态；
+- 关键词。
+
+## 5. 业务字段与内部字段
+
+普通界面使用中文业务字段：
+
+| 中文业务名称 | 内部字段 |
+| --- | --- |
+| 系统结论 | `verdict` |
+| 人工结论 | `reviewed_verdict` |
+| 复核状态 | `review_status` |
+| 风险等级 | `risk_level` |
+| 风险原因 | `risk_reason_codes` |
+| 判断依据 | `rationale` |
+| 缺失项 | `missing_items` |
+| PDF 页码 | `source_pdf_page` |
+| 报告页码 | `source_report_page` |
+| 证据片段 | `evidence_preview` |
+
+高级说明可以显示“中文（字段名）”。profile、ontology、route、candidate pages、evidence kind 和内部 guardrail 只进入诊断日志或管理员级导出，不进入普通产品界面。
+
+## 6. 状态模型
+
+### 6.1 报告状态
+
+```mermaid
+stateDiagram-v2
+    [*] --> uploaded
+    uploaded --> metadata_detected
+    metadata_detected --> awaiting_confirmation
+    awaiting_confirmation --> ready_for_analysis: 用户确认
+    ready_for_analysis --> analyzing
+    analyzing --> analysis_completed
+    analyzing --> partially_completed
+    analyzing --> analysis_failed
+    partially_completed --> analyzing: 重跑失败项
+    analysis_completed --> high_risk_review_completed: 全部高风险完成
+    partially_completed --> high_risk_review_completed: 失败项已复核或重跑完成
+    high_risk_review_completed --> formally_exported
+    formally_exported --> reopened: 填写重开原因
+    high_risk_review_completed --> reopened: 填写重开原因
+    reopened --> analyzing
+    formally_exported --> archived
+```
+
+### 6.2 分析阶段
+
+业务阶段固定为：文件检查、PDF 解析、报告结构识别、GRI requirement 匹配、证据与结论生成、风险分级、结果汇总。
+
+阶段状态：`pending / running / completed / partially_failed / failed`。每阶段保存完成数量、总数量、开始时间、结束时间和业务错误摘要。
+
+### 6.3 Requirement 复核状态
 
 ```text
-上传 PDF
-  -> pypdf 读取页数、outline、元数据、基础文本可用性
-  -> 页面预检测：文本密度、图片占比、表格复杂度、扫描页判断
-  -> 数字原生页：pdfplumber 提取正文、坐标、表格
-  -> 扫描关键页：OCRmyPDF + Tesseract 生成文本层，再交给 pypdf/pdfplumber
-  -> 复杂失败页：Docling fallback
-  -> 关键 KPI / 低质量页：授权后调用 deepseek-v4-flash 辅助识别
-  -> 分块入库并标记质量
+pending_review
+reviewed_approved
+reviewed_modified
+evidence_invalidated
+reopened
 ```
 
-OCR 路由状态：
+快速通过生成 `reviewed_approved`；修改任何字段生成 `reviewed_modified`；证据无效生成 `evidence_invalidated` 并重新计算风险。
 
-- `pypdf + pdfplumber` 仍是默认主链路。
-- OCRmyPDF/Tesseract 已作为显式启用路由接入，默认不调用。
-- 分析请求可传 `enable_ocr=true` 启用 OCR。
-- 分析请求可传 `ocr_pages` 指定页码；未指定时只选择 `low_text_density` 或 `scanned` 页，且受 `OCR_MAX_PAGES` 限制。
-- OCR 产物保存为派生 PDF，后续由 `pdfplumber` 读取目标页文本并生成 `source_method=ocr` 的 chunk。
-
-关键原则：
-
-- 原始 PDF 不覆盖。
-- OCR 产物作为派生文件保存并记录来源。
-- VLM 输出不作为未经复核的最终事实。
-- OCR/VLM 来源的 KPI 默认标记 `needs_manual_review` 或低置信度。
-- 页面和 chunk 需要保留 `source_method`、`ocr_status`、`vlm_used`、`bbox`、`quality_flags`。
-
-第一版实现：
-
-- pypdf/pdfplumber 主链路。
-- 页面预检测。
-- OCRmyPDF/Tesseract 工具路径配置和显式关键页 OCR 入口。
-- Docling fallback 接口和状态字段。
-- VLM 辅助识别接口和状态字段。
-
-第一版不保证：
-
-- 全量 OCR 后台队列。
-- 全量 Docling 修复。
-- OCR 置信度精细校准。
-
-## 7. 模型调用设计
-
-模型调用通过 OpenAI-compatible SDK 的薄适配层完成：
-
-- `LLMClient`：文本判断、建议生成。
-- `VisionLLMClient`：低质量页、关键 KPI、OCR 失败页的视觉辅助。
-- `ProviderAdapter`：隔离 DeepSeek 与其他 OpenAI-compatible 服务差异。
-
-调用规则：
-
-- 默认不调用外部模型。
-- 只有 `confirm_llm=true` 才能调用。
-- 模型响应必须经过 Pydantic v2 校验。
-- 校验失败进入人工复核。
-- 测试中必须 mock 模型调用。
-- 外部模型响应中的非公开数据不提交。
-
-## 8. 前端设计
-
-前端使用 Next.js App Router，核心页面：
+### 6.4 输出状态
 
 ```text
-frontend/
-  app/
-    page.tsx
-    reports/page.tsx
-    runs/[runId]/page.tsx
-    review/page.tsx
-    audit/page.tsx
-  components/
-    layout/
-    upload/
-    analysis/
-    evidence/
-    review/
-    charts/
-  lib/
-    api/
-    generated/
-    types.ts
-    utils.ts
+draft
+formal
+superseded
+voided
 ```
 
-页面职责：
+旧正式版本不得覆盖。报告重开并生成新正式版本后，旧版本转为 `superseded`。
 
-- 首页：最近运行记录、快速入口、系统状态。
-- 报告上传页：上传 PDF、显示解析状态、确认模型调用、启动分析。
-- 分析结果页：运行摘要、条款表格、证据详情、建议、导出入口。
-- 人工复核页：待复核条款筛选、复核决策保存、历史复核记录。
-- 审计日志页：运行事件、模型调用状态、文件哈希、错误信息。
+## 7. 固定风险模型
 
-前端约束：
+风险等级独立于 verdict 和 review status，采用 `high / medium / low`。每条结果保存 `risk_level`、`risk_reason_codes` 和 `risk_rule_version`。
 
-- 工作台式界面，不做聊天入口。
-- 空状态必须清楚显示暂无数据。
-- 不展示无来源的准确率、完成率或最终结论。
-- 图表只通过内部组件暴露业务入参，页面不直接依赖 Recharts API。
-- API 类型由 OpenAPI 生成，业务组件使用封装后的 client。
+### 7.1 高风险
 
-## 9. API 边界
+任一条件成立：
 
-API 前缀为 `/api`。
+- requirement 分析失败或没有 assessment；
+- `verdict=unknown`；
+- 无有效 source evidence；
+- 需要 OCR/VLM，或存在正文未抽取、证据错页、页码冲突；
+- omission note、index statement 或非 substantive evidence 是唯一依据；
+- 结论与证据充分性冲突；
+- 人工标记证据无效；
+- 批量操作后需要抽查；
+- 正式输出后重新开启。
 
-第一版接口：
+### 7.2 中风险
+
+- `verdict=partially_disclosed` 且有有效 substantive evidence；
+- 缺拆分维度、方法、假设或边界；
+- 有明确整改项但核心证据有效。
+
+### 7.3 低风险
+
+- `verdict=disclosed`；
+- 有直接、可定位且质量合格的 substantive evidence；
+- 没有解析失败、质量风险或充分性冲突。
+
+高风险完成率的分母取当前报告最新有效 run 的高风险 requirement 集合。重开或风险重算后分母允许变化，变化必须写入审计事件。
+
+## 8. 人工复核与审计
+
+### 8.1 单用户身份
+
+第一版不建设账号系统。用户首次执行复核时填写复核人名称，前端本地保存便于后续默认填充，服务端每次写操作仍显式接收并保存复核人。
+
+### 8.2 可编辑内容
+
+- 结论；
+- 证据页；
+- 证据片段；
+- 判断依据；
+- 缺失项；
+- 备注。
+
+系统 assessment 不可覆盖。每次人工操作追加 review snapshot 和字段级 change event，保存原值、新值、复核人、时间、原因、操作类型和上一个 snapshot。
+
+### 8.3 操作规则
+
+- 快速通过：允许预设原因，备注可选；
+- 修改：备注必填；
+- 无效证据：备注必填；
+- 批量操作：备注必填；
+- 重开 requirement 或报告：原因必填。
+
+审计记录只追加，不允许更新和删除。
+
+## 9. 部分失败与重跑
+
+分析失败分为：文件、解析、结构识别、route、evidence、assessment 和系统异常。
+
+- 已成功 requirement 的 assessment 保留；
+- 失败 requirement 自动进入高风险；
+- 报告状态为 `partially_completed`；
+- 用户可只重跑失败项；
+- 新 run 与旧 run 分开保存；
+- 重跑成功后通过最新有效结果视图合并展示，历史结果仍可审计。
+
+## 10. 后端模块边界
 
 ```text
-GET  /api/health
-POST /api/reports/upload
-POST /api/reports/{report_id}/analyze
-GET  /api/runs
-GET  /api/runs/{run_id}
-GET  /api/runs/{run_id}/assessments
-GET  /api/runs/{run_id}/recommendations
-GET  /api/review/runs
-GET  /api/review/runs/{run_id}/assessments
-POST /api/review/runs/{run_id}/decisions
-GET  /api/exports/runs/{run_id}/assessments.csv
-GET  /api/exports/runs/{run_id}/review.csv
-GET  /api/exports/runs/{run_id}/assessments.json
-GET  /api/exports/runs/{run_id}/review.json
-GET  /api/audit/runs
+backend/src/
+  domain/       状态、DTO 和业务规则
+  db/           持久化模型、repository、migration
+  standards/    GRI requirement、ontology 和充分性规则
+  agents/       系统 assessment
+  workflows/    报告分析与失败项重跑
+  services/     PDF、风险、复核、整改、导出、审计
+  api/          报告、运行、结果、复核、整改和输出接口
 ```
 
-上传和分析分离：
+report profile 只提供当前报告的候选证据路由。通用逻辑依赖行标签、章节语义、年份、单位和证据类型，不依赖固定页码。
 
-- 上传接口只保存文件和元数据。
-- 分析接口显式触发工作流；请求体支持 `confirm_llm`、`enable_ocr`、`ocr_pages`。
-- 前端通过 TanStack Query 轮询运行状态。
+## 11. 数据库设计方向
 
-## 10. 测试与验证
+现有 `reports`、`analysis_runs`、`document_pages`、`document_chunks`、`standard_requirements`、`disclosure_tasks`、`assessments`、`evidence_items`、`recommendations`、`review_decisions` 和 `audit_events` 保留。
 
-后端测试：
+设计新增：
 
-- domain models。
-- PDF 页面预检测和分块。
-- `GRIAdapter`。
-- `DisclosureAgent`。
-- `SingleReportWorkflow`。
-- PostgreSQL repository。
-- reports API。
-- review API。
-- exports API。
-- audit API。
+- `analysis_stage_events`：业务阶段进度；
+- `assessment_risks`：风险等级、原因和规则版本；
+- `review_snapshots`：人工结果快照；
+- `review_change_events`：字段级变更；
+- `improvement_actions`：整改任务；
+- `export_versions`：草稿和正式输出版本。
 
-前端测试：
+`reports` 扩展企业、年度、语言、metadata confirmation 和报告状态；`analysis_runs` 扩展引擎版本、风险规则版本和部分失败统计。具体字段和迁移顺序以 `docs/product/data-model-impact.md` 为准。
 
-- upload 页面状态。
-- run 页面空状态和数据状态。
-- review 决策提交。
-- chart wrapper 业务入参渲染。
-- `pnpm build` 和 typecheck。
+替代接口或新表实际启用后，旧接口和旧表进入两个连续切片验收周期的兼容窗口。每个周期必须有自动回归覆盖；连续两轮通过且历史数据映射一致后，才允许在后续独立迁移中清理。审批日期和仅完成代码定义不计入兼容周期。
 
-验收：
+## 12. API 边界
 
-- 后端 `pytest` 通过。
-- 前端 `pnpm build`、typecheck、Vitest 通过。
-- 上传、分析、复核、导出链路通过。
-- 原 `envision` 和 `esg-dashboard` 不删除、不覆盖、不回退。
+API 前缀保持 `/api`。资源分组：
 
-## 11. 风险与控制
+- reports：列表、上传、详情、metadata 确认、分析、重开；
+- runs：状态、阶段、失败项重跑；
+- assessments：分页列表、详情和筛选；
+- review：风险队列、决策、批量操作、历史和重开；
+- actions：整改任务；
+- exports：草稿、正式版本和文件；
+- audit：报告级只追加记录。
 
-扫描件处理耗时：
+详细请求、响应和错误码以 `docs/product/api-contract.md` 为准。OpenAPI 是前端类型唯一来源。
 
-- 不默认全量同步 OCR。
-- 先做页面预检测。
-- 只有显式启用时才对指定页或低文本/扫描页 OCR。
-- OCR 页数受 `OCR_MAX_PAGES` 限制。
-- 后续可增量重跑。
+## 13. PDF 与外部模型边界
 
-多模态识别幻觉：
+PDF 继续采用分级路由：pypdf/pdfplumber 为默认主链路；扫描关键页可显式启用 OCR；复杂失败页允许 Docling fallback；VLM 只有用户显式确认后才允许调用。
 
-- VLM 结果标记 `vlm_assisted`。
-- 默认进入人工复核或低置信度。
-- 不把 VLM 输出直接写成最终披露事实。
+硬性原则：
 
-PostgreSQL 本地依赖：
+- 原始 PDF 不覆盖；
+- OCR 产物作为派生文件保存；
+- 外部模型默认不调用；
+- VLM 输出不直接成为最终合规事实；
+- OCR/VLM、低文本和复杂表格风险进入 evidence quality 和风险模型；
+- 测试中 mock 外部模型。
 
-- Docker Compose 管数据库。
-- `.env.example` 提供连接配置。
-- Alembic 管迁移。
+## 14. 输出设计
 
-前后端契约漂移：
+第一版支持：
 
-- FastAPI OpenAPI 生成 TypeScript types。
-- 前端不手写重复接口类型。
+1. 完整 GRI 核查表：Excel、可打印网页；
+2. 管理层摘要：PDF、可打印网页；
+3. 改进任务清单：Excel；
+4. 审计说明：复核范围、系统待确认范围、版本和生成时间。
 
-图表库迁移：
+草稿输出带草稿标识。正式输出只有在高风险复核完成后生成，并绑定：原文件哈希、run、GRI requirement 版本、分析引擎版本、风险规则版本和 review snapshot 版本。
 
-- 图表库封装在 `components/charts/`。
-- 页面只使用业务图表组件。
-- 后续切 ECharts 只改组件内部。
+输出必须区分人工确认结果与系统待确认结果，并注明仍未人工复核的中低风险数量。
 
-## 12. 待进入实施计划的任务组
+## 15. 前端设计约束
 
-1. 初始化 Monorepo、Git、根配置和 Docker Compose。
-2. 建立 FastAPI、Pydantic settings、PostgreSQL、SQLAlchemy、Alembic。
-3. 实现领域模型、数据库表和 repository。
-4. 实现 PDF 多路由解析框架和页面预检测。
-5. 迁移允许的 GRI 和报告资产。
-6. 实现 `GRIAdapter`。
-7. 实现 `DisclosureAgent` 和模型适配层。
-8. 实现 `SingleReportWorkflow`。
-9. 实现 reports、runs、review、exports API。
-10. 初始化 Next.js、Tailwind、shadcn/ui、TanStack Query、TanStack Table。
-11. 实现上传、结果、复核、审计页面。
-12. 配置 OpenAPI TS 生成、测试和构建脚本。
+- 工作台式界面，不做聊天入口；
+- 报告和核查对象是首屏信号；
+- 使用紧凑信息密度，不使用营销式 hero；
+- 按钮使用 lucide icons 和明确 tooltip；
+- 页面不直接依赖 Recharts API；
+- 577 条表格分页和按需加载证据；
+- 所有核心指标来自后端 API；
+- 空、加载、部分失败、失败和无权限外的单用户状态均有明确呈现；
+- 中文业务名称优先，内部字段仅在高级说明出现。
+
+## 16. 测试与验收
+
+后端重点：
+
+- 577 条任务生成；
+- 报告 metadata 确认；
+- 阶段进度和部分失败；
+- 风险规则和版本；
+- review snapshot 只追加；
+- 必填原因校验；
+- 高风险完成门槛；
+- 正式输出版本和复核范围；
+- OpenAPI 契约与数据库迁移。
+
+前端重点：
+
+- 报告列表和上传空状态；
+- metadata 确认；
+- 分析阶段进度；
+- 风险队列筛选；
+- 三栏与窄屏视图；
+- 快速通过和字段编辑；
+- 批量操作备注；
+- 完整核查表分页；
+- 草稿/正式输出门槛。
+
+验收命令：
+
+```powershell
+cd backend
+uv run pytest
+
+cd ../frontend
+pnpm typecheck
+pnpm test
+pnpm build
+```
+
+## 17. 实施顺序
+
+1. 报告列表、metadata 检测与确认；
+2. 577 条后台分析、阶段进度和部分失败；
+3. 固定风险模型与风险队列 API；
+4. review snapshot、字段级审计和重开；
+5. 报告仪表盘与三栏复核工作台；
+6. 完整核查表与整改任务；
+7. 草稿和版本化正式输出；
+8. 使用不同企业报告验证产品闭环和分析泛化。
+
+设计冻结前不创建 migration、不修改正式 API、不实现新页面。
