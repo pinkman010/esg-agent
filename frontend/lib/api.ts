@@ -1,9 +1,20 @@
 import type {
   AnalysisRun,
+  AnalysisStageResponse,
+  AssessmentListResponse,
+  AssessmentDetailResponse,
+  ReportDashboardResponse,
+  ImprovementAction,
+  ExportVersion,
   AnalyzeResponse,
   AuditRun,
+  ConfirmReportMetadataRequest,
   DisclosureAssessment,
   Recommendation,
+  ReportListResponse,
+  ReportResponse,
+  ReviewSnapshot,
+  ReviewSnapshotRequest,
   ReportUploadResponse,
   ReviewDecision,
   ReviewDecisionRequest,
@@ -55,11 +66,51 @@ export function uploadReport(file: File): Promise<ReportUploadResponse> {
   formData.append("file", file);
   return request<ReportUploadResponse>("/api/reports/upload", { method: "POST", body: formData });
 }
+export function listReports(page = 1, pageSize = 50): Promise<ReportListResponse> {
+  return request<ReportListResponse>(`/api/reports?page=${page}&page_size=${pageSize}`);
+}
+export function getReport(reportId: string): Promise<ReportResponse> {
+  return request<ReportResponse>(`/api/reports/${reportId}`);
+}
+export function confirmReportMetadata(reportId: string, payload: ConfirmReportMetadataRequest): Promise<ReportResponse> {
+  return request<ReportResponse>(`/api/reports/${reportId}/confirm-metadata`, { method: "POST", body: payload });
+}
 export function analyzeReport(reportId: string, confirmLlm: boolean): Promise<AnalyzeResponse> {
   return request<AnalyzeResponse>(`/api/reports/${reportId}/analyze`, { method: "POST", body: { confirm_llm: confirmLlm } });
 }
 export function listRuns(): Promise<AnalysisRun[]> { return request<AnalysisRun[]>("/api/runs"); }
 export function getRun(runId: string): Promise<AnalysisRun> { return request<AnalysisRun>(`/api/runs/${runId}`); }
+export function getRunStages(runId: string): Promise<AnalysisStageResponse[]> { return request<AnalysisStageResponse[]>(`/api/runs/${runId}/stages`); }
+export function retryFailedRun(runId: string, reason: string): Promise<AnalysisRun> {
+  return request<AnalysisRun>(`/api/runs/${runId}/retry-failed`, { method: "POST", body: { reason } });
+}
+export function getReviewQueue(reportId: string): Promise<AssessmentListResponse> {
+  return request<AssessmentListResponse>(`/api/reports/${reportId}/review-queue`);
+}
+export function listReportAssessments(reportId: string, page = 1): Promise<AssessmentListResponse> {
+  return request<AssessmentListResponse>(`/api/reports/${reportId}/assessments?page=${page}&page_size=50`);
+}
+export function saveReviewSnapshot(assessmentId: string, payload: ReviewSnapshotRequest): Promise<ReviewSnapshot> {
+  return request<ReviewSnapshot>(`/api/assessments/${assessmentId}/review-decisions`, { method: "POST", body: payload });
+}
+export function getReviewHistory(assessmentId: string): Promise<ReviewSnapshot[]> {
+  return request<ReviewSnapshot[]>(`/api/assessments/${assessmentId}/review-history`);
+}
+export function getAssessmentDetail(reportId: string, assessmentId: string): Promise<AssessmentDetailResponse> {
+  return request<AssessmentDetailResponse>(`/api/reports/${reportId}/assessments/${assessmentId}`);
+}
+export function getReportDashboard(reportId: string): Promise<ReportDashboardResponse> {
+  return request<ReportDashboardResponse>(`/api/reports/${reportId}/dashboard`);
+}
+export function listActions(reportId: string): Promise<ImprovementAction[]> {
+  return request<ImprovementAction[]>(`/api/reports/${reportId}/actions`);
+}
+export function listExportVersions(reportId: string): Promise<ExportVersion[]> {
+  return request<ExportVersion[]>(`/api/reports/${reportId}/exports`);
+}
+export function generateExport(reportId: string, isDraft: boolean, createdBy: string): Promise<ExportVersion> {
+  return request<ExportVersion>(`/api/reports/${reportId}/exports/${isDraft ? "draft" : "formal"}`, { method: "POST", body: { formats: ["assessment_xlsx", "management_pdf", "actions_xlsx", "print_html"], created_by: createdBy } });
+}
 export function listRunAssessments(runId: string): Promise<DisclosureAssessment[]> { return request<DisclosureAssessment[]>(`/api/runs/${runId}/assessments`); }
 export function listRunRecommendations(runId: string): Promise<Recommendation[]> { return request<Recommendation[]>(`/api/runs/${runId}/recommendations`); }
 export function listReviewRuns(): Promise<AnalysisRun[]> { return request<AnalysisRun[]>("/api/review/runs"); }

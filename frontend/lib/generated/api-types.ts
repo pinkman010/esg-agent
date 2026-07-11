@@ -21,6 +21,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Reports */
+        get: operations["list_reports_api_reports_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reports/{report_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Report */
+        get: operations["get_report_api_reports__report_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reports/{report_id}/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Report File */
+        get: operations["get_report_file_api_reports__report_id__file_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/reports/upload": {
         parameters: {
             query?: never;
@@ -32,6 +83,23 @@ export interface paths {
         put?: never;
         /** Upload Report */
         post: operations["upload_report_api_reports_upload_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reports/{report_id}/confirm-metadata": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confirm Report Metadata */
+        post: operations["confirm_report_metadata_api_reports__report_id__confirm_metadata_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -53,6 +121,109 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/reports/{report_id}/dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Dashboard */
+        get: operations["dashboard_api_reports__report_id__dashboard_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reports/{report_id}/assessments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Assessments */
+        get: operations["list_assessments_api_reports__report_id__assessments_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reports/{report_id}/review-queue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Review Queue */
+        get: operations["review_queue_api_reports__report_id__review_queue_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reports/{report_id}/assessments/{assessment_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Assessment Detail */
+        get: operations["assessment_detail_api_reports__report_id__assessments__assessment_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reports/{report_id}/actions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Actions */
+        get: operations["list_actions_api_reports__report_id__actions_get"];
+        put?: never;
+        /** Create Action */
+        post: operations["create_action_api_reports__report_id__actions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/actions/{action_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Action */
+        patch: operations["update_action_api_actions__action_id__patch"];
         trace?: never;
     };
     "/api/runs": {
@@ -123,6 +294,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/runs/{run_id}/stages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Stages */
+        get: operations["list_stages_api_runs__run_id__stages_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/runs/{run_id}/retry-failed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Retry Failed */
+        post: operations["retry_failed_api_runs__run_id__retry_failed_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/review/runs": {
         parameters: {
             query?: never;
@@ -168,6 +373,40 @@ export interface paths {
         put?: never;
         /** Save Review Decision */
         post: operations["save_review_decision_api_review_runs__run_id__decisions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/assessments/{assessment_id}/review-decisions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Save Review Snapshot */
+        post: operations["save_review_snapshot_api_assessments__assessment_id__review_decisions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/assessments/{assessment_id}/review-history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Review History */
+        get: operations["review_history_api_assessments__assessment_id__review_history_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -242,6 +481,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/reports/{report_id}/exports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Versions */
+        get: operations["list_versions_api_reports__report_id__exports_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reports/{report_id}/exports/draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Generate Draft */
+        post: operations["generate_draft_api_reports__report_id__exports_draft_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reports/{report_id}/exports/formal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Generate Formal */
+        post: operations["generate_formal_api_reports__report_id__exports_formal_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/audit/runs": {
         parameters: {
             query?: never;
@@ -263,6 +553,16 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * ActionPriority
+         * @enum {string}
+         */
+        ActionPriority: "high" | "medium" | "low";
+        /**
+         * ActionStatus
+         * @enum {string}
+         */
+        ActionStatus: "open" | "in_progress" | "completed" | "cancelled";
         /** AnalysisRun */
         AnalysisRun: {
             /** Run Id */
@@ -282,6 +582,52 @@ export interface components {
             completed_at?: string | null;
             /** Error Message */
             error_message?: string | null;
+            /** Parent Run Id */
+            parent_run_id?: string | null;
+            /**
+             * Engine Version
+             * @default rules-v1
+             */
+            engine_version: string;
+            /**
+             * Risk Rule Version
+             * @default risk-v1
+             */
+            risk_rule_version: string;
+            /**
+             * Eligible Requirement Count
+             * @default 577
+             */
+            eligible_requirement_count: number;
+            /**
+             * Succeeded Requirement Count
+             * @default 0
+             */
+            succeeded_requirement_count: number;
+            /**
+             * Failed Requirement Count
+             * @default 0
+             */
+            failed_requirement_count: number;
+            /** Failure Summary */
+            failure_summary?: {
+                [key: string]: unknown;
+            };
+        };
+        /** AnalysisStageResponse */
+        AnalysisStageResponse: {
+            /** Stage Code */
+            stage_code: string;
+            /** Status */
+            status: string;
+            /** Completed Units */
+            completed_units: number;
+            /** Total Units */
+            total_units: number;
+            /** Error Summary */
+            error_summary?: string | null;
+            /** Created At */
+            created_at?: string | null;
         };
         /** AnalyzeRequest */
         AnalyzeRequest: {
@@ -290,6 +636,16 @@ export interface components {
              * @default false
              */
             confirm_llm: boolean;
+            /**
+             * Enable Ocr
+             * @default false
+             */
+            enable_ocr: boolean;
+            /**
+             * Ocr Pages
+             * @default []
+             */
+            ocr_pages: number[];
         };
         /** AnalyzeResponse */
         AnalyzeResponse: {
@@ -302,6 +658,75 @@ export interface components {
             confirm_llm: boolean;
             /** Error Message */
             error_message?: string | null;
+        };
+        /** AssessmentDetailResponse */
+        AssessmentDetailResponse: {
+            /** Assessment Id */
+            assessment_id: string;
+            /** Requirement Id */
+            requirement_id: string;
+            /** Requirement Text */
+            requirement_text: string;
+            /** System Verdict */
+            system_verdict: string;
+            /** Reviewed Verdict */
+            reviewed_verdict?: string | null;
+            /** Effective Verdict */
+            effective_verdict: string;
+            /** Review Status */
+            review_status: string;
+            /** Risk Level */
+            risk_level: string;
+            /** Risk Reason Codes */
+            risk_reason_codes: string[];
+            /** Rationale */
+            rationale: string;
+            /** Missing Items */
+            missing_items: string[];
+            /** Evidence Items */
+            evidence_items: components["schemas"]["BusinessEvidenceItem"][];
+            /** Latest Snapshot Id */
+            latest_snapshot_id?: string | null;
+        };
+        /** AssessmentListItem */
+        AssessmentListItem: {
+            /** Assessment Id */
+            assessment_id: string;
+            /** Requirement Id */
+            requirement_id: string;
+            /** Requirement Name Zh */
+            requirement_name_zh: string;
+            /** Gri Topic */
+            gri_topic: string;
+            /** System Verdict */
+            system_verdict: string;
+            /** Reviewed Verdict */
+            reviewed_verdict?: string | null;
+            /** Effective Verdict */
+            effective_verdict: string;
+            /** Risk Level */
+            risk_level: string;
+            /** Risk Reason Codes */
+            risk_reason_codes: string[];
+            /** Review Status */
+            review_status: string;
+            /** Evidence Count */
+            evidence_count: number;
+            /** Source Pdf Pages */
+            source_pdf_pages: number[];
+            /** Action Status */
+            action_status?: string | null;
+        };
+        /** AssessmentListResponse */
+        AssessmentListResponse: {
+            /** Items */
+            items: components["schemas"]["AssessmentListItem"][];
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+            /** Total */
+            total: number;
         };
         /**
          * AssessmentVerdict
@@ -348,6 +773,56 @@ export interface components {
             /** File */
             file: string;
         };
+        /** BusinessEvidenceItem */
+        BusinessEvidenceItem: {
+            /** Evidence Id */
+            evidence_id: string;
+            /** Source Pdf Page */
+            source_pdf_page: number;
+            /** Source Report Page */
+            source_report_page?: number | null;
+            /** Page Label */
+            page_label: string;
+            /** Evidence Preview */
+            evidence_preview: string;
+            /** Source Method */
+            source_method: string;
+            /** Quality Flags */
+            quality_flags: string[];
+            /** Bbox */
+            bbox?: {
+                [key: string]: number;
+            } | null;
+        };
+        /** ConfirmReportMetadataRequest */
+        ConfirmReportMetadataRequest: {
+            /** Company Name */
+            company_name: string;
+            /** Report Year */
+            report_year: number;
+            /** Language */
+            language: string;
+        };
+        /** CreateActionRequest */
+        CreateActionRequest: {
+            /** Assessment Id */
+            assessment_id: string;
+            /** Title */
+            title: string;
+            /** @default medium */
+            priority: components["schemas"]["ActionPriority"];
+            /** Owner Name */
+            owner_name?: string | null;
+            /** Due Date */
+            due_date?: string | null;
+            /**
+             * Recommendation Text
+             * @default
+             */
+            recommendation_text: string;
+            /** Created By */
+            created_by: string;
+        };
         /** DisclosureAssessment */
         DisclosureAssessment: {
             /** Assessment Id */
@@ -391,6 +866,10 @@ export interface components {
             source_text: string;
             /** Source Page */
             source_page: number;
+            /** Source Pdf Page */
+            source_pdf_page?: number | null;
+            /** Source Report Page */
+            source_report_page?: number | null;
             /** Source File Hash */
             source_file_hash: string;
             source_method: components["schemas"]["EvidenceSourceMethod"];
@@ -410,6 +889,25 @@ export interface components {
             is_kpi_evidence: boolean;
             /** Quality Flags */
             quality_flags?: components["schemas"]["PageQualityFlag"][];
+            /**
+             * Needs Ocr Or Vlm
+             * @default false
+             */
+            needs_ocr_or_vlm: boolean;
+            /**
+             * Requires Ocr
+             * @default false
+             */
+            requires_ocr: boolean;
+            /**
+             * Requires Vlm
+             * @default false
+             */
+            requires_vlm: boolean;
+            /** Ocr Or Vlm Reason */
+            ocr_or_vlm_reason?: string | null;
+            /** Evidence Preview */
+            evidence_preview?: string | null;
             /** Metadata */
             metadata?: {
                 [key: string]: unknown;
@@ -420,16 +918,95 @@ export interface components {
          * @enum {string}
          */
         EvidenceSourceMethod: "pypdf" | "pdfplumber" | "ocr" | "docling" | "vlm" | "manual";
+        /** ExportVersion */
+        ExportVersion: {
+            /** Export Id */
+            export_id: string;
+            /** Report Id */
+            report_id: string;
+            /** Run Id */
+            run_id: string;
+            /** Version Number */
+            version_number: number;
+            /** Status */
+            status: string;
+            /** Is Draft */
+            is_draft: boolean;
+            /** File Hash */
+            file_hash: string;
+            /** Engine Version */
+            engine_version: string;
+            /** Risk Rule Version */
+            risk_rule_version: string;
+            /**
+             * Requirement Version
+             * @default gri-eligible-577-v1
+             */
+            requirement_version: string;
+            /** Review Scope */
+            review_scope?: {
+                [key: string]: unknown;
+            };
+            /** File Manifest */
+            file_manifest?: {
+                [key: string]: unknown;
+            }[];
+            /** Supersedes Export Id */
+            supersedes_export_id?: string | null;
+            /** Created By */
+            created_by: string;
+            /** Created At */
+            created_at?: string | null;
+        };
+        /** GenerateExportRequest */
+        GenerateExportRequest: {
+            /** Formats */
+            formats: string[];
+            /** Created By */
+            created_by: string;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
         };
+        /** ImprovementAction */
+        ImprovementAction: {
+            /** Action Id */
+            action_id: string;
+            /** Report Id */
+            report_id: string;
+            /** Assessment Id */
+            assessment_id: string;
+            /** Title */
+            title: string;
+            /** @default medium */
+            priority: components["schemas"]["ActionPriority"];
+            /** @default open */
+            status: components["schemas"]["ActionStatus"];
+            /** Owner Name */
+            owner_name?: string | null;
+            /** Due Date */
+            due_date?: string | null;
+            /**
+             * Recommendation Text
+             * @default
+             */
+            recommendation_text: string;
+            /** Completion Note */
+            completion_note?: string | null;
+            /** Created By */
+            created_by: string;
+            /** Created At */
+            created_at?: string | null;
+            /** Updated At */
+            updated_at?: string | null;
+        };
         /**
          * PageQualityFlag
          * @enum {string}
          */
-        PageQualityFlag: "digital_text" | "scanned" | "low_text_density" | "complex_table" | "ocr_failed" | "needs_manual_review";
+        PageQualityFlag: "digital_text" | "short_text" | "scanned" | "low_text_density" | "complex_table" | "image_body_not_extracted" | "ocr_failed" | "needs_manual_review";
         /** Recommendation */
         Recommendation: {
             /** Recommendation Id */
@@ -447,6 +1024,71 @@ export interface components {
             /** Created At */
             created_at?: string | null;
         };
+        /** ReportDashboardResponse */
+        ReportDashboardResponse: {
+            /** Report Id */
+            report_id: string;
+            /** Run Id */
+            run_id: string | null;
+            /** Verdict Counts */
+            verdict_counts: {
+                [key: string]: number;
+            };
+            /** Risk Counts */
+            risk_counts: {
+                [key: string]: number;
+            };
+            /** High Risk Total */
+            high_risk_total: number;
+            /** High Risk Reviewed */
+            high_risk_reviewed: number;
+            /** Failed Requirement Count */
+            failed_requirement_count: number;
+        };
+        /** ReportListResponse */
+        ReportListResponse: {
+            /** Items */
+            items: components["schemas"]["ReportResponse"][];
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+            /** Total */
+            total: number;
+        };
+        /** ReportResponse */
+        ReportResponse: {
+            /** Report Id */
+            report_id: string;
+            /** Original Filename */
+            original_filename: string;
+            /** File Hash */
+            file_hash: string;
+            /** Page Count */
+            page_count?: number | null;
+            /** Company Name */
+            company_name?: string | null;
+            /** Report Year */
+            report_year?: number | null;
+            /** Language */
+            language?: string | null;
+            status: components["schemas"]["ReportStatus"];
+            /** Metadata Detected */
+            metadata_detected: {
+                [key: string]: unknown;
+            };
+            /** Metadata Confirmed At */
+            metadata_confirmed_at?: string | null;
+            /** Created At */
+            created_at?: string | null;
+            /** Updated At */
+            updated_at?: string | null;
+        };
+        /**
+         * ReportStatus
+         * @enum {string}
+         */
+        ReportStatus: "uploaded" | "metadata_detected" | "awaiting_confirmation" | "ready_for_analysis" | "analyzing" | "analysis_completed" | "partially_completed" | "analysis_failed" | "high_risk_review_completed" | "formally_exported" | "reopened" | "archived";
         /** ReportUploadResponse */
         ReportUploadResponse: {
             /** Report Id */
@@ -460,6 +1102,11 @@ export interface components {
              * @constant
              */
             status: "uploaded";
+        };
+        /** RetryFailedRequest */
+        RetryFailedRequest: {
+            /** Reason */
+            reason: string;
         };
         /** ReviewDecision */
         ReviewDecision: {
@@ -490,15 +1137,98 @@ export interface components {
             reviewer_note: string;
         };
         /**
+         * ReviewOperation
+         * @enum {string}
+         */
+        ReviewOperation: "approve" | "modify" | "invalidate_evidence" | "reopen" | "legacy_import";
+        /** ReviewSnapshot */
+        ReviewSnapshot: {
+            /** Snapshot Id */
+            snapshot_id: string;
+            /** Assessment Id */
+            assessment_id: string;
+            /** Run Id */
+            run_id: string;
+            /** Sequence */
+            sequence: number;
+            /** Previous Snapshot Id */
+            previous_snapshot_id?: string | null;
+            operation_type: components["schemas"]["ReviewOperation"];
+            /** Reviewer Name */
+            reviewer_name: string;
+            /** Reason Code */
+            reason_code: string;
+            /**
+             * Reviewer Note
+             * @default
+             */
+            reviewer_note: string;
+            reviewed_verdict?: components["schemas"]["AssessmentVerdict"] | null;
+            /** Evidence Pages */
+            evidence_pages?: number[] | null;
+            /** Evidence Preview */
+            evidence_preview?: string | null;
+            /** Rationale */
+            rationale?: string | null;
+            /** Missing Items */
+            missing_items?: string[] | null;
+            /**
+             * Is Batch Operation
+             * @default false
+             */
+            is_batch_operation: boolean;
+            /** Batch Id */
+            batch_id?: string | null;
+            /** Created At */
+            created_at?: string | null;
+        };
+        /** ReviewSnapshotRequest */
+        ReviewSnapshotRequest: {
+            operation_type: components["schemas"]["ReviewOperation"];
+            /** Reviewer Name */
+            reviewer_name: string;
+            /** Reason Code */
+            reason_code: string;
+            /**
+             * Reviewer Note
+             * @default
+             */
+            reviewer_note: string;
+            reviewed_verdict?: components["schemas"]["AssessmentVerdict"] | null;
+            /** Evidence Pages */
+            evidence_pages?: number[] | null;
+            /** Evidence Preview */
+            evidence_preview?: string | null;
+            /** Rationale */
+            rationale?: string | null;
+            /** Missing Items */
+            missing_items?: string[] | null;
+            /** Expected Previous Snapshot Id */
+            expected_previous_snapshot_id?: string | null;
+        };
+        /**
          * ReviewStatus
          * @enum {string}
          */
         ReviewStatus: "not_required" | "needs_manual_review" | "approved" | "rejected" | "corrected";
         /**
+         * RiskLevel
+         * @enum {string}
+         */
+        RiskLevel: "high" | "medium" | "low";
+        /**
          * RunStatus
          * @enum {string}
          */
-        RunStatus: "pending" | "running" | "completed" | "failed";
+        RunStatus: "pending" | "running" | "completed" | "partially_completed" | "failed";
+        /** UpdateActionRequest */
+        UpdateActionRequest: {
+            status?: components["schemas"]["ActionStatus"] | null;
+            /** Owner Name */
+            owner_name?: string | null;
+            /** Completion Note */
+            completion_note?: string | null;
+        };
         /** ValidationError */
         ValidationError: {
             /** Location */
@@ -543,6 +1273,101 @@ export interface operations {
             };
         };
     };
+    list_reports_api_reports_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                page_size?: number;
+                status?: components["schemas"]["ReportStatus"] | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_report_api_reports__report_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                report_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_report_file_api_reports__report_id__file_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                report_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     upload_report_api_reports_upload_post: {
         parameters: {
             query?: never;
@@ -563,6 +1388,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ReportUploadResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    confirm_report_metadata_api_reports__report_id__confirm_metadata_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                report_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmReportMetadataRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportResponse"];
                 };
             };
             /** @description Validation Error */
@@ -598,6 +1458,239 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AnalyzeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    dashboard_api_reports__report_id__dashboard_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                report_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportDashboardResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_assessments_api_reports__report_id__assessments_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                page_size?: number;
+                risk_level?: components["schemas"]["RiskLevel"] | null;
+            };
+            header?: never;
+            path: {
+                report_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    review_queue_api_reports__report_id__review_queue_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path: {
+                report_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    assessment_detail_api_reports__report_id__assessments__assessment_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                report_id: string;
+                assessment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentDetailResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_actions_api_reports__report_id__actions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                report_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImprovementAction"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_action_api_reports__report_id__actions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                report_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateActionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImprovementAction"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_action_api_actions__action_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                action_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateActionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImprovementAction"];
                 };
             };
             /** @description Validation Error */
@@ -724,6 +1817,72 @@ export interface operations {
             };
         };
     };
+    list_stages_api_runs__run_id__stages_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnalysisStageResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    retry_failed_api_runs__run_id__retry_failed_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RetryFailedRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnalysisRun"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_review_runs_api_review_runs_get: {
         parameters: {
             query?: never;
@@ -797,6 +1956,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ReviewDecision"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    save_review_snapshot_api_assessments__assessment_id__review_decisions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assessment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewSnapshotRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewSnapshot"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    review_history_api_assessments__assessment_id__review_history_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assessment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewSnapshot"][];
                 };
             };
             /** @description Validation Error */
@@ -925,6 +2150,107 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_versions_api_reports__report_id__exports_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                report_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExportVersion"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    generate_draft_api_reports__report_id__exports_draft_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                report_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GenerateExportRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExportVersion"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    generate_formal_api_reports__report_id__exports_formal_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                report_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GenerateExportRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExportVersion"];
                 };
             };
             /** @description Validation Error */

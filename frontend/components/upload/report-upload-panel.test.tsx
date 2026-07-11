@@ -23,30 +23,19 @@ describe("ReportUploadPanel", () => {
     router.push.mockReset();
   });
 
-  it("uploads a PDF, shows report metadata, and starts analysis", async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce(
-        jsonResponse({ report_id: "report-1", original_filename: "report.pdf", file_hash: "hash-1", status: "uploaded" }),
-      )
-      .mockResolvedValueOnce(
-        jsonResponse({ run_id: "run-1", report_id: "report-1", status: "completed", confirm_llm: true, error_message: null }),
-      );
+  it("uploads a PDF and opens metadata confirmation", async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(
+      jsonResponse({ report_id: "report-1", original_filename: "report.pdf", file_hash: "hash-1", status: "uploaded" }),
+    );
     vi.stubGlobal("fetch", fetchMock);
 
     renderWithQuery(<ReportUploadPanel />);
 
     const file = new File(["pdf"], "report.pdf", { type: "application/pdf" });
-    fireEvent.change(screen.getByLabelText("PDF report"), { target: { files: [file] } });
-    fireEvent.click(screen.getByRole("button", { name: "Upload PDF" }));
+    fireEvent.change(screen.getByLabelText("PDF 报告文件"), { target: { files: [file] } });
+    fireEvent.click(screen.getByRole("button", { name: "上传 PDF" }));
 
-    expect(await screen.findByText("report-1")).toBeInTheDocument();
-    expect(screen.getByText("hash-1")).toBeInTheDocument();
-
-    fireEvent.click(screen.getByLabelText("Allow external model call"));
-    fireEvent.click(screen.getByRole("button", { name: "Start analysis" }));
-
-    await waitFor(() => expect(router.push).toHaveBeenCalledWith("/runs/run-1"));
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    await waitFor(() => expect(router.push).toHaveBeenCalledWith("/reports/report-1/confirm"));
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
