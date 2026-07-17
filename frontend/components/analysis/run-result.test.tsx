@@ -56,6 +56,8 @@ describe("RunResult", () => {
 
     expect(await screen.findByText("GRI 302")).toBeInTheDocument();
     expect(screen.getByText("pdfplumber p.1")).toBeInTheDocument();
+    expect(screen.getByText("无需复核")).toBeInTheDocument();
+    expect(screen.queryByText("not_required")).not.toBeInTheDocument();
     expect(screen.getByText("Improve disclosure.")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Assessments CSV" })).toHaveAttribute("href", "http://localhost:8000/api/exports/runs/run-1/assessments.csv");
   });

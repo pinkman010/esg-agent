@@ -9,6 +9,7 @@ import type {
   AnalyzeResponse,
   AuditRun,
   ConfirmReportMetadataRequest,
+  DemoResetResponse,
   DisclosureAssessment,
   Recommendation,
   ReportListResponse,
@@ -65,6 +66,12 @@ export function uploadReport(file: File): Promise<ReportUploadResponse> {
   const formData = new FormData();
   formData.append("file", file);
   return request<ReportUploadResponse>("/api/reports/upload", { method: "POST", body: formData });
+}
+export function resetDemoEnvironment(): Promise<DemoResetResponse> {
+  return request<DemoResetResponse>("/api/demo/reset", {
+    method: "POST",
+    body: { confirmation: "RESET_DEMO" },
+  });
 }
 export function listReports(page = 1, pageSize = 50): Promise<ReportListResponse> {
   return request<ReportListResponse>(`/api/reports?page=${page}&page_size=${pageSize}`);

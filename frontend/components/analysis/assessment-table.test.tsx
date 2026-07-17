@@ -12,6 +12,8 @@ describe("AssessmentTable", () => {
     renderWithQuery(<AssessmentTable reportId="report-1" />);
     expect(await screen.findByText("GRI 2-1-a")).toBeInTheDocument();
     expect(screen.getByText("已披露")).toBeInTheDocument();
+    expect(screen.getByText("待复核")).toBeInTheDocument();
+    expect(screen.queryByText("pending_review")).not.toBeInTheDocument();
     expect(screen.getByText("共 577 条")).toBeInTheDocument();
   });
 });

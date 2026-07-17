@@ -5,13 +5,14 @@ import { flexRender, getCoreRowModel, useReactTable, type ColumnDef } from "@tan
 import { AlertCircle, Download, RefreshCcw } from "lucide-react";
 import { DisclosureSummaryChart } from "@/components/charts/disclosure-summary-chart";
 import { apiUrl, getRun, listRunAssessments, listRunRecommendations } from "@/lib/api";
+import { reviewStatusLabels } from "@/lib/business-labels";
 import type { DisclosureAssessment } from "@/lib/types";
 
 const columns: ColumnDef<DisclosureAssessment>[] = [
   { accessorKey: "disclosure_id", header: "Disclosure" },
   { accessorKey: "requirement_id", header: "Requirement" },
   { accessorKey: "verdict", header: "Verdict" },
-  { accessorKey: "review_status", header: "Review" },
+  { accessorKey: "review_status", header: "Review", cell: ({ row }) => reviewStatusLabels[row.original.review_status] ?? "待确认" },
   { id: "evidence", header: "Evidence", cell: ({ row }) => { const evidence = row.original.evidence?.[0]; return evidence ? `${evidence.source_method} p.${evidence.source_page}` : "No evidence"; } },
 ];
 

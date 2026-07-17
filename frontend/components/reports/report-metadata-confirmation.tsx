@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Check, Play } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -23,9 +24,9 @@ export function ReportMetadataConfirmation({ reportId }: { reportId: string }) {
 
   useEffect(() => {
     if (!reportQuery.data) return;
-    setCompanyName(reportQuery.data.company_name ?? "");
+    setCompanyName(reportQuery.data.company_name || detectedValue(reportQuery.data, "company_name"));
     setReportYear(String(reportQuery.data.report_year ?? detectedValue(reportQuery.data, "report_year")));
-    setLanguage(reportQuery.data.language ?? detectedValue(reportQuery.data, "language") ?? "zh-CN");
+    setLanguage(reportQuery.data.language || detectedValue(reportQuery.data, "language") || "zh-CN");
     setConfirmed(reportQuery.data.status === "ready_for_analysis");
   }, [reportQuery.data]);
 
@@ -45,31 +46,47 @@ export function ReportMetadataConfirmation({ reportId }: { reportId: string }) {
   if (reportQuery.isLoading) return <p className="p-6 text-sm text-muted-foreground">正在读取报告信息...</p>;
   if (!reportQuery.data) return <p className="p-6 text-sm text-red-700">报告信息读取失败。</p>;
 
+  const editableStatuses = new Set(["uploaded", "metadata_detected", "awaiting_confirmation", "ready_for_analysis"]);
+  const resultStatuses = new Set(["analysis_completed", "partially_completed", "high_risk_review_completed", "formally_exported", "reopened"]);
+  const canEdit = editableStatuses.has(reportQuery.data.status);
+  const hasResults = resultStatuses.has(reportQuery.data.status);
+  const isAnalyzing = reportQuery.data.status === "analyzing";
+
   return (
     <section className="mx-auto w-full max-w-3xl px-6 py-6">
       <div className="border-b border-border pb-5">
         <h1 className="text-xl font-semibold">确认报告信息</h1>
         <p className="mt-1 text-sm text-muted-foreground">{reportQuery.data.original_filename} · {reportQuery.data.page_count ?? "?"} 页</p>
       </div>
+      {hasResults && (
+        <div className="mt-5 flex flex-wrap items-center gap-3 rounded-md border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
+          <span className="font-medium">该报告已有分析结果</span>
+          <Link className="rounded-md bg-accent px-3 py-1.5 font-medium text-accent-foreground" href={`/reports/${reportId}/dashboard`}>查看分析结果</Link>
+          <Link className="rounded-md border border-emerald-300 bg-white px-3 py-1.5 font-medium" href={`/reports/${reportId}/review`}>进入高风险复核</Link>
+        </div>
+      )}
+      {isAnalyzing && (
+        <div className="mt-5 rounded-md border border-blue-200 bg-blue-50 p-4 text-sm font-medium text-blue-900">分析正在进行</div>
+      )}
       <div className="grid gap-5 py-6 sm:grid-cols-2">
         <label className="space-y-2 text-sm font-medium sm:col-span-2">
           <span>企业名称</span>
-          <input aria-label="企业名称" className="h-10 w-full rounded-md border border-border px-3 font-normal" value={companyName} onChange={(event) => setCompanyName(event.target.value)} />
+          <input aria-label="企业名称" className="h-10 w-full rounded-md border border-border px-3 font-normal disabled:bg-muted" disabled={!canEdit} value={companyName} onChange={(event) => setCompanyName(event.target.value)} />
         </label>
         <label className="space-y-2 text-sm font-medium">
           <span>报告年度</span>
-          <input aria-label="报告年度" className="h-10 w-full rounded-md border border-border px-3 font-normal" min="1900" max="2100" type="number" value={reportYear} onChange={(event) => setReportYear(event.target.value)} />
+          <input aria-label="报告年度" className="h-10 w-full rounded-md border border-border px-3 font-normal disabled:bg-muted" disabled={!canEdit} min="1900" max="2100" type="number" value={reportYear} onChange={(event) => setReportYear(event.target.value)} />
         </label>
         <label className="space-y-2 text-sm font-medium">
           <span>主要语言</span>
-          <select aria-label="主要语言" className="h-10 w-full rounded-md border border-border bg-white px-3 font-normal" value={language} onChange={(event) => setLanguage(event.target.value)}>
+          <select aria-label="主要语言" className="h-10 w-full rounded-md border border-border bg-white px-3 font-normal disabled:bg-muted" disabled={!canEdit} value={language} onChange={(event) => setLanguage(event.target.value)}>
             <option value="zh-CN">中文</option>
             <option value="en">英文</option>
             <option value="zh-CN,en">中英双语</option>
           </select>
         </label>
       </div>
-      <div className="flex flex-wrap items-center gap-3 border-t border-border pt-5">
+      {canEdit && <div className="flex flex-wrap items-center gap-3 border-t border-border pt-5">
         <button
           type="button"
           className="inline-flex h-10 items-center gap-2 rounded-md bg-accent px-4 text-sm font-medium text-accent-foreground disabled:opacity-50"
@@ -89,7 +106,7 @@ export function ReportMetadataConfirmation({ reportId }: { reportId: string }) {
           <Play aria-hidden="true" className="h-4 w-4" />
           启动分析
         </button>
-      </div>
+      </div>}
     </section>
   );
 }

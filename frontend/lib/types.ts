@@ -6,6 +6,17 @@ export type AssessmentVerdict = components["schemas"]["AssessmentVerdict"];
 export type ReportUploadResponse = components["schemas"]["ReportUploadResponse"];
 export type ReportResponse = components["schemas"]["ReportResponse"];
 export type ReportListResponse = components["schemas"]["ReportListResponse"];
+export type DuplicateReportDetail = {
+  code: "duplicate_report";
+  message: string;
+  report_id: string;
+  existing_report_status: ReportResponse["status"];
+  can_start_new_demo: boolean;
+};
+export type DemoResetResponse = {
+  cleared_report_count: number;
+  cleared_runtime_directories: Array<"uploads" | "derived">;
+};
 export type ConfirmReportMetadataRequest = components["schemas"]["ConfirmReportMetadataRequest"];
 export type AnalyzeResponse = components["schemas"]["AnalyzeResponse"];
 export type AnalysisRun = components["schemas"]["AnalysisRun"];

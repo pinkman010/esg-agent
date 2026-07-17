@@ -5,19 +5,82 @@ import { AlertCircle, FileUp } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { uploadReport } from "@/lib/api";
+import { ApiError, resetDemoEnvironment, uploadReport } from "@/lib/api";
+import type { DuplicateReportDetail } from "@/lib/types";
+
+function duplicateReportDetail(error: unknown): DuplicateReportDetail | null {
+  if (!(error instanceof ApiError) || error.status !== 409 || typeof error.body !== "object" || error.body === null) return null;
+  const detail = "detail" in error.body ? error.body.detail : null;
+  if (typeof detail !== "object" || detail === null) return null;
+  const code = "code" in detail ? detail.code : null;
+  const reportId = "report_id" in detail ? detail.report_id : null;
+  if (code !== "duplicate_report" || typeof reportId !== "string" || !reportId) return null;
+  const message = "message" in detail && typeof detail.message === "string" ? detail.message : "相同报告已存在";
+  const status = "existing_report_status" in detail && typeof detail.existing_report_status === "string"
+    ? detail.existing_report_status as DuplicateReportDetail["existing_report_status"]
+    : "uploaded";
+  return {
+    code,
+    message,
+    report_id: reportId,
+    existing_report_status: status,
+    can_start_new_demo: "can_start_new_demo" in detail && detail.can_start_new_demo === true,
+  };
+}
 
 function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : "上传失败，请稍后重试。";
+  return error ? "上传失败，请稍后重试。" : "";
+}
+
+function apiErrorCode(error: unknown): string | null {
+  if (!(error instanceof ApiError) || typeof error.body !== "object" || error.body === null) return null;
+  const detail = "detail" in error.body ? error.body.detail : null;
+  if (typeof detail !== "object" || detail === null || !("code" in detail)) return null;
+  return typeof detail.code === "string" ? detail.code : null;
+}
+
+function resetErrorMessage(error: unknown): string {
+  const code = apiErrorCode(error);
+  if (code === "demo_reset_blocked_active_run") {
+    return "当前报告仍在分析，无法清空演示库。请等待分析结束后重试。";
+  }
+  if (code === "demo_runtime_cleanup_failed") {
+    return "演示数据已清空，但文件清理失败。请重启演示环境后重试。";
+  }
+  if (code === "demo_reset_unavailable") {
+    return "当前环境未启用演示库清理功能。";
+  }
+  return "清空演示库失败，请检查后端服务后重试。";
 }
 
 export function ReportUploadPanel() {
   const router = useRouter();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [showResetConfirmation, setShowResetConfirmation] = useState(false);
+  const [demoError, setDemoError] = useState<string | null>(null);
   const uploadMutation = useMutation({
     mutationFn: uploadReport,
     onSuccess: (report) => router.push(`/reports/${report.report_id}/confirm`),
   });
+  const reuploadMutation = useMutation({
+    mutationFn: uploadReport,
+    onSuccess: (report) => router.push(`/reports/${report.report_id}/confirm`),
+    onError: () => setDemoError("演示库已清空，但重新上传报告失败，请重新选择文件后再试。"),
+  });
+  const resetMutation = useMutation({
+    mutationFn: resetDemoEnvironment,
+    onMutate: () => setDemoError(null),
+    onSuccess: () => {
+      if (!selectedFile) {
+        setDemoError("未找到待重新上传的报告，请重新选择文件。");
+        return;
+      }
+      reuploadMutation.mutate(selectedFile);
+    },
+    onError: (error) => setDemoError(resetErrorMessage(error)),
+  });
+  const duplicateReport = duplicateReportDetail(uploadMutation.error);
+  const isPending = uploadMutation.isPending || resetMutation.isPending || reuploadMutation.isPending;
 
   return (
     <section className="min-w-0 rounded-lg border border-border bg-white p-5 shadow-sm">
@@ -36,11 +99,18 @@ export function ReportUploadPanel() {
             accept="application/pdf,.pdf"
             className="block w-full min-w-0 max-w-full rounded-md border border-border bg-white px-3 py-2 text-sm file:mr-2 file:rounded-md file:border-0 file:bg-muted file:px-3 file:py-2 file:text-sm file:font-medium"
             type="file"
-            onChange={(event) => setSelectedFile(event.currentTarget.files?.[0] ?? null)}
+            onChange={(event) => {
+              setSelectedFile(event.currentTarget.files?.[0] ?? null);
+              setShowResetConfirmation(false);
+              setDemoError(null);
+              uploadMutation.reset();
+              resetMutation.reset();
+              reuploadMutation.reset();
+            }}
           />
           <button
             className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-accent px-4 text-sm font-medium text-accent-foreground disabled:cursor-not-allowed disabled:opacity-50"
-            disabled={!selectedFile || uploadMutation.isPending}
+            disabled={!selectedFile || isPending}
             type="button"
             onClick={() => selectedFile && uploadMutation.mutate(selectedFile)}
           >
@@ -50,7 +120,59 @@ export function ReportUploadPanel() {
           {uploadMutation.error && (
             <div className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
               <AlertCircle aria-hidden="true" className="mt-0.5 h-4 w-4" />
-              <span>{errorMessage(uploadMutation.error)}</span>
+              {duplicateReport ? (
+                <div className="space-y-2">
+                  <p>报告已存在</p>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      className="rounded-md border border-red-300 bg-white px-3 py-1.5 font-medium text-red-700"
+                      type="button"
+                      onClick={() => router.push(`/reports/${duplicateReport.report_id}/dashboard`)}
+                    >
+                      查看已有结果
+                    </button>
+                    {duplicateReport.can_start_new_demo && (
+                      <button
+                        className="rounded-md border border-red-300 bg-white px-3 py-1.5 font-medium text-red-700"
+                        disabled={isPending}
+                        type="button"
+                        onClick={() => {
+                          setShowResetConfirmation(true);
+                          setDemoError(null);
+                        }}
+                      >
+                        开始新演示
+                      </button>
+                    )}
+                  </div>
+                  {showResetConfirmation && (
+                    <div className="space-y-2 rounded-md border border-red-200 bg-white p-3">
+                      <p>这会清除演示库中的报告、复核、整改任务和输出版本。</p>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          className="rounded-md bg-red-700 px-3 py-1.5 font-medium text-white disabled:opacity-50"
+                          disabled={isPending}
+                          type="button"
+                          onClick={() => resetMutation.mutate()}
+                        >
+                          {resetMutation.isPending || reuploadMutation.isPending ? "正在准备新演示..." : "确认清空并重新上传"}
+                        </button>
+                        <button
+                          className="rounded-md border border-border bg-white px-3 py-1.5 font-medium text-foreground"
+                          disabled={isPending}
+                          type="button"
+                          onClick={() => setShowResetConfirmation(false)}
+                        >
+                          取消
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  {demoError && <p role="alert">{demoError}</p>}
+                </div>
+              ) : (
+                <span>{errorMessage(uploadMutation.error)}</span>
+              )}
             </div>
           )}
       </div>
