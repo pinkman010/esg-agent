@@ -156,6 +156,60 @@ class SelectiveFailingAgent:
         return self.delegate.analyze(task, chunks, confirm_llm=confirm_llm)
 
 
+class RollbackRequiredRepository:
+    def __init__(self):
+        self.runs = {}
+        self.stages = []
+        self.audit_events = []
+        self.operations = []
+        self.rollback_required = False
+        self.rollback_called = False
+
+    def get_run(self, run_id):
+        return self.runs.get(run_id)
+
+    def create_run(self, run):
+        self.runs[run.run_id] = run
+        return run
+
+    def update_run_status(self, run_id, status, error_message=None, **counts):
+        self._require_usable_session()
+        updates = {"status": status, "error_message": error_message}
+        updates.update({name: value for name, value in counts.items() if value is not None})
+        run = self.runs[run_id].model_copy(update=updates)
+        self.runs[run_id] = run
+        self.operations.append(f"run:{status.value}")
+        return run
+
+    def create_audit_event(self, run_id, event_type, payload):
+        self._require_usable_session()
+        self.audit_events.append((run_id, event_type, payload))
+        self.operations.append(f"audit:{event_type}")
+
+    def append_analysis_stage_event(self, event):
+        self._require_usable_session()
+        self.stages.append(event)
+        self.operations.append(f"stage:{event.stage_code}:{event.status}")
+        return event
+
+    def save_pages_and_chunks(self, pages, chunks):
+        self.operations.append("save_pages_and_chunks raises")
+        self.rollback_required = True
+        raise RuntimeError("page persistence failed")
+
+    def rollback(self):
+        self.rollback_required = False
+        self.rollback_called = True
+        self.operations.append("rollback")
+
+    def latest_stage(self, stage_code):
+        return next(event for event in reversed(self.stages) if event.stage_code == stage_code)
+
+    def _require_usable_session(self):
+        if self.rollback_required:
+            raise RuntimeError("repository session requires rollback")
+
+
 def requirement_to_task(requirement, run_id, report_id):
     from src.domain.models import DisclosureTask
 
@@ -286,6 +340,55 @@ def test_single_report_workflow_marks_run_failed_on_parser_error(repo_session):
     assert run.status is RunStatus.FAILED
     assert "parse failed" in (run.error_message or "")
     assert repo_session.scalar(select(RecommendationRecord).where(RecommendationRecord.run_id == run.run_id)) is None
+
+
+def test_single_report_workflow_rolls_back_before_persisting_failure_state():
+    repository = RollbackRequiredRepository()
+    workflow = SingleReportWorkflow(
+        repository,
+        FakeParser(),
+        FakeAdapter(),
+        DisclosureAgent(),
+    )
+
+    result = workflow.run(
+        "report-1",
+        Path("report.pdf"),
+        "hash-1",
+        confirm_llm=False,
+        run_id="run-rollback",
+    )
+
+    failure_index = repository.operations.index("save_pages_and_chunks raises")
+    assert repository.operations[failure_index:] == [
+        "save_pages_and_chunks raises",
+        "rollback",
+        "stage:result_summary:failed",
+        "audit:analysis_failed",
+        "run:failed",
+    ]
+    assert result.status is RunStatus.FAILED
+    assert result.error_message == "page persistence failed"
+    assert repository.rollback_called is True
+    assert repository.latest_stage("result_summary").status == "failed"
+
+
+def test_single_report_workflow_can_run_same_report_twice(repo_session):
+    repo = Repository(repo_session)
+    seed_report(repo)
+    workflow = SingleReportWorkflow(repo, FakeParser(), FakeAdapter(), DisclosureAgent())
+
+    first = workflow.run(
+        "report-1", Path("report.pdf"), "hash-1", confirm_llm=False, run_id="run-first"
+    )
+    second = workflow.run(
+        "report-1", Path("report.pdf"), "hash-1", confirm_llm=False, run_id="run-second"
+    )
+
+    assert first.status is RunStatus.COMPLETED
+    assert second.status is RunStatus.COMPLETED
+    second_stages = repo.list_latest_analysis_stages("run-second")
+    assert next(stage for stage in second_stages if stage.stage_code == "result_summary").status == "completed"
 
 
 def test_single_report_workflow_attaches_report_index_candidate_pages(repo_session, tmp_path):

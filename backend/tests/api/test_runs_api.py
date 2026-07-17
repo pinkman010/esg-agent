@@ -70,7 +70,7 @@ async def test_runs_api_returns_latest_stage_events(api_client, api_session):
 
 
 async def test_retry_failed_creates_child_run_for_failed_requirements(api_client, api_session, monkeypatch):
-    monkeypatch.setattr("src.api.routes.runs.execute_analysis", lambda *args, **kwargs: None)
+    monkeypatch.setattr("src.api.routes.runs.execute_analysis_job", lambda **kwargs: None)
     repo = Repository(api_session)
     repo.create_report(Report(report_id="report-1", original_filename="report.pdf", stored_path="x", file_hash="hash-1"))
     repo.create_run(
@@ -88,3 +88,44 @@ async def test_retry_failed_creates_child_run_for_failed_requirements(api_client
     assert response.status_code == 200
     assert response.json()["parent_run_id"] == "run-1"
     assert response.json()["failure_summary"]["retry_requirement_ids"] == ["GRI 2-1-b"]
+
+
+async def test_retry_failed_queues_background_job_with_identifiers_only(
+    api_client,
+    api_session,
+    monkeypatch,
+):
+    captured = {}
+
+    def capture_job(*args, **kwargs):
+        captured["args"] = args
+        captured["kwargs"] = kwargs
+
+    monkeypatch.setattr("src.api.routes.runs.execute_analysis_job", capture_job)
+    repo = Repository(api_session)
+    repo.create_report(
+        Report(report_id="report-1", original_filename="report.pdf", stored_path="x", file_hash="hash-1")
+    )
+    repo.create_run(
+        AnalysisRun(
+            run_id="run-1",
+            report_id="report-1",
+            status=RunStatus.PARTIALLY_COMPLETED,
+            failed_requirement_count=1,
+            failure_summary={"failed_requirement_ids": ["GRI 2-1-b"]},
+        )
+    )
+
+    response = await api_client.post(
+        "/api/runs/run-1/retry-failed",
+        json={"reason": "修复后重跑"},
+    )
+
+    assert response.status_code == 200
+    assert captured["args"] == ()
+    assert captured["kwargs"] == {
+        "report_id": "report-1",
+        "run_id": response.json()["run_id"],
+        "confirm_llm": False,
+        "requirement_ids": {"GRI 2-1-b"},
+    }

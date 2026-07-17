@@ -36,9 +36,15 @@
 
 RunStatus 扩展 `partially_completed`。父 run 用于失败项重跑，不覆盖旧 run。
 
+`0009_active_analysis_run_gate` 增加唯一索引 `uq_analysis_runs_one_active_per_report`，键为 `report_id`，条件为 `status IN ('pending', 'running')`。该索引只限制 active run，不删除或合并任何历史终态 run；repository 把该索引的竞态冲突转换为 `analysis_already_running`。
+
 ### `recommendations`
 
 保留为系统建议来源，不直接作为可管理整改任务。增加可选 `assessment_id` 外键，便于迁移为 action。
+
+### `document_pages` / `document_chunks`
+
+本轮不改字段和约束。保存语义改为以 report 为单位在单一事务内先删除旧 pages/chunks、flush 后写入新解析产物；任一步失败整体 rollback，支持同一报告安全重新分析。
 
 ## 3. 新表
 
@@ -155,11 +161,12 @@ API 只通过 repository/service 组装该视图，避免前端合并历史。
 3. 创建 review_snapshots 和 review_change_events；
 4. 创建 improvement_actions；
 5. 创建 export_versions；
-6. 回填现有 report/run 默认状态和版本；
-7. 将现有 review_decisions 转为 review snapshot，保留原表；
-8. 切换 API 写路径；
-9. 新写路径启用后，将旧 `review_decisions` 标记 deprecated，并开始两个连续阶段验收周期；每轮验证历史记录映射、只读查询和新旧结果一致性；
-10. 两轮均通过且备份、行数、主键关联和字段映射一致后，在独立 Alembic revision 中清理旧表。任一检查失败时停止清理并保留旧表。
+6. 为 `analysis_runs(report_id)` 增加 active 状态部分唯一索引；
+7. 回填现有 report/run 默认状态和版本；
+8. 将现有 review_decisions 转为 review snapshot，保留原表；
+9. 切换 API 写路径；
+10. 新写路径启用后，将旧 `review_decisions` 标记 deprecated，并开始两个连续阶段验收周期；每轮验证历史记录映射、只读查询和新旧结果一致性；
+11. 两轮均通过且备份、行数、主键关联和字段映射一致后，在独立 Alembic revision 中清理旧表。任一检查失败时停止清理并保留旧表。
 
 每步独立 Alembic revision，支持前滚和结构回滚。包含数据回填的 revision 在 downgrade 时不得静默丢失人工记录，应阻止 downgrade 并提示先导出备份。
 
@@ -172,6 +179,8 @@ API 只通过 repository/service 组装该视图，避免前端合并历史。
 
 ## 8. 当前实施状态
 
-截至 2026-07-11，`0003_report_metadata_and_status` 至 `0008_export_versions` 已实现并完成 upgrade/downgrade/upgrade 验证，当前数据库 head 为 `0008_export_versions`。新写路径使用 `review_snapshots` 和 `review_change_events`，风险、整改和输出分别写入独立表。
+截至 2026-07-15，代码 migration head 为 `0009_active_analysis_run_gate`。`0009` 只增加 active run 部分唯一索引，不删除历史 run，不修改 assessment、review、action 或 export 字段；`downgrade()` 只删除该索引。新写路径继续使用 `review_snapshots` 和 `review_change_events`，风险、整改和输出分别写入独立表。
+
+demo 在线重置不新增业务表：同一事务内先删除 `audit_events`，再删除 `reports` 根记录并依赖外键 cascade 清理报告、run、assessment、复核、整改和输出数据。该路径只允许 `esg_agent_demo`；`esg_agent` 不提供清理入口。
 
 旧 `review_decisions` 已完成阶段 5、阶段 6 两个连续兼容周期，3 条旧记录与 3 条 `legacy_import` snapshot 映射一致。由于旧 API、旧前端工作台和旧导出仍有调用者，尚未满足清理条件，旧表继续保留。后续清理必须先迁移调用者，再使用独立 Alembic revision 验证 upgrade/downgrade。

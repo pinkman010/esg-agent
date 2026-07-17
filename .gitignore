@@ -2,6 +2,7 @@
 .env
 .env.*
 !.env.example
+!backend/.env.demo.example
 
 # Python 缓存和测试输出
 __pycache__/

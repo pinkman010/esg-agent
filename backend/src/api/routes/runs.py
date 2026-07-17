@@ -4,9 +4,8 @@ from sqlalchemy.orm import Session
 
 from src.db.repositories import Repository
 from src.db.session import get_db_session
-from src.config.settings import get_settings
 from src.domain.enums import ReportStatus
-from src.services.analysis_runner import execute_analysis
+from src.services.analysis_job import execute_analysis_job
 from src.api.schemas import AnalysisStageResponse
 from src.domain.models import AnalysisRun, AnalysisStageEvent, DisclosureAssessment, Recommendation
 
@@ -76,10 +75,8 @@ def retry_failed(
     requirement_ids = set(run.failure_summary["retry_requirement_ids"])
     repo.update_report_status(report.report_id, ReportStatus.ANALYZING)
     background_tasks.add_task(
-        execute_analysis,
-        repo,
-        report,
-        get_settings(),
+        execute_analysis_job,
+        report_id=report.report_id,
         run_id=run.run_id,
         confirm_llm=run.confirm_llm,
         requirement_ids=requirement_ids,

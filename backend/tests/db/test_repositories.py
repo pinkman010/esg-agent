@@ -1,4 +1,8 @@
-from sqlalchemy import inspect, select
+import time
+
+import pytest
+from sqlalchemy import func, inspect, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import sessionmaker
 
 from src.db.base import Base
@@ -213,6 +217,194 @@ def test_repository_appends_analysis_stage_events_and_creates_retry_run():
         assert stages[0].status == "completed"
         assert retry.parent_run_id == "run-1"
         assert retry.failure_summary["retry_requirement_ids"] == ["GRI 2-1-b"]
+    finally:
+        session.close()
+        reset_database(engine)
+        engine.dispose()
+
+
+def test_repository_enforces_one_active_run_per_report_and_tracks_lifecycle_times():
+    engine, session = make_session()
+    try:
+        repo = Repository(session)
+        repo.create_report(
+            Report(
+                report_id="report-active-run",
+                original_filename="report.pdf",
+                stored_path="backend/data/runtime/uploads/report.pdf",
+                file_hash="hash-active-run",
+            )
+        )
+
+        pending = repo.create_run(
+            AnalysisRun(
+                run_id="run-pending",
+                report_id="report-active-run",
+                status=RunStatus.PENDING,
+            )
+        )
+        assert repo.get_active_run_for_report("report-active-run").run_id == pending.run_id
+
+        with pytest.raises(ValueError, match="active analysis run already exists"):
+            repo.create_run(
+                AnalysisRun(
+                    run_id="run-concurrent",
+                    report_id="report-active-run",
+                    status=RunStatus.RUNNING,
+                )
+            )
+
+        running = repo.update_run_status("run-pending", RunStatus.RUNNING)
+        assert running.started_at is not None
+        started_at = running.started_at
+        time.sleep(0.01)
+        assert repo.update_run_status("run-pending", RunStatus.RUNNING).started_at == started_at
+
+        completed = repo.update_run_status("run-pending", RunStatus.COMPLETED)
+        assert completed.completed_at is not None
+        completed_at = completed.completed_at
+        assert repo.get_active_run_for_report("report-active-run") is None
+
+        time.sleep(0.01)
+        terminal_update = repo.update_run_status("run-pending", RunStatus.FAILED)
+        assert terminal_update.completed_at == completed_at
+
+        next_run = repo.create_run(
+            AnalysisRun(
+                run_id="run-next",
+                report_id="report-active-run",
+                status=RunStatus.RUNNING,
+            )
+        )
+        assert next_run.run_id == "run-next"
+        assert repo.get_active_run_for_report("report-active-run").run_id == "run-next"
+
+        index_names = {index["name"] for index in inspect(engine).get_indexes("analysis_runs")}
+        assert "uq_analysis_runs_one_active_per_report" in index_names
+    finally:
+        session.close()
+        reset_database(engine)
+        engine.dispose()
+
+
+def test_repository_replaces_pages_and_chunks_for_same_report():
+    engine, session = make_session()
+    try:
+        repo = Repository(session)
+        repo.create_report(
+            Report(
+                report_id="report-idempotent",
+                original_filename="report.pdf",
+                stored_path="backend/data/runtime/uploads/report.pdf",
+                file_hash="hash-idempotent",
+                page_count=1,
+            )
+        )
+
+        repo.save_pages_and_chunks(
+            pages=[
+                PageExtraction(
+                    report_id="report-idempotent",
+                    page_number=1,
+                    text="first text",
+                    source_method=EvidenceSourceMethod.PDFPLUMBER,
+                )
+            ],
+            chunks=[
+                DocumentChunk(
+                    chunk_id="report-idempotent-p1-pdfplumber",
+                    report_id="report-idempotent",
+                    text="first text",
+                    source_page=1,
+                    source_method=EvidenceSourceMethod.PDFPLUMBER,
+                    source_file_hash="hash-idempotent",
+                )
+            ],
+        )
+        repo.save_pages_and_chunks(
+            pages=[
+                PageExtraction(
+                    report_id="report-idempotent",
+                    page_number=1,
+                    text="updated text",
+                    source_method=EvidenceSourceMethod.PDFPLUMBER,
+                )
+            ],
+            chunks=[
+                DocumentChunk(
+                    chunk_id="report-idempotent-p1-pdfplumber",
+                    report_id="report-idempotent",
+                    text="updated text",
+                    source_page=1,
+                    source_method=EvidenceSourceMethod.PDFPLUMBER,
+                    source_file_hash="hash-idempotent",
+                )
+            ],
+        )
+
+        page_count = session.scalar(
+            select(func.count())
+            .select_from(DocumentPageRecord)
+            .where(DocumentPageRecord.report_id == "report-idempotent")
+        )
+        chunk_count = session.scalar(
+            select(func.count())
+            .select_from(DocumentChunkRecord)
+            .where(DocumentChunkRecord.report_id == "report-idempotent")
+        )
+        saved_chunk = session.get(DocumentChunkRecord, "report-idempotent-p1-pdfplumber")
+
+        assert page_count == 1
+        assert chunk_count == 1
+        assert saved_chunk.text == "updated text"
+    finally:
+        session.close()
+        reset_database(engine)
+        engine.dispose()
+
+
+def test_repository_rollback_recovers_after_page_chunk_commit_failure():
+    engine, session = make_session()
+    try:
+        repo = Repository(session)
+        repo.create_report(
+            Report(
+                report_id="report-rollback",
+                original_filename="report.pdf",
+                stored_path="backend/data/runtime/uploads/report.pdf",
+                file_hash="hash-rollback",
+            )
+        )
+        repo.create_run(
+            AnalysisRun(
+                run_id="run-rollback",
+                report_id="report-rollback",
+                status=RunStatus.PENDING,
+            )
+        )
+
+        with pytest.raises(IntegrityError):
+            repo.save_pages_and_chunks(
+                pages=[],
+                chunks=[
+                    DocumentChunk(
+                        chunk_id="invalid-foreign-key-chunk",
+                        report_id="missing-report",
+                        text="invalid",
+                        source_page=1,
+                        source_method=EvidenceSourceMethod.PDFPLUMBER,
+                        source_file_hash="hash-missing",
+                    )
+                ],
+            )
+
+        repo.rollback()
+        repo.create_audit_event("run-rollback", "analysis_failed", {"reason": "test"})
+        failed_run = repo.update_run_status("run-rollback", RunStatus.FAILED, "test failure")
+
+        assert repo.count_audit_events("run-rollback") == 1
+        assert failed_run.status == RunStatus.FAILED
+        assert failed_run.completed_at is not None
     finally:
         session.close()
         reset_database(engine)

@@ -101,6 +101,49 @@ pnpm build
 pnpm dev
 ```
 
+### 本地演示环境
+
+本机使用一套代码和 PostgreSQL 实例，数据库按用途隔离：
+
+- `esg_agent`：开发、回归和长期验收数据；
+- `esg_agent_demo`：可重建的空演示库；
+- `esg_agent_test`：pytest 测试库。
+
+演示环境配置参考 `backend/.env.demo.example`。演示上传和派生文件写入 `backend/data/runtime/demo/`，原始报告、标准文件和 manifest 继续从共享只读资产目录读取。
+
+在启动 demo 后端、执行 Alembic 或运行重置工具前，先在同一个 PowerShell 终端加载演示配置：
+
+```powershell
+$env:APP_ENV="demo"
+$env:DATABASE_URL="postgresql+psycopg://esg_agent:esg_agent@localhost:5432/esg_agent_demo"
+$env:UPLOAD_DIR="backend/data/runtime/demo/uploads"
+$env:DERIVED_DIR="backend/data/runtime/demo/derived"
+$env:OCR_ENABLED="false"
+```
+
+这些变量只影响当前终端进程，不写入或提交 `.env`。后续 `reset_demo_environment`、Alembic 和 uvicorn 必须在同一终端运行，确保三者使用同一 demo 配置。
+
+普通演示路径：在首页重复上传同一 PDF，选择“开始新演示”，阅读清理范围并二次确认。前端调用 `POST /api/demo/reset` 成功后自动重新上传当前文件并进入 metadata 确认页。
+
+在线清理只允许 demo 后端，要求请求体为 `{"confirmation":"RESET_DEMO"}`。存在 `pending/running` run 时返回 `409 demo_reset_blocked_active_run`；非 demo 或实际连接库不是 `esg_agent_demo` 时返回 `404 demo_reset_unavailable`。数据库清理成功但运行时文件清理失败时返回 `500 demo_runtime_cleanup_failed`，此时数据库已经为空，必须按故障恢复路径处理。
+
+在线重置不会触碰共享只读资产或 `esg_agent`。前端同时保留“查看已有结果”路径，选择该路径不会清理任何数据。
+
+停止服务后的离线故障恢复：
+
+```powershell
+# 先关闭仍连接 demo 库的后端和分析任务
+cd backend
+uv run --no-sync python -m src.tools.reset_demo_environment --dry-run
+uv run --no-sync python -m src.tools.reset_demo_environment --confirm-database esg_agent_demo
+uv run --no-sync alembic current
+uv run --no-sync uvicorn src.main:app --reload --port 8000
+```
+
+重置工具只允许 `APP_ENV=demo`、数据库名为 `esg_agent_demo`，且上传和派生目录位于 `backend/data/runtime/demo/`。任一校验失败时停止。重置不处理 `backend/data/reports/`、`backend/data/standards/`、`backend/data/manifests/` 或现有 `esg_agent` 数据。
+
+后端重启会在 lifespan 启动阶段把数据库中遗留的 `pending/running` run 标记为 `failed`，原因固定为“分析服务重启，任务已中断”。该恢复只收敛状态，不自动重跑、不清库；用户随后可从报告页重新启动分析。
+
 ## 6. 测试策略
 
 后端测试使用 `pytest`，重点覆盖：
@@ -135,7 +178,7 @@ pnpm dev
 
 ## 7. 企业产品闭环验收
 
-当前 Alembic head：`0008_export_versions`。迁移覆盖报告 metadata、分析阶段、风险快照、人工复核快照、整改任务和版本化输出。
+当前代码 Alembic head：`0009_active_analysis_run_gate`。`0003` 至 `0008` 覆盖报告 metadata、分析阶段、风险快照、人工复核快照、整改任务和版本化输出；`0009` 为同一报告的 `pending/running` run 增加部分唯一索引。启动后端前必须执行 `uv run --no-sync alembic upgrade head`。
 
 核心产品 API：
 
@@ -145,6 +188,7 @@ pnpm dev
 - `POST /api/assessments/{assessment_id}/review-decisions`
 - `POST /api/reports/{report_id}/actions`、`PATCH /api/actions/{action_id}`
 - `POST /api/reports/{report_id}/exports/draft`、`POST /api/reports/{report_id}/exports/formal`
+- `POST /api/demo/reset`（仅 demo 环境）
 
 正式输出门禁：全部高风险 assessment 必须已有有效 review snapshot。草稿不受该门禁限制，但输出 manifest 会记录草稿标识、高风险复核范围、run、engine version 和 risk rule version。正式版本使用递增版本号，旧正式版本标记为 superseded，文件 manifest 保存路径、大小和 SHA256。
 
@@ -165,21 +209,23 @@ pnpm build
 
 API 端到端测试 `backend/tests/api/test_product_closure_e2e.py` 覆盖上传、metadata 确认、577 计数、七阶段进度、高风险队列、人工复核、整改、草稿门禁和正式输出。人工产品验收重点检查：报告列表、分析进度、dashboard、三栏复核、完整核查表、整改任务、版本化输出，以及“高风险复核已完成”表述未暗示 577 条全部人工确认。
 
+首次上传演示还必须检查：企业名称、年度和语言由文件名及 PDF 前两页本地文本自动预填；普通页面不显示内部 `report_id`；分析进度按 `5/10/5/10/60/5/5` 阶段权重和真实 units 计算且不显示 `X / 577 条已生成结果`；超过 120 秒无 stage event 时显示中断提示；完成态提供“查看分析结果”和“进入高风险复核”。重复上传需同时验证“查看已有结果”和“开始新演示→二次确认→自动重新上传”两条路径。
+
 旧 `review_decisions` 已完成两个连续阶段的数据映射兼容测试，但旧 API、旧前端工作台和旧导出仍有调用者，因此暂不删除。完成调用迁移后，应以独立 migration 验证 upgrade/downgrade，再申请清理。
 
 ### 当前验收风险与后续项
 
-- 重复上传相同 PDF 时，后端正确返回 `409 duplicate_report` 和已有 `report_id`，前端当前只显示通用状态码；应改为“报告已存在 + 打开已有报告”。
-- 同一报告已有 running run 时，分析接口尚未阻止再次启动，需要增加并发门禁。
+本轮已闭环：重复上传提供“查看已有结果”和“开始新演示”；同一报告 active run 同时受 API 预检查和 `0009` 数据库部分唯一索引保护；metadata 进入分析后禁止改写；服务重启会收敛遗留 active run。
+
 - 批量复核、独立 report/assessment reopen、report 级审计、单 export metadata 和文件下载 API 尚未实现；这些接口在 `docs/product/api-contract.md` 标记为规划中。
 - `actions_xlsx` 尚未按整改任务字段生成完整任务清单，当前验收只覆盖核查表 XLSX、管理层摘要 PDF 和打印 HTML。
 - 旧 `/api/review/*`、旧 `/api/exports/runs/*`、`/api/audit/runs` 和对应旧前端页面仍承担兼容用途，不能删除 `review_decisions`。
 - Goldwind 100 条人工 gold gate 的 `unknown_leakage_count=2`，但 `false_disclosed_count=0`、`wrong_source_page_count=0`；该风险不阻塞 MVP 人工验收。
-- 开发库包含多次 Envision regeneration 记录，报告列表会出现重复开发数据；正式验收应使用明确选择的报告，生产初始化应使用空库。
+- `esg_agent` 开发/长期验收库包含多次 Envision regeneration 记录，禁止为演示清理；普通演示必须连接隔离的 `esg_agent_demo`，并通过显式在线重置获得空演示库。
 - Codex 内置浏览器控制在本机发生两次桌面应用闪退。自动页面截图改用独立无头 Edge；人工验收使用普通浏览器，不再启用 Codex 内置浏览器。
 - 外部模型和 OCR/VLM 默认关闭，只有用户明确批准后才能启用。
 
-当前自动门禁：后端 444 项测试通过；前端 17 项测试、typecheck 和 production build 通过；Envision 577 audit 通过且 verdict delta=0；数据库 head 为 `0008_export_versions`。下一步为人工产品验收，发现问题后按阻塞程度进入修复和回归。
+当前自动门禁（2026-07-15）：后端 507 项测试通过；前端 16 个测试文件、42 项测试、typecheck 和 production build 通过；Envision regeneration gate 为 577 个唯一 eligible requirement、audit `ok=true`、verdict delta=0；本地数据库 head 为 `0009_active_analysis_run_gate`。下一步需取得当次明确授权后重置真实 demo，并用独立 Edge 完成两轮全新上传分析与人工产品验收。
 
 review CSV 生成后必须执行硬门禁自查：
 

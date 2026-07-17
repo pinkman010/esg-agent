@@ -1,6 +1,6 @@
 from datetime import date, datetime
 
-from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Index, Integer, String, Text, func
+from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Index, Integer, String, Text, func, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -48,6 +48,14 @@ class AnalysisRunRecord(Base):
     failure_summary: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
 
     report: Mapped[ReportRecord] = relationship(back_populates="runs")
+
+
+Index(
+    "uq_analysis_runs_one_active_per_report",
+    AnalysisRunRecord.report_id,
+    unique=True,
+    postgresql_where=text("status IN ('pending', 'running')"),
+)
 
 
 class AnalysisStageEventRecord(Base):

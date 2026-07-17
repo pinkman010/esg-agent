@@ -150,9 +150,14 @@ class SingleReportWorkflow:
                 failure_summary={"failed_requirement_ids": failed_ids},
             )
         except Exception as exc:
-            self._stage(run_id, "result_summary", "failed", 0, 1, str(exc))
-            self.repository.create_audit_event(run_id, "analysis_failed", {"error": str(exc)})
-            return self.repository.update_run_status(run_id, RunStatus.FAILED, error_message=str(exc))
+            self.repository.rollback()
+            try:
+                self._stage(run_id, "result_summary", "failed", 0, 1, str(exc))
+                self.repository.create_audit_event(run_id, "analysis_failed", {"error": str(exc)})
+                return self.repository.update_run_status(run_id, RunStatus.FAILED, error_message=str(exc))
+            except Exception as persistence_exc:
+                self.repository.rollback()
+                raise exc from persistence_exc
 
     def _stage(
         self,

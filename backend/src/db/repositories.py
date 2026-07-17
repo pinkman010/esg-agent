@@ -1,6 +1,7 @@
 from uuid import uuid4
 
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select, text
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
 from src.db.models import (
@@ -25,9 +26,38 @@ from src.domain.enums import ActionPriority, ActionStatus, AssessmentVerdict, Ev
 from src.domain.models import AnalysisRun, AnalysisStageEvent, AssessmentRisk, DisclosureAssessment, DisclosureTask, DocumentChunk, EvidenceItem, ExportVersion, ImprovementAction, PageExtraction, Recommendation, Report, ReviewChangeEvent, ReviewDecision, ReviewSnapshot
 
 
+ACTIVE_RUN_CONSTRAINT_NAME = "uq_analysis_runs_one_active_per_report"
+ACTIVE_RUN_STATUSES = {RunStatus.PENDING, RunStatus.RUNNING}
+TERMINAL_RUN_STATUSES = {RunStatus.COMPLETED, RunStatus.PARTIALLY_COMPLETED, RunStatus.FAILED}
+METADATA_CONFIRMABLE_REPORT_STATUSES = {
+    ReportStatus.UPLOADED,
+    ReportStatus.METADATA_DETECTED,
+    ReportStatus.AWAITING_CONFIRMATION,
+    ReportStatus.READY_FOR_ANALYSIS,
+}
+
+
+class ReportMetadataLockedError(ValueError):
+    pass
+
+
 class Repository:
     def __init__(self, session: Session):
         self.session = session
+
+    def rollback(self) -> None:
+        self.session.rollback()
+
+    def get_current_database(self) -> str:
+        database_name = self.session.scalar(text("SELECT current_database()"))
+        return str(database_name or "")
+
+    def clear_demo_business_data(self) -> int:
+        report_count = self.session.scalar(select(func.count()).select_from(ReportRecord)) or 0
+        self.session.execute(delete(AuditEventRecord))
+        self.session.execute(delete(ReportRecord))
+        self.session.commit()
+        return int(report_count)
 
     def create_report(self, report: Report) -> Report:
         record = ReportRecord(
@@ -86,6 +116,8 @@ class Repository:
         record = self.session.get(ReportRecord, report_id)
         if record is None:
             raise ValueError(f"report not found: {report_id}")
+        if ReportStatus(record.status) not in METADATA_CONFIRMABLE_REPORT_STATUSES:
+            raise ReportMetadataLockedError("报告已进入分析流程")
         record.company_name = company_name
         record.report_year = report_year
         record.language = language
@@ -106,7 +138,23 @@ class Repository:
         self.session.refresh(record)
         return self._report_from_record(record)
 
+    def get_active_run_for_report(self, report_id: str) -> AnalysisRun | None:
+        record = self.session.scalar(
+            select(AnalysisRunRecord).where(
+                AnalysisRunRecord.report_id == report_id,
+                AnalysisRunRecord.status.in_([status.value for status in ACTIVE_RUN_STATUSES]),
+            )
+        )
+        if record is None:
+            return None
+        return self._run_from_record(record)
+
     def create_run(self, run: AnalysisRun) -> AnalysisRun:
+        if run.status in ACTIVE_RUN_STATUSES:
+            active_run = self.get_active_run_for_report(run.report_id)
+            if active_run is not None:
+                raise ValueError(f"active analysis run already exists: {active_run.run_id}")
+
         record = AnalysisRunRecord(
             run_id=run.run_id,
             report_id=run.report_id,
@@ -124,7 +172,14 @@ class Repository:
             failure_summary=run.failure_summary,
         )
         self.session.add(record)
-        self.session.commit()
+        try:
+            self.session.commit()
+        except IntegrityError as exc:
+            self.session.rollback()
+            diagnostic = getattr(exc.orig, "diag", None)
+            if getattr(diagnostic, "constraint_name", None) == ACTIVE_RUN_CONSTRAINT_NAME:
+                raise ValueError("active analysis run already exists") from exc
+            raise
         self.session.refresh(record)
         return self._run_from_record(record)
 
@@ -142,6 +197,10 @@ class Repository:
         record = self.session.get(AnalysisRunRecord, run_id)
         if record is None:
             raise ValueError(f"run not found: {run_id}")
+        if status == RunStatus.RUNNING and record.started_at is None:
+            record.started_at = func.now()
+        if status in TERMINAL_RUN_STATUSES and record.completed_at is None:
+            record.completed_at = func.now()
         record.status = status.value
         record.error_message = error_message
         if eligible_requirement_count is not None:
@@ -220,6 +279,14 @@ class Repository:
         if record is None:
             return None
         return self._run_from_record(record)
+
+    def list_active_runs(self) -> list[AnalysisRun]:
+        records = self.session.scalars(
+            select(AnalysisRunRecord)
+            .where(AnalysisRunRecord.status.in_([status.value for status in ACTIVE_RUN_STATUSES]))
+            .order_by(AnalysisRunRecord.run_id)
+        ).all()
+        return [self._run_from_record(record) for record in records]
 
     def list_recommendations_by_run(self, run_id: str) -> list[Recommendation]:
         records = self.session.scalars(
@@ -630,6 +697,17 @@ class Repository:
         return audit_runs
 
     def save_pages_and_chunks(self, pages: list[PageExtraction], chunks: list[DocumentChunk]) -> None:
+        report_ids = sorted(
+            {page.report_id for page in pages} | {chunk.report_id for chunk in chunks}
+        )
+        if report_ids:
+            self.session.execute(
+                delete(DocumentChunkRecord).where(DocumentChunkRecord.report_id.in_(report_ids))
+            )
+            self.session.execute(
+                delete(DocumentPageRecord).where(DocumentPageRecord.report_id.in_(report_ids))
+            )
+            self.session.flush()
         for page in pages:
             self.session.add(
                 DocumentPageRecord(

@@ -49,6 +49,15 @@ class AnalyzeResponse(BaseModel):
     error_message: str | None = None
 
 
+class DemoResetRequest(BaseModel):
+    confirmation: str
+
+
+class DemoResetResponse(BaseModel):
+    cleared_report_count: int
+    cleared_runtime_directories: list[Literal["uploads", "derived"]]
+
+
 class AnalysisStageResponse(BaseModel):
     stage_code: str
     status: str

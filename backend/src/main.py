@@ -1,13 +1,22 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.api.routes import actions, assessments, audit, exports, reports, review, runs
+from src.api.routes import actions, assessments, audit, demo, exports, reports, review, runs
 from src.config.settings import get_settings
+from src.services.analysis_job import recover_interrupted_analysis_runs
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    recover_interrupted_analysis_runs()
+    yield
 
 
 def create_app() -> FastAPI:
     settings = get_settings()
-    app = FastAPI(title="esg-agent")
+    app = FastAPI(title="esg-agent", lifespan=lifespan)
 
     app.add_middleware(
         CORSMiddleware,
@@ -30,6 +39,7 @@ def create_app() -> FastAPI:
     app.include_router(review.assessment_router)
     app.include_router(exports.router)
     app.include_router(exports.report_export_router)
+    app.include_router(demo.router)
     app.include_router(audit.router)
 
     return app

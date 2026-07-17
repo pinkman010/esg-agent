@@ -3,8 +3,11 @@ from io import BytesIO
 import pytest
 from pypdf import PdfWriter
 
+from src.config.settings import get_settings
+from src.db.repositories import Repository
 from src.domain.enums import AssessmentVerdict, ReviewStatus, RunStatus
 from src.domain.models import AnalysisStageEvent, DisclosureAssessment
+from src.services.analysis_runner import execute_analysis
 from src.services.risk_service import calculate_and_store_risk
 
 
@@ -19,7 +22,7 @@ def _pdf_bytes() -> bytes:
     return buffer.getvalue()
 
 
-async def test_product_closure_from_upload_to_formal_export(api_client, monkeypatch):
+async def test_product_closure_from_upload_to_formal_export(api_client, api_session, monkeypatch):
     class FakeWorkflow:
         def __init__(self, repository, *args, **kwargs):
             self.repository = repository
@@ -76,6 +79,29 @@ async def test_product_closure_from_upload_to_formal_export(api_client, monkeypa
             )
 
     monkeypatch.setattr("src.services.analysis_runner.SingleReportWorkflow", FakeWorkflow)
+
+    def execute_test_job(
+        *,
+        report_id,
+        run_id,
+        confirm_llm,
+        enable_ocr=False,
+        ocr_pages=None,
+        requirement_ids=None,
+    ):
+        repo = Repository(api_session)
+        execute_analysis(
+            repo,
+            repo.get_report(report_id),
+            get_settings(),
+            run_id=run_id,
+            confirm_llm=confirm_llm,
+            enable_ocr=enable_ocr,
+            ocr_pages=ocr_pages,
+            requirement_ids=requirement_ids,
+        )
+
+    monkeypatch.setattr("src.api.routes.reports.execute_analysis_job", execute_test_job)
 
     upload = await api_client.post(
         "/api/reports/upload",
