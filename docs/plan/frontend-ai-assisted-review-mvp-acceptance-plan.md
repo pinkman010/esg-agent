@@ -771,7 +771,7 @@ backend/data/runtime/acceptance/frontend-ai/
 
 执行记录（2026-07-20）：新增 `docs/product/mvp-acceptance-report.md` 并同步 README、DESIGN、DEVELOPMENT、API契约和页面规格。用户将Goldwind优先级降低，最终验收以Envision为主；Goldwind历史100条结果继续保留但不作为本轮阻塞门禁。
 
-- [ ] **Step 10：提交最终 checkpoint**
+- [x] **Step 10：提交最终 checkpoint**
 
 ```powershell
 git status --short
@@ -783,6 +783,8 @@ git status --short --branch
 ```
 
 期望：保持 `main`；工作区干净或仅剩明确 ignored 的 runtime/tmp；不 push。
+
+执行记录（2026-07-20）：验收证据、manifest、最终报告和同步文档已提交为 `67c2e15`（`docs: complete Envision AI-assisted MVP acceptance`）；保持 `main`，未 push。本文档关闭记录另行提交，确保计划自身状态可追溯。
 
 ## 十三、完成判定
 
