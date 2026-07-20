@@ -20,6 +20,45 @@ def test_default_environment_is_main():
     assert Settings().app_env == "main"
 
 
+def test_llm_defaults_match_deepseek_json_configuration():
+    settings = Settings()
+
+    assert settings.openai_compatible_api_base == "https://api.deepseek.com"
+    assert settings.llm_model == "deepseek-v4-flash"
+    assert settings.llm_thinking_type == "enabled"
+    assert settings.llm_reasoning_effort == "high"
+    assert settings.llm_response_format == "json_object"
+    assert settings.llm_max_tokens == 4096
+    assert settings.llm_timeout_seconds == 120
+    assert settings.llm_max_retries == 2
+    assert settings.llm_retry_delay_seconds == 2
+    assert settings.llm_max_concurrency == 8
+    assert settings.llm_max_calls_per_run == 200
+    assert settings.llm_prompt_version == "deepseek-gri-assist-v1"
+
+
+def test_llm_settings_reject_unsafe_or_out_of_range_values():
+    with pytest.raises(ValueError, match="HTTPS"):
+        Settings(openai_compatible_api_base="http://api.deepseek.com")
+    with pytest.raises(ValueError):
+        Settings(llm_max_concurrency=17)
+    with pytest.raises(ValueError):
+        Settings(llm_max_retries=4)
+    with pytest.raises(ValueError):
+        Settings(llm_max_tokens=511)
+    with pytest.raises(ValueError):
+        Settings(llm_max_tokens=8193)
+
+
+def test_llm_configuration_summary_never_exposes_api_key():
+    secret = "sk-do-not-return-this-value"
+    summary = Settings(openai_compatible_api_key=secret).llm_configuration_summary()
+
+    assert summary["api_key_present"] is True
+    assert secret not in str(summary)
+    assert "api_key" not in summary
+
+
 def test_demo_runtime_paths_resolve_from_project_root(monkeypatch):
     backend_dir = Path(__file__).resolve().parents[1]
     project_root = backend_dir.parent

@@ -669,7 +669,7 @@ uv run --no-sync pytest tests/standards/test_gri_adapter.py tests/workflows/test
 - Modify: `backend/tests/test_settings.py`
 - Modify: `backend/tests/tools/test_llm_client.py`
 
-- [ ] **Step 1：先写客户端失败测试**
+- [x] **Step 1：先写客户端失败测试**
 
 测试覆盖：
 
@@ -682,7 +682,7 @@ uv run --no-sync pytest tests/standards/test_gri_adapter.py tests/workflows/test
 - 返回 metadata 包含 model、finish_reason、usage、latency_ms 和 retry_count；
 - 日志及异常中不出现 API Key。
 
-- [ ] **Step 2：增加非密钥配置**
+- [x] **Step 2：增加非密钥配置**
 
 示例文件使用：
 
@@ -704,7 +704,7 @@ LLM_PROMPT_VERSION=deepseek-gri-assist-v1
 
 `Settings` 校验：Base URL 只接受 HTTPS；并发范围1—16；重试范围0—3；max tokens范围512—8192；生产配置检查只返回 `api_key_present`，不返回明文或长度。
 
-- [ ] **Step 3：实现消息式调用结果**
+- [x] **Step 3：实现消息式调用结果**
 
 客户端接口改为：
 
@@ -728,7 +728,7 @@ def complete_json(
 
 JSON解析失败和空内容均按可重试输出错误处理；最终失败转成有明确 `error_code` 的领域异常。
 
-- [ ] **Step 4：运行客户端和配置测试**
+- [x] **Step 4：运行客户端和配置测试**
 
 ```powershell
 cd backend
