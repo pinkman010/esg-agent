@@ -38,6 +38,12 @@ class ApplicabilityStatus(StrEnum):
     UNDETERMINED = "undetermined"
 
 
+class AISuggestionStatus(StrEnum):
+    SUCCEEDED = "succeeded"
+    FAILED = "failed"
+    SKIPPED = "skipped"
+
+
 class ActionStatus(StrEnum):
     OPEN = "open"
     IN_PROGRESS = "in_progress"

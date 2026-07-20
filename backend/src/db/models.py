@@ -1,6 +1,6 @@
 from datetime import date, datetime
 
-from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Index, Integer, String, Text, func, text
+from sqlalchemy import Boolean, CheckConstraint, Date, DateTime, Float, ForeignKey, Index, Integer, String, Text, func, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -42,7 +42,10 @@ class AnalysisRunRecord(Base):
     parent_run_id: Mapped[str | None] = mapped_column(ForeignKey("analysis_runs.run_id"), index=True)
     engine_version: Mapped[str] = mapped_column(String(64), default="rules-v1", nullable=False)
     risk_rule_version: Mapped[str] = mapped_column(String(64), default="risk-v1", nullable=False)
+    standard_unit_count: Mapped[int | None] = mapped_column(Integer)
     eligible_requirement_count: Mapped[int] = mapped_column(Integer, default=577, nullable=False)
+    context_only_count: Mapped[int | None] = mapped_column(Integer)
+    method_pending_count: Mapped[int | None] = mapped_column(Integer)
     succeeded_requirement_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     failed_requirement_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     failure_summary: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
@@ -129,6 +132,9 @@ class DisclosureTaskRecord(Base):
     disclosure_id: Mapped[str] = mapped_column(String(128), nullable=False)
     requirement_id: Mapped[str] = mapped_column(String(128), nullable=False)
     requirement_text: Mapped[str] = mapped_column(Text, nullable=False)
+    source_requirement_text: Mapped[str | None] = mapped_column(Text)
+    context_requirement_ids: Mapped[list[str] | None] = mapped_column(JSONB)
+    structure_status: Mapped[str | None] = mapped_column(String(32))
     keywords: Mapped[list[str]] = mapped_column(JSONB, default=list, nullable=False)
 
 
@@ -149,6 +155,49 @@ class AssessmentRecord(Base):
     review_status: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
 
     evidence_items: Mapped[list["EvidenceItemRecord"]] = relationship(back_populates="assessment", cascade="all, delete-orphan")
+
+
+class AIAssessmentSuggestionRecord(Base):
+    __tablename__ = "ai_assessment_suggestions"
+
+    suggestion_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    assessment_id: Mapped[str] = mapped_column(
+        ForeignKey("assessments.assessment_id", ondelete="CASCADE"), nullable=False
+    )
+    run_id: Mapped[str] = mapped_column(
+        ForeignKey("analysis_runs.run_id", ondelete="CASCADE"), nullable=False
+    )
+    status: Mapped[str] = mapped_column(String(32), nullable=False)
+    provider: Mapped[str] = mapped_column(String(64), nullable=False)
+    model: Mapped[str] = mapped_column(String(128), nullable=False)
+    prompt_version: Mapped[str] = mapped_column(String(128), nullable=False)
+    input_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    suggested_verdict: Mapped[str | None] = mapped_column(String(64))
+    rationale_zh: Mapped[str | None] = mapped_column(Text)
+    missing_items_zh: Mapped[list[str]] = mapped_column(JSONB, default=list, nullable=False)
+    evidence_ids: Mapped[list[str]] = mapped_column(JSONB, default=list, nullable=False)
+    evidence_pdf_pages: Mapped[list[int]] = mapped_column(JSONB, default=list, nullable=False)
+    confidence: Mapped[float | None] = mapped_column(Float)
+    guardrail_codes: Mapped[list[str]] = mapped_column(JSONB, default=list, nullable=False)
+    usage: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
+    finish_reason: Mapped[str | None] = mapped_column(String(64))
+    latency_ms: Mapped[int | None] = mapped_column(Integer)
+    retry_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    error_code: Mapped[str | None] = mapped_column(String(64))
+    error_message: Mapped[str | None] = mapped_column(Text)
+    raw_response: Mapped[object | None] = mapped_column(JSONB)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    __table_args__ = (
+        CheckConstraint("confidence IS NULL OR (confidence >= 0 AND confidence <= 1)", name="ck_ai_suggestions_confidence"),
+        CheckConstraint("latency_ms IS NULL OR latency_ms >= 0", name="ck_ai_suggestions_latency_ms"),
+        CheckConstraint("retry_count >= 0", name="ck_ai_suggestions_retry_count"),
+        Index("ix_ai_suggestions_assessment_created", "assessment_id", created_at.desc()),
+        Index("ix_ai_suggestions_run_id", "run_id"),
+        Index("ix_ai_suggestions_status", "status"),
+    )
 
 
 class AssessmentRiskRecord(Base):

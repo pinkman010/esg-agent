@@ -5,6 +5,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
 from src.db.models import (
+    AIAssessmentSuggestionRecord,
     AnalysisRunRecord,
     AnalysisStageEventRecord,
     DisclosureTaskRecord,
@@ -22,7 +23,8 @@ from src.db.models import (
     ReviewSnapshotRecord,
     ReviewChangeEventRecord,
 )
-from src.domain.enums import ActionPriority, ActionStatus, ApplicabilityStatus, AssessmentVerdict, EvidenceSourceMethod, EvidenceStatus, PageQualityFlag, ReportStatus, ReviewOperation, ReviewStatus, RiskLevel, RunStatus
+from src.domain.ai_models import AIAssessmentSuggestion
+from src.domain.enums import AISuggestionStatus, ActionPriority, ActionStatus, ApplicabilityStatus, AssessmentVerdict, EvidenceSourceMethod, EvidenceStatus, PageQualityFlag, ReportStatus, ReviewOperation, ReviewStatus, RiskLevel, RunStatus
 from src.domain.models import AnalysisRun, AnalysisStageEvent, AssessmentRisk, DisclosureAssessment, DisclosureTask, DocumentChunk, EvidenceItem, ExportVersion, ImprovementAction, PageExtraction, Recommendation, Report, ReviewChangeEvent, ReviewDecision, ReviewSnapshot
 
 
@@ -179,7 +181,10 @@ class Repository:
             parent_run_id=run.parent_run_id,
             engine_version=run.engine_version,
             risk_rule_version=run.risk_rule_version,
+            standard_unit_count=run.standard_unit_count,
             eligible_requirement_count=run.eligible_requirement_count,
+            context_only_count=run.context_only_count,
+            method_pending_count=run.method_pending_count,
             succeeded_requirement_count=run.succeeded_requirement_count,
             failed_requirement_count=run.failed_requirement_count,
             failure_summary=run.failure_summary,
@@ -390,6 +395,77 @@ class Repository:
             .options(selectinload(AssessmentRecord.evidence_items))
         )
         return self._assessment_from_record(record) if record is not None else None
+
+    def append_ai_suggestion(
+        self,
+        suggestion: AIAssessmentSuggestion,
+    ) -> AIAssessmentSuggestion:
+        record = AIAssessmentSuggestionRecord(
+            suggestion_id=suggestion.suggestion_id,
+            assessment_id=suggestion.assessment_id,
+            run_id=suggestion.run_id,
+            status=suggestion.status.value,
+            provider=suggestion.provider,
+            model=suggestion.model,
+            prompt_version=suggestion.prompt_version,
+            input_hash=suggestion.input_hash,
+            suggested_verdict=(
+                suggestion.suggested_verdict.value
+                if suggestion.suggested_verdict is not None
+                else None
+            ),
+            rationale_zh=suggestion.rationale_zh,
+            missing_items_zh=suggestion.missing_items_zh,
+            evidence_ids=suggestion.evidence_ids,
+            evidence_pdf_pages=suggestion.evidence_pdf_pages,
+            confidence=suggestion.confidence,
+            guardrail_codes=suggestion.guardrail_codes,
+            usage=suggestion.usage,
+            finish_reason=suggestion.finish_reason,
+            latency_ms=suggestion.latency_ms,
+            retry_count=suggestion.retry_count,
+            error_code=suggestion.error_code,
+            error_message=suggestion.error_message,
+            raw_response=suggestion.raw_response,
+            created_at=suggestion.created_at,
+        )
+        self.session.add(record)
+        try:
+            self.session.commit()
+        except IntegrityError:
+            self.session.rollback()
+            raise
+        self.session.refresh(record)
+        return self._ai_suggestion_from_record(record)
+
+    def get_latest_ai_suggestion(
+        self,
+        assessment_id: str,
+    ) -> AIAssessmentSuggestion | None:
+        record = self.session.scalar(
+            select(AIAssessmentSuggestionRecord)
+            .where(AIAssessmentSuggestionRecord.assessment_id == assessment_id)
+            .order_by(
+                AIAssessmentSuggestionRecord.created_at.desc(),
+                AIAssessmentSuggestionRecord.suggestion_id.desc(),
+            )
+            .limit(1)
+        )
+        return self._ai_suggestion_from_record(record) if record is not None else None
+
+    def list_ai_suggestions_for_run(
+        self,
+        run_id: str,
+    ) -> list[AIAssessmentSuggestion]:
+        records = self.session.scalars(
+            select(AIAssessmentSuggestionRecord)
+            .where(AIAssessmentSuggestionRecord.run_id == run_id)
+            .order_by(
+                AIAssessmentSuggestionRecord.created_at,
+                AIAssessmentSuggestionRecord.suggestion_id,
+            )
+        ).all()
+        return [self._ai_suggestion_from_record(record) for record in records]
 
     def latest_review_snapshot(self, assessment_id: str) -> ReviewSnapshot | None:
         record = self.session.scalar(
@@ -796,6 +872,9 @@ class Repository:
                 disclosure_id=task.disclosure_id,
                 requirement_id=task.requirement_id,
                 requirement_text=task.requirement_text,
+                source_requirement_text=task.source_requirement_text,
+                context_requirement_ids=task.context_requirement_ids,
+                structure_status=task.structure_status,
                 keywords=task.keywords,
             )
         )
@@ -875,7 +954,14 @@ class Repository:
             parent_run_id=record.parent_run_id,
             engine_version=record.engine_version,
             risk_rule_version=record.risk_rule_version,
+            standard_unit_count=(
+                record.standard_unit_count
+                if record.standard_unit_count is not None
+                else record.eligible_requirement_count
+            ),
             eligible_requirement_count=record.eligible_requirement_count,
+            context_only_count=record.context_only_count or 0,
+            method_pending_count=record.method_pending_count or 0,
             succeeded_requirement_count=record.succeeded_requirement_count,
             failed_requirement_count=record.failed_requirement_count,
             failure_summary=record.failure_summary,
@@ -911,6 +997,40 @@ class Repository:
             ),
             trigger_event=record.trigger_event,
             calculated_at=record.calculated_at,
+        )
+
+    def _ai_suggestion_from_record(
+        self,
+        record: AIAssessmentSuggestionRecord,
+    ) -> AIAssessmentSuggestion:
+        return AIAssessmentSuggestion(
+            suggestion_id=record.suggestion_id,
+            assessment_id=record.assessment_id,
+            run_id=record.run_id,
+            status=AISuggestionStatus(record.status),
+            provider=record.provider,
+            model=record.model,
+            prompt_version=record.prompt_version,
+            input_hash=record.input_hash,
+            suggested_verdict=(
+                AssessmentVerdict(record.suggested_verdict)
+                if record.suggested_verdict
+                else None
+            ),
+            rationale_zh=record.rationale_zh,
+            missing_items_zh=record.missing_items_zh,
+            evidence_ids=record.evidence_ids,
+            evidence_pdf_pages=record.evidence_pdf_pages,
+            confidence=record.confidence,
+            guardrail_codes=record.guardrail_codes,
+            usage=record.usage,
+            finish_reason=record.finish_reason,
+            latency_ms=record.latency_ms,
+            retry_count=record.retry_count,
+            error_code=record.error_code,
+            error_message=record.error_message,
+            raw_response=record.raw_response,
+            created_at=record.created_at,
         )
 
     def _snapshot_from_record(self, record: ReviewSnapshotRecord) -> ReviewSnapshot:

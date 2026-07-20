@@ -175,6 +175,17 @@
                        "material_status":  "derived_validation_data",
                        "copied_at":  "2026-07-20",
                        "source_protection":  "source copied only; original project tmp file was not modified"
+                   },
+                   {
+                       "source_path":  "database:esg_agent@0010_risk_v2_dimensions",
+                       "target_path":  "backend/data/runtime/backups/pre_0011_esg_agent.dump",
+                       "sha256":  "8b306d6946febf07bb40207ef784b0a1737cd62213d3e9c212280fe96e2ddfe4",
+                       "size_bytes":  25744964,
+                       "asset_type":  "postgresql_pre_migration_backup",
+                       "migration_reason":  "Preserves the local validation database before additive migration 0011.",
+                       "material_status":  "runtime_backup",
+                       "copied_at":  "2026-07-20",
+                       "source_protection":  "database was read with pg_dump; no source records were modified"
                    }
                ],
     "notes":  [

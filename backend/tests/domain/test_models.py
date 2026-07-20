@@ -1,7 +1,9 @@
 import pytest
 from pydantic import ValidationError
 
+from src.domain.ai_models import AIAssessmentSuggestion
 from src.domain.enums import (
+    AISuggestionStatus,
     ApplicabilityStatus,
     AssessmentVerdict,
     EvidenceSourceMethod,
@@ -202,3 +204,28 @@ def test_review_snapshot_can_append_an_independent_applicability_decision():
     )
 
     assert snapshot.reviewed_applicability_status is ApplicabilityStatus.APPLICABLE
+
+
+def test_ai_assessment_suggestion_is_append_only_advice_without_review_authority():
+    suggestion = AIAssessmentSuggestion(
+        suggestion_id="ai-suggestion-1",
+        assessment_id="assessment-1",
+        run_id="run-1",
+        status=AISuggestionStatus.SUCCEEDED,
+        provider="deepseek",
+        model="deepseek-v4-flash",
+        prompt_version="deepseek-gri-assist-v1",
+        input_hash="a" * 64,
+        suggested_verdict=AssessmentVerdict.PARTIALLY_DISCLOSED,
+        rationale_zh="存在部分直接证据，仍缺少范围说明。",
+        missing_items_zh=["范围说明"],
+        evidence_ids=["evidence-1"],
+        evidence_pdf_pages=[41],
+        confidence=0.78,
+        guardrail_codes=[],
+        usage={"prompt_tokens": 100, "completion_tokens": 50, "total_tokens": 150},
+    )
+
+    assert suggestion.review_status is None
+    assert "review_status" not in suggestion.model_dump()
+    assert "applicability_status" not in suggestion.model_dump()

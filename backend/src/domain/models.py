@@ -48,7 +48,10 @@ class AnalysisRun(BaseModel):
     parent_run_id: str | None = None
     engine_version: str = "rules-v1"
     risk_rule_version: str = "risk-v1"
+    standard_unit_count: int = Field(default=577, ge=0)
     eligible_requirement_count: int = Field(default=577, ge=0)
+    context_only_count: int = Field(default=0, ge=0)
+    method_pending_count: int = Field(default=0, ge=0)
     succeeded_requirement_count: int = Field(default=0, ge=0)
     failed_requirement_count: int = Field(default=0, ge=0)
     failure_summary: dict[str, Any] = Field(default_factory=dict)
@@ -122,6 +125,9 @@ class DisclosureTask(BaseModel):
     disclosure_id: str
     requirement_id: str
     requirement_text: str
+    source_requirement_text: str | None = None
+    context_requirement_ids: list[str] = Field(default_factory=list)
+    structure_status: str = "verified"
     keywords: list[str] = Field(default_factory=list)
     candidate_pages: list[int] = Field(default_factory=list)
     candidate_pdf_pages: list[int] = Field(default_factory=list)
@@ -137,6 +143,8 @@ class DisclosureTask(BaseModel):
 
     @model_validator(mode="after")
     def default_candidate_pdf_pages(self) -> "DisclosureTask":
+        if self.source_requirement_text is None:
+            self.source_requirement_text = self.requirement_text
         if not self.candidate_pdf_pages and self.candidate_pages:
             self.candidate_pdf_pages = list(self.candidate_pages)
         return self

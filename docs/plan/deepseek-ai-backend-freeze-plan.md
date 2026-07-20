@@ -497,7 +497,7 @@ git commit -m "feat: compile verified GRI requirement structure"
 - Test: `backend/tests/domain/test_models.py`
 - Test: `backend/tests/db/test_repositories.py`
 
-- [ ] **Step 1：迁移前保存本地数据库备份**
+- [x] **Step 1：迁移前保存本地数据库备份**
 
 运行：
 
@@ -511,7 +511,7 @@ if((Get-Item backend/data/runtime/backups/pre_0011_esg_agent.dump).Length -le 0)
 
 把备份目标路径、SHA256、大小、数据库名、迁移前head和生成时间登记到 `backend/data/manifests/assets_manifest.json`；不登记数据库密码或连接URL。
 
-- [ ] **Step 2：先写领域和仓储失败测试**
+- [x] **Step 2：先写领域和仓储失败测试**
 
 领域测试构造：
 
@@ -539,7 +539,7 @@ assert suggestion.review_status is None
 
 仓储测试必须证明同一 assessment 可以追加多条不同 `prompt_version` 或时间的 suggestion，旧 suggestion 不更新、不删除。
 
-- [ ] **Step 3：实现新增枚举和领域模型**
+- [x] **Step 3：实现新增枚举和领域模型**
 
 枚举固定为：
 
@@ -552,7 +552,7 @@ class AISuggestionStatus(StrEnum):
 
 `AIAssessmentSuggestion` 字段固定包括：身份字段、status、provider、model、prompt_version、input_hash、suggested_verdict、rationale_zh、missing_items_zh、evidence_ids、evidence_pdf_pages、confidence、guardrail_codes、usage、finish_reason、latency_ms、retry_count、error_code、error_message、raw_response、created_at。模型中不得出现可由AI赋值的人工复核状态或适用性字段。
 
-- [ ] **Step 4：编写只追加迁移**
+- [x] **Step 4：编写只追加迁移**
 
 `0011` 必须：
 
@@ -563,7 +563,7 @@ class AISuggestionStatus(StrEnum):
 - upgrade 不回填推测的结构值，不删除历史列；
 - downgrade 只删除本迁移新增表、索引和列，并在文档中标记会丢失 AI suggestion。
 
-- [ ] **Step 5：实现 Repository 追加与查询接口**
+- [x] **Step 5：实现 Repository 追加与查询接口**
 
 接口固定为：
 
@@ -575,7 +575,7 @@ def list_ai_suggestions_for_run(self, run_id: str) -> list[AIAssessmentSuggestio
 
 `append_ai_suggestion()` 遇到重复主键抛错，禁止 upsert。
 
-- [ ] **Step 6：验证 migration 和仓储**
+- [x] **Step 6：验证 migration 和仓储**
 
 ```powershell
 cd backend
@@ -584,7 +584,7 @@ uv run --no-sync alembic upgrade head
 uv run --no-sync alembic current
 ```
 
-期望：测试通过；current 为 `0011_standard_structure_and_ai_suggestions`。
+期望：测试通过；current 为 `0011_ai_suggestions`。revision ID 必须控制在 Alembic 版本表的32字符限制内。
 
 ### Task 4：切换运行时到493条独立判断并保留577结构范围
 

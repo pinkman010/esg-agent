@@ -1,4 +1,5 @@
 import time
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from sqlalchemy import func, inspect, select
@@ -6,9 +7,11 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import sessionmaker
 
 from src.db.base import Base
-from src.db.models import DisclosureTaskRecord, DocumentChunkRecord, DocumentPageRecord, RecommendationRecord
+from src.db.models import AIAssessmentSuggestionRecord, DisclosureTaskRecord, DocumentChunkRecord, DocumentPageRecord, RecommendationRecord
 from src.db.repositories import Repository
+from src.domain.ai_models import AIAssessmentSuggestion
 from src.domain.enums import (
+    AISuggestionStatus,
     ApplicabilityStatus,
     AssessmentVerdict,
     EvidenceSourceMethod,
@@ -589,6 +592,80 @@ def test_repository_round_trips_risk_v2_1_dimensions_and_reviewed_applicability(
         assert {"evidence_status", "applicability_status"}.issubset(risk_columns)
         assert "reviewed_applicability_status" in snapshot_columns
     finally:
+        session.close()
+        reset_database(engine)
+        engine.dispose()
+
+
+def test_repository_appends_and_queries_ai_suggestions_without_overwriting_history():
+    engine, session = make_session()
+    try:
+        repo = Repository(session)
+        repo.create_report(
+            Report(
+                report_id="report-ai",
+                original_filename="report.pdf",
+                stored_path="backend/data/runtime/uploads/report.pdf",
+                file_hash="hash-ai",
+            )
+        )
+        repo.create_run(AnalysisRun(run_id="run-ai", report_id="report-ai"))
+        repo.save_assessment(
+            DisclosureAssessment(
+                assessment_id="assessment-ai",
+                run_id="run-ai",
+                report_id="report-ai",
+                standard_id="GRI",
+                standard_version="2021",
+                disclosure_id="GRI 2-1",
+                requirement_id="GRI 2-1-a",
+                verdict=AssessmentVerdict.UNKNOWN,
+                rationale="未发现充分证据。",
+                evidence=[],
+            )
+        )
+        first = AIAssessmentSuggestion(
+            suggestion_id="suggestion-1",
+            assessment_id="assessment-ai",
+            run_id="run-ai",
+            status=AISuggestionStatus.SUCCEEDED,
+            provider="deepseek",
+            model="deepseek-v4-flash",
+            prompt_version="prompt-v1",
+            input_hash="a" * 64,
+            suggested_verdict=AssessmentVerdict.UNKNOWN,
+            rationale_zh="第一版建议。",
+            created_at=datetime.now(UTC),
+        )
+        second = AIAssessmentSuggestion(
+            suggestion_id="suggestion-2",
+            assessment_id="assessment-ai",
+            run_id="run-ai",
+            status=AISuggestionStatus.SUCCEEDED,
+            provider="deepseek",
+            model="deepseek-v4-flash",
+            prompt_version="prompt-v2",
+            input_hash="b" * 64,
+            suggested_verdict=AssessmentVerdict.PARTIALLY_DISCLOSED,
+            rationale_zh="第二版建议。",
+            missing_items_zh=["范围"],
+            created_at=first.created_at + timedelta(seconds=1),
+        )
+
+        repo.append_ai_suggestion(first)
+        repo.append_ai_suggestion(second)
+
+        latest = repo.get_latest_ai_suggestion("assessment-ai")
+        history = repo.list_ai_suggestions_for_run("run-ai")
+        assert latest.suggestion_id == "suggestion-2"
+        assert [item.suggestion_id for item in history] == ["suggestion-1", "suggestion-2"]
+        assert session.scalar(
+            select(func.count()).select_from(AIAssessmentSuggestionRecord)
+        ) == 2
+        with pytest.raises(IntegrityError):
+            repo.append_ai_suggestion(first)
+    finally:
+        session.rollback()
         session.close()
         reset_database(engine)
         engine.dispose()
