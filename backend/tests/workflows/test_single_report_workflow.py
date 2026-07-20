@@ -218,11 +218,11 @@ class WorkflowFakeLLMClient:
         evidence = payload["evidence"][0]
         return LLMCompletionResult(
             content={
-                "suggested_verdict": "disclosed",
+                "suggested_verdict": "partially_disclosed",
                 "evidence_ids": [evidence["evidence_id"]],
                 "evidence_pdf_pages": [evidence["source_pdf_page"]],
                 "rationale_zh": "输入证据直接支持当前要求。",
-                "missing_items_zh": [],
+                "missing_items_zh": ["剩余披露项"],
                 "confidence": 0.9,
             },
             model=self.model,

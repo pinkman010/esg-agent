@@ -475,7 +475,9 @@ async def test_analyze_creates_new_run_with_risk_v2_1(
 
 
 async def test_reports_api_uses_real_gri_checklist_path():
-    assert GRI_REQUIREMENTS_PATH.as_posix().endswith("backend/data/manifests/gri_requirement_checklist.json")
+    assert GRI_REQUIREMENTS_PATH.as_posix().endswith(
+        "backend/data/manifests/gri_requirement_checklist_v2.json"
+    )
     assert GRI_REQUIREMENTS_LIMIT is None
     assert GRI_REQUIREMENTS_PATH.exists()
     assert GRI_REQUIREMENT_PACK_PATH.as_posix().endswith("backend/data/manifests/gri_requirement_pack.json")

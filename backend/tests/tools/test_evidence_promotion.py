@@ -14,6 +14,7 @@ def _context(
     evidence_kind: EvidenceKind | None = None,
     profile_candidate_unmatched: bool = False,
     matched_terms: tuple[str, ...] = (),
+    kpi_row_label: str | None = None,
 ) -> EvidencePromotionContext:
     return EvidencePromotionContext(
         requirement_id="GRI test",
@@ -22,7 +23,7 @@ def _context(
         facets=facets,
         evidence_kind=evidence_kind,
         matched_terms=matched_terms,
-        kpi_row_label=None,
+        kpi_row_label=kpi_row_label,
         kpi_row_unit=None,
         kpi_row_value=None,
         source_text=source_text,
@@ -138,6 +139,38 @@ def test_occupational_disease_cases_are_partial_for_ill_health_fatalities() -> N
             "职业病发病次数为 0",
             semantic_group=SemanticGroup.OHS_KPI,
             evidence_kind=EvidenceKind.KPI_VALUE,
+        )
+    )
+
+    assert decision.promote is True
+    assert decision.max_verdict is AssessmentVerdict.PARTIALLY_DISCLOSED
+
+
+def test_kpi_row_label_does_not_bypass_ill_health_fatality_scope_guardrail() -> None:
+    decision = evaluate_evidence_promotion(
+        _context(
+            "number of fatalities as a result of work-related ill health",
+            "职业病发病次数 次 0 0 0",
+            semantic_group=SemanticGroup.OHS_KPI,
+            evidence_kind=EvidenceKind.KPI_VALUE,
+            matched_terms=("职业病发病次数",),
+            kpi_row_label="职业病发病次数",
+        )
+    )
+
+    assert decision.promote is True
+    assert decision.max_verdict is AssessmentVerdict.PARTIALLY_DISCLOSED
+
+
+def test_neighbor_work_injury_fatality_row_does_not_satisfy_ill_health_fatalities() -> None:
+    decision = evaluate_evidence_promotion(
+        _context(
+            "number of fatalities as a result of work-related ill health",
+            "职业病发病次数 0；员工因工死亡人数 1",
+            semantic_group=SemanticGroup.OHS_KPI,
+            evidence_kind=EvidenceKind.KPI_VALUE,
+            matched_terms=("员工因工死亡人数",),
+            kpi_row_label="员工因工死亡人数",
         )
     )
 

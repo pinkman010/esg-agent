@@ -41,13 +41,6 @@ def evaluate_evidence_promotion(context: EvidencePromotionContext) -> EvidencePr
     ):
         return _reject("Profile candidate has no leaf-level anchor or KPI row match.")
 
-    if _has_direct_leaf_kpi_anchor(context):
-        return EvidencePromotionDecision(
-            promote=True,
-            max_verdict=AssessmentVerdict.DISCLOSED,
-            reason="A leaf-specific KPI label matched within the bounded profile route.",
-        )
-
     if context.semantic_group is SemanticGroup.GHG_EMISSIONS_KPI and _is_reduction_requirement(requirement):
         if _contains_any(source, ("预计", "预估", "预测", "expected", "estimated", "projected")):
             return EvidencePromotionDecision(
@@ -94,6 +87,14 @@ def evaluate_evidence_promotion(context: EvidencePromotionContext) -> EvidencePr
                 promote=True,
                 max_verdict=AssessmentVerdict.DISCLOSED,
                 reason="The bounded KPI row discloses the agreed-improvement supplier percentage.",
+            )
+        if _has_direct_leaf_kpi_anchor(context) and any(
+            term.lower() in source for term in context.matched_terms
+        ):
+            return EvidencePromotionDecision(
+                promote=True,
+                max_verdict=AssessmentVerdict.DISCLOSED,
+                reason="A leaf-specific supplier KPI label matched the bounded source text.",
             )
         if RequirementFacet.REQUIRES_COUNT in context.facets:
             has_supplier_count = bool(
@@ -156,6 +157,13 @@ def evaluate_evidence_promotion(context: EvidencePromotionContext) -> EvidencePr
         has_gender = _contains_any(source, ("男性", "女性", "按性别", "by gender", "male", "female"))
         if not (has_leave_return and has_gender):
             return _reject("General workforce data does not establish parental-leave returns by gender.")
+
+    if _has_direct_leaf_kpi_anchor(context):
+        return EvidencePromotionDecision(
+            promote=True,
+            max_verdict=AssessmentVerdict.DISCLOSED,
+            reason="A leaf-specific KPI label matched within the bounded profile route.",
+        )
 
     return EvidencePromotionDecision(
         promote=True,
