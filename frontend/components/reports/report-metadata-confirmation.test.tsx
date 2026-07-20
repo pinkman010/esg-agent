@@ -58,12 +58,50 @@ describe("ReportMetadataConfirmation", () => {
     renderWithQuery(<ReportMetadataConfirmation reportId="report-1" />);
 
     expect(await screen.findByLabelText("企业名称")).toHaveValue("远景能源有限公司");
+    expect(screen.getByRole("checkbox", { name: "启用 AI 辅助分析" })).not.toBeChecked();
     fireEvent.change(screen.getByLabelText("企业名称"), { target: { value: "测试公司" } });
     fireEvent.click(screen.getByRole("button", { name: "确认报告信息" }));
     expect(await screen.findByText("报告信息已确认")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "启动分析" }));
     await waitFor(() => expect(router.push).toHaveBeenCalledWith("/reports/report-1/progress?runId=run-1"));
+    expect(JSON.parse(String(fetchMock.mock.calls[2][1]?.body))).toMatchObject({ confirm_llm: false });
+  });
+
+  it("only enables external AI assistance after an explicit checkbox action", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(jsonResponse(reportWithStatus("ready_for_analysis")))
+      .mockResolvedValueOnce(jsonResponse({
+        run_id: "run-ai",
+        report_id: "report-1",
+        status: "pending",
+        confirm_llm: true,
+        error_message: null,
+      }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    renderWithQuery(<ReportMetadataConfirmation reportId="report-1" />);
+
+    const checkbox = await screen.findByRole("checkbox", { name: "启用 AI 辅助分析" });
+    fireEvent.click(checkbox);
+    expect(checkbox).toBeChecked();
+    expect(screen.getByText(/AI 建议不会覆盖规则结论或人工复核结果/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "启动分析" }));
+    await waitFor(() => expect(router.push).toHaveBeenCalledWith("/reports/report-1/progress?runId=run-ai"));
+    expect(JSON.parse(String(fetchMock.mock.calls[1][1]?.body))).toMatchObject({ confirm_llm: true });
+  });
+
+  it("shows a safe error when analysis cannot start", async () => {
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce(jsonResponse(reportWithStatus("ready_for_analysis")))
+      .mockRejectedValueOnce(new Error("secret upstream details")));
+
+    renderWithQuery(<ReportMetadataConfirmation reportId="report-1" />);
+    fireEvent.click(await screen.findByRole("button", { name: "启动分析" }));
+
+    expect(await screen.findByText("分析启动失败，请检查服务配置后重试。")).toBeInTheDocument();
+    expect(screen.queryByText("secret upstream details")).not.toBeInTheDocument();
   });
 
   it.each(["analysis_completed", "partially_completed"])(

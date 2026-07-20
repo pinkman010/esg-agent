@@ -21,6 +21,7 @@ export function ReportMetadataConfirmation({ reportId }: { reportId: string }) {
   const [reportYear, setReportYear] = useState("");
   const [language, setLanguage] = useState("");
   const [confirmed, setConfirmed] = useState(false);
+  const [aiAssistanceEnabled, setAIAssistanceEnabled] = useState(false);
 
   useEffect(() => {
     if (!reportQuery.data) return;
@@ -39,7 +40,7 @@ export function ReportMetadataConfirmation({ reportId }: { reportId: string }) {
     onSuccess: () => setConfirmed(true),
   });
   const analyzeMutation = useMutation({
-    mutationFn: () => analyzeReport(reportId, false),
+    mutationFn: () => analyzeReport(reportId, aiAssistanceEnabled),
     onSuccess: (run) => router.push(`/reports/${reportId}/progress?runId=${run.run_id}`),
   });
 
@@ -86,6 +87,23 @@ export function ReportMetadataConfirmation({ reportId }: { reportId: string }) {
           </select>
         </label>
       </div>
+      {canEdit && (
+        <label className="mb-5 flex items-start gap-3 rounded-md border border-border bg-muted/40 p-4 text-sm">
+          <input
+            aria-label="启用 AI 辅助分析"
+            checked={aiAssistanceEnabled}
+            className="mt-1 h-4 w-4 accent-emerald-700"
+            type="checkbox"
+            onChange={(event) => setAIAssistanceEnabled(event.target.checked)}
+          />
+          <span>
+            <span className="block font-medium">启用 AI 辅助分析</span>
+            <span className="mt-1 block leading-5 text-muted-foreground">
+              仅发送当前 requirement、有限证据片段、证据 ID、PDF 页码和必要报告信息。AI 建议不会覆盖规则结论或人工复核结果。
+            </span>
+          </span>
+        </label>
+      )}
       {canEdit && <div className="flex flex-wrap items-center gap-3 border-t border-border pt-5">
         <button
           type="button"
@@ -106,6 +124,9 @@ export function ReportMetadataConfirmation({ reportId }: { reportId: string }) {
           <Play aria-hidden="true" className="h-4 w-4" />
           启动分析
         </button>
+        {analyzeMutation.isError && (
+          <span className="w-full text-sm text-red-700">分析启动失败，请检查服务配置后重试。</span>
+        )}
       </div>}
     </section>
   );
