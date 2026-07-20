@@ -11,6 +11,15 @@ from reportlab.pdfgen import canvas
 from src.db.repositories import Repository
 from src.domain.enums import ReportStatus, RiskLevel
 from src.domain.models import ExportVersion
+from src.services.presentation_localization import localize_missing_items, localize_rationale
+from src.domain.versions import CURRENT_RISK_RULE_VERSION
+
+
+class ExportGateError(PermissionError):
+    def __init__(self, code: str, remaining: int):
+        super().__init__(f"{code}: {remaining}")
+        self.code = code
+        self.remaining = remaining
 
 
 def assessments_rows(repository: Repository, run_id: str) -> list[dict]:
@@ -32,6 +41,9 @@ def assessments_rows(repository: Repository, run_id: str) -> list[dict]:
                 "requirement_id": assessment.requirement_id,
                 "verdict": assessment.verdict.value,
                 "rationale": assessment.rationale,
+                "rationale_zh": localize_rationale(assessment.rationale),
+                "missing_items": assessment.missing_items,
+                "missing_items_zh": localize_missing_items(assessment.missing_items),
                 "model_called": assessment.model_called,
                 "review_status": assessment.review_status.value,
                 "evidence_count": len(assessment.evidence),
@@ -98,6 +110,12 @@ class VersionedExportService:
         formats: list[str],
         created_by: str,
     ) -> ExportVersion:
+        supported_formats = {"assessment_xlsx", "management_pdf", "print_html"}
+        unsupported_formats = [item for item in formats if item not in supported_formats]
+        if unsupported_formats:
+            raise ValueError(
+                f"unsupported export format: {unsupported_formats[0]}"
+            )
         run = self.repository.latest_run_for_report(report_id)
         if run is None:
             raise ValueError("report has no analysis run")
@@ -105,10 +123,62 @@ class VersionedExportService:
         ids = [item.assessment_id for item in assessments]
         risks = self.repository.latest_risks_for_assessments(ids)
         snapshots = self.repository.latest_snapshots_for_assessments(ids)
-        high_ids = [item.assessment_id for item in assessments if not risks.get(item.assessment_id) or risks[item.assessment_id].risk_level is RiskLevel.HIGH]
-        reviewed_high = [item for item in high_ids if item in snapshots and snapshots[item].operation_type.value in {"approve", "modify", "legacy_import"}]
+        resolved_operations = {"approve", "modify", "legacy_import"}
+        high_ids = [
+            item.assessment_id
+            for item in assessments
+            if not risks.get(item.assessment_id)
+            or risks[item.assessment_id].risk_level is RiskLevel.HIGH
+        ]
+        medium_ids = [
+            item.assessment_id
+            for item in assessments
+            if risks.get(item.assessment_id)
+            and risks[item.assessment_id].risk_level is RiskLevel.MEDIUM
+        ]
+        reviewed_ids = {
+            assessment_id
+            for assessment_id, snapshot in snapshots.items()
+            if snapshot.operation_type.value in resolved_operations
+        }
+        reviewed_high = [item for item in high_ids if item in reviewed_ids]
+        reviewed_medium = [item for item in medium_ids if item in reviewed_ids]
+        applicability_undetermined = [
+            item.assessment_id
+            for item in assessments
+            if risks.get(item.assessment_id)
+            and risks[item.assessment_id].applicability_status is not None
+            and risks[item.assessment_id].applicability_status.value == "undetermined"
+        ]
+        uses_current_risk_rule = run.risk_rule_version == CURRENT_RISK_RULE_VERSION
+        eligible_total = (
+            run.eligible_requirement_count if uses_current_risk_rule else len(assessments)
+        )
+        analysis_incomplete_total = (
+            max(
+                run.failed_requirement_count,
+                eligible_total - run.succeeded_requirement_count,
+                eligible_total - len(assessments),
+                0,
+            )
+            if uses_current_risk_rule
+            else run.failed_requirement_count
+        )
+        high_priority_unresolved = len(high_ids) - len(reviewed_high)
+        review_scope_statement = (
+            f"当前仍有高复核优先级未处理 {high_priority_unresolved} 条、"
+            f"分析失败或未生成结果 {analysis_incomplete_total} 条；"
+            f"不代表全部 {eligible_total} 条均已人工确认。"
+            if high_priority_unresolved or analysis_incomplete_total
+            else f"高复核优先级项目已处理；不代表全部 {eligible_total} 条均已人工确认。"
+        )
+        if not is_draft and analysis_incomplete_total:
+            raise ExportGateError("analysis_incomplete", analysis_incomplete_total)
         if not is_draft and len(reviewed_high) != len(high_ids):
-            raise PermissionError(f"high risk review incomplete: {len(high_ids) - len(reviewed_high)}")
+            raise ExportGateError(
+                "high_risk_review_incomplete",
+                high_priority_unresolved,
+            )
 
         export_id = self.repository.new_export_id()
         version_number = 0 if is_draft else self.repository.next_formal_export_version(report_id)
@@ -132,6 +202,17 @@ class VersionedExportService:
                 review_scope={
                     "high_risk_total": len(high_ids),
                     "high_risk_reviewed": len(reviewed_high),
+                    "high_priority_total": len(high_ids),
+                    "high_priority_reviewed": len(reviewed_high),
+                    "high_priority_unresolved": high_priority_unresolved,
+                    "medium_priority_total": len(medium_ids),
+                    "medium_priority_reviewed": len(reviewed_medium),
+                    "medium_priority_unresolved": len(medium_ids) - len(reviewed_medium),
+                    "applicability_undetermined_total": len(applicability_undetermined),
+                    "analysis_incomplete_total": analysis_incomplete_total,
+                    "eligible_requirement_total": eligible_total,
+                    "human_reviewed_total": len(reviewed_ids.intersection(ids)),
+                    "review_scope_statement": review_scope_statement,
                     "system_pending_count": len(assessments) - len(snapshots),
                     "draft_label": is_draft,
                 },
@@ -147,11 +228,11 @@ class VersionedExportService:
         return export
 
     def _write_format(self, destination: Path, format_name: str, rows: list[dict], report_id: str, is_draft: bool) -> dict:
-        if format_name in {"assessment_xlsx", "actions_xlsx"}:
+        if format_name == "assessment_xlsx":
             path = destination / f"{format_name}.xlsx"
             workbook = Workbook()
             sheet = workbook.active
-            sheet.title = "GRI核查" if format_name == "assessment_xlsx" else "整改任务"
+            sheet.title = "GRI核查"
             if rows:
                 sheet.append(list(rows[0].keys()))
                 for row in rows:

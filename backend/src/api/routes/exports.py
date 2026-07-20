@@ -7,7 +7,7 @@ from src.db.repositories import Repository
 from src.db.session import get_db_session
 from src.config.settings import get_settings
 from src.domain.models import ExportVersion
-from src.services.export_service import VersionedExportService, assessments_rows, review_rows, rows_to_csv
+from src.services.export_service import ExportGateError, VersionedExportService, assessments_rows, review_rows, rows_to_csv
 
 router = APIRouter(prefix="/api/exports", tags=["exports"])
 report_export_router = APIRouter(prefix="/api/reports/{report_id}/exports", tags=["exports"])
@@ -59,9 +59,11 @@ def _generate(report_id: str, request: GenerateExportRequest, session: Session, 
     service = VersionedExportService(Repository(session), get_settings().derived_dir)
     try:
         result = service.generate(report_id, is_draft=is_draft, formats=request.formats, created_by=request.created_by)
-    except PermissionError as exc:
-        remaining = int(str(exc).rsplit(":", 1)[-1].strip())
-        raise HTTPException(status_code=409, detail={"code": "high_risk_review_incomplete", "remaining": remaining}) from exc
+    except ExportGateError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={"code": exc.code, "remaining": exc.remaining},
+        ) from exc
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     return result.model_dump(mode="json")

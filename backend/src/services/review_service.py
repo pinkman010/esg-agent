@@ -1,7 +1,7 @@
 from typing import Any
 
 from src.db.repositories import Repository, new_id
-from src.domain.enums import AssessmentVerdict, ReportStatus, ReviewOperation, RiskLevel
+from src.domain.enums import ApplicabilityStatus, AssessmentVerdict, ReportStatus, ReviewOperation, RiskLevel
 from src.domain.models import ReviewChangeEvent, ReviewSnapshot
 from src.services.risk_service import calculate_and_store_risk
 
@@ -19,6 +19,7 @@ class ReviewService:
         reason_code: str,
         reviewer_note: str = "",
         reviewed_verdict: AssessmentVerdict | None = None,
+        reviewed_applicability_status: ApplicabilityStatus | None = None,
         evidence_pages: list[int] | None = None,
         evidence_preview: str | None = None,
         rationale: str | None = None,
@@ -26,6 +27,8 @@ class ReviewService:
         expected_previous_snapshot_id: str | None = None,
         is_batch_operation: bool = False,
         batch_id: str | None = None,
+        advance_report_status: bool = True,
+        commit: bool = True,
     ) -> ReviewSnapshot:
         assessment = self.repository.get_assessment(assessment_id)
         if assessment is None:
@@ -37,7 +40,14 @@ class ReviewService:
             raise RuntimeError("snapshot conflict")
         if operation_type in {ReviewOperation.MODIFY, ReviewOperation.INVALIDATE_EVIDENCE, ReviewOperation.REOPEN} and not reviewer_note.strip():
             raise ValueError("reviewer_note is required")
-        overrides = [reviewed_verdict, evidence_pages, evidence_preview, rationale, missing_items]
+        overrides = [
+            reviewed_verdict,
+            reviewed_applicability_status,
+            evidence_pages,
+            evidence_preview,
+            rationale,
+            missing_items,
+        ]
         if operation_type is ReviewOperation.MODIFY and all(value is None for value in overrides):
             raise ValueError("modify requires at least one changed field")
 
@@ -45,6 +55,7 @@ class ReviewService:
         values = dict(previous_values)
         supplied = {
             "reviewed_verdict": reviewed_verdict,
+            "reviewed_applicability_status": reviewed_applicability_status,
             "evidence_pages": evidence_pages,
             "evidence_preview": evidence_preview,
             "rationale": rationale,
@@ -68,6 +79,7 @@ class ReviewService:
             reason_code=reason_code,
             reviewer_note=reviewer_note,
             reviewed_verdict=values["reviewed_verdict"],
+            reviewed_applicability_status=values["reviewed_applicability_status"],
             evidence_pages=values["evidence_pages"],
             evidence_preview=values["evidence_preview"],
             rationale=values["rationale"],
@@ -85,7 +97,15 @@ class ReviewService:
             for field, value in values.items()
             if self._json_value(previous_values[field]) != self._json_value(value)
         ]
-        saved = self.repository.save_review_snapshot(snapshot, changes)
+        saved = (
+            self.repository.save_review_snapshot(snapshot, changes)
+            if commit
+            else self.repository.save_review_snapshot(
+                snapshot,
+                changes,
+                commit=False,
+            )
+        )
         effective = assessment.model_copy(
             update={
                 "verdict": values["reviewed_verdict"] or assessment.verdict,
@@ -94,19 +114,143 @@ class ReviewService:
                 "evidence": [] if operation_type is ReviewOperation.INVALIDATE_EVIDENCE else assessment.evidence,
             }
         )
-        calculate_and_store_risk(
-            self.repository,
-            effective,
-            trigger_event=f"review_{operation_type.value}",
-            snapshot_id=saved.snapshot_id,
-        )
-        if operation_type is ReviewOperation.REOPEN:
-            self.repository.update_report_status(assessment.report_id, ReportStatus.REOPENED)
-        else:
-            self._advance_report_status(assessment.report_id, assessment.run_id)
+        run = self.repository.get_run(assessment.run_id)
+        risk_rule_version = run.risk_rule_version if run else "risk-v1"
+        risk_kwargs = {
+            "trigger_event": f"review_{operation_type.value}",
+            "snapshot_id": saved.snapshot_id,
+            "risk_rule_version": risk_rule_version,
+            "applicability_status": values["reviewed_applicability_status"],
+            "evidence_invalidated": operation_type
+            is ReviewOperation.INVALIDATE_EVIDENCE,
+            "reopened": operation_type is ReviewOperation.REOPEN,
+        }
+        if not commit:
+            risk_kwargs["commit"] = False
+        calculate_and_store_risk(self.repository, effective, **risk_kwargs)
+        if advance_report_status:
+            if operation_type is ReviewOperation.REOPEN:
+                if commit:
+                    self.repository.update_report_status(
+                        assessment.report_id,
+                        ReportStatus.REOPENED,
+                    )
+                else:
+                    self.repository.update_report_status(
+                        assessment.report_id,
+                        ReportStatus.REOPENED,
+                        commit=False,
+                    )
+            else:
+                if commit:
+                    self._advance_report_status(
+                        assessment.report_id,
+                        assessment.run_id,
+                    )
+                else:
+                    self._advance_report_status(
+                        assessment.report_id,
+                        assessment.run_id,
+                        commit=False,
+                    )
         return saved
 
-    def _advance_report_status(self, report_id: str, run_id: str) -> None:
+    def record_applicability_batch(
+        self,
+        report_id: str,
+        *,
+        assessment_ids: list[str],
+        reviewed_applicability_status: ApplicabilityStatus,
+        reviewer_name: str,
+        reviewer_note: str,
+    ) -> tuple[str, list[ReviewSnapshot]]:
+        if reviewed_applicability_status not in {
+            ApplicabilityStatus.APPLICABLE,
+            ApplicabilityStatus.NOT_APPLICABLE_CONFIRMED,
+        }:
+            raise ValueError(
+                "batch applicability decision must be applicable or confirmed not applicable"
+            )
+        if not reviewer_name.strip():
+            raise ValueError("reviewer_name is required")
+        if not reviewer_note.strip():
+            raise ValueError("reviewer_note is required")
+        if not assessment_ids:
+            raise ValueError("assessment_ids is required")
+        if len(set(assessment_ids)) != len(assessment_ids):
+            raise ValueError("assessment_ids contains duplicates")
+        if self.repository.get_report(report_id) is None:
+            raise LookupError("report not found")
+        run = self.repository.latest_run_for_report(report_id)
+        if run is None:
+            raise LookupError("report has no analysis run")
+
+        assessments = []
+        for assessment_id in assessment_ids:
+            assessment = self.repository.get_assessment(assessment_id)
+            if (
+                assessment is None
+                or assessment.report_id != report_id
+                or assessment.run_id != run.run_id
+            ):
+                raise ValueError(
+                    f"assessment is not in the latest report run: {assessment_id}"
+                )
+            assessments.append(assessment)
+        risks = self.repository.latest_risks_for_assessments(assessment_ids)
+        stale_ids = [
+            assessment.assessment_id
+            for assessment in assessments
+            if assessment.assessment_id not in risks
+            or risks[assessment.assessment_id].applicability_status
+            is not ApplicabilityStatus.UNDETERMINED
+        ]
+        if stale_ids:
+            raise RuntimeError(
+                "applicability decision conflict: " + ", ".join(stale_ids)
+            )
+
+        batch_id = new_id("batch")
+        try:
+            snapshots = [
+                self.record(
+                    assessment.assessment_id,
+                    operation_type=ReviewOperation.MODIFY,
+                    reviewer_name=reviewer_name,
+                    reason_code="applicability_batch_reviewed",
+                    reviewer_note=reviewer_note,
+                    reviewed_applicability_status=reviewed_applicability_status,
+                    is_batch_operation=True,
+                    batch_id=batch_id,
+                    advance_report_status=False,
+                    commit=False,
+                )
+                for assessment in assessments
+            ]
+            self._advance_report_status(report_id, run.run_id, commit=False)
+            self.repository.create_audit_event(
+                run.run_id,
+                "applicability_batch_reviewed",
+                {
+                    "batch_id": batch_id,
+                    "assessment_count": len(snapshots),
+                    "reviewed_applicability_status": reviewed_applicability_status.value,
+                },
+                commit=False,
+            )
+            self.repository.session.commit()
+        except Exception:
+            self.repository.session.rollback()
+            raise
+        return batch_id, snapshots
+
+    def _advance_report_status(
+        self,
+        report_id: str,
+        run_id: str,
+        *,
+        commit: bool = True,
+    ) -> None:
         assessments = self.repository.list_assessments_by_run(run_id)
         assessment_ids = [item.assessment_id for item in assessments]
         risks = self.repository.latest_risks_for_assessments(assessment_ids)
@@ -121,17 +265,30 @@ class ReviewService:
             ReviewOperation.MODIFY,
             ReviewOperation.LEGACY_IMPORT,
         }
-        if high_risk_ids and all(
+        if all(
             assessment_id in snapshots
             and snapshots[assessment_id].operation_type in reviewed_operations
             for assessment_id in high_risk_ids
         ):
-            self.repository.update_report_status(report_id, ReportStatus.HIGH_RISK_REVIEW_COMPLETED)
+            if commit:
+                self.repository.update_report_status(
+                    report_id,
+                    ReportStatus.HIGH_RISK_REVIEW_COMPLETED,
+                )
+            else:
+                self.repository.update_report_status(
+                    report_id,
+                    ReportStatus.HIGH_RISK_REVIEW_COMPLETED,
+                    commit=False,
+                )
 
     @staticmethod
     def _effective_values(assessment, latest: ReviewSnapshot | None) -> dict[str, Any]:
         return {
             "reviewed_verdict": latest.reviewed_verdict if latest else None,
+            "reviewed_applicability_status": (
+                latest.reviewed_applicability_status if latest else None
+            ),
             "evidence_pages": latest.evidence_pages if latest else None,
             "evidence_preview": latest.evidence_preview if latest else None,
             "rationale": latest.rationale if latest else assessment.rationale,
@@ -140,4 +297,8 @@ class ReviewService:
 
     @staticmethod
     def _json_value(value):
-        return value.value if isinstance(value, AssessmentVerdict) else value
+        return (
+            value.value
+            if isinstance(value, (AssessmentVerdict, ApplicabilityStatus))
+            else value
+        )

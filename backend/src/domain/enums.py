@@ -22,6 +22,22 @@ class RiskLevel(StrEnum):
     LOW = "low"
 
 
+class EvidenceStatus(StrEnum):
+    VALID_DIRECT = "valid_direct"
+    MISSING = "missing"
+    NON_SUBSTANTIVE_ONLY = "non_substantive_only"
+    QUALITY_WARNING = "quality_warning"
+    INVALID = "invalid"
+    CONFLICT = "conflict"
+
+
+class ApplicabilityStatus(StrEnum):
+    APPLICABLE = "applicable"
+    NOT_APPLICABLE_CLAIMED = "not_applicable_claimed"
+    NOT_APPLICABLE_CONFIRMED = "not_applicable_confirmed"
+    UNDETERMINED = "undetermined"
+
+
 class ActionStatus(StrEnum):
     OPEN = "open"
     IN_PROGRESS = "in_progress"

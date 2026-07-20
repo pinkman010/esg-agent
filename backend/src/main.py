@@ -37,6 +37,7 @@ def create_app() -> FastAPI:
     app.include_router(runs.router)
     app.include_router(review.router)
     app.include_router(review.assessment_router)
+    app.include_router(review.report_router)
     app.include_router(exports.router)
     app.include_router(exports.report_export_router)
     app.include_router(demo.router)

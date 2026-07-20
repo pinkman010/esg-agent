@@ -1,7 +1,7 @@
 import pytest
 
 from src.db.repositories import Repository
-from src.domain.enums import AssessmentVerdict, ReportStatus, ReviewOperation, ReviewStatus, RunStatus
+from src.domain.enums import ApplicabilityStatus, AssessmentVerdict, ReportStatus, ReviewOperation, ReviewStatus, RunStatus
 from src.domain.models import AnalysisRun, DisclosureAssessment, Report
 from src.services.review_service import ReviewService
 from tests.database import make_test_engine, reset_database
@@ -17,7 +17,14 @@ def service_context():
     session = sessionmaker(bind=engine, expire_on_commit=False)()
     repo = Repository(session)
     repo.create_report(Report(report_id="report-1", original_filename="report.pdf", stored_path="x", file_hash="hash-1"))
-    repo.create_run(AnalysisRun(run_id="run-1", report_id="report-1", status=RunStatus.COMPLETED))
+    repo.create_run(
+        AnalysisRun(
+            run_id="run-1",
+            report_id="report-1",
+            status=RunStatus.COMPLETED,
+            risk_rule_version="risk-v2.1",
+        )
+    )
     repo.save_assessment(
         DisclosureAssessment(
             assessment_id="assessment-1",
@@ -114,3 +121,23 @@ def test_review_service_advances_and_reopens_report_status(service_context):
     )
 
     assert repo.get_report("report-1").status is ReportStatus.REOPENED
+
+
+def test_review_service_recalculates_risk_v2_1_with_independent_applicability(service_context):
+    service, repo = service_context
+
+    snapshot = service.record(
+        "assessment-1",
+        operation_type=ReviewOperation.MODIFY,
+        reviewer_name="张三",
+        reason_code="applicability_reviewed",
+        reviewer_note="确认该要求适用于企业",
+        reviewed_applicability_status=ApplicabilityStatus.APPLICABLE,
+    )
+
+    risk = repo.latest_risks_for_assessments(["assessment-1"])["assessment-1"]
+    assert snapshot.reviewed_applicability_status is ApplicabilityStatus.APPLICABLE
+    assert risk.risk_rule_version == "risk-v2.1"
+    assert risk.applicability_status is ApplicabilityStatus.APPLICABLE
+    assert risk.evidence_status.value == "missing"
+    assert risk.risk_level.value == "low"

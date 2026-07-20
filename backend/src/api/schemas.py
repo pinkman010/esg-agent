@@ -76,6 +76,9 @@ class AssessmentListItem(BaseModel):
     reviewed_verdict: str | None = None
     effective_verdict: str
     risk_level: str
+    review_priority: str
+    evidence_status: str | None = None
+    applicability_status: str | None = None
     risk_reason_codes: list[str]
     review_status: str
     evidence_count: int
@@ -95,8 +98,14 @@ class ReportDashboardResponse(BaseModel):
     run_id: str | None
     verdict_counts: dict[str, int]
     risk_counts: dict[str, int]
+    review_priority_counts: dict[str, int]
     high_risk_total: int
     high_risk_reviewed: int
+    high_priority_total: int
+    high_priority_reviewed: int
+    high_priority_unresolved: int
+    applicability_counts: dict[str, int]
+    applicability_undetermined_total: int
     failed_requirement_count: int
 
 
@@ -120,9 +129,14 @@ class AssessmentDetailResponse(BaseModel):
     effective_verdict: str
     review_status: str
     risk_level: str
+    review_priority: str
+    evidence_status: str | None = None
+    applicability_status: str | None = None
     risk_reason_codes: list[str]
     rationale: str
+    rationale_display: str
     missing_items: list[str]
+    missing_items_display: list[str]
     evidence_items: list[BusinessEvidenceItem]
     latest_snapshot_id: str | None = None
 

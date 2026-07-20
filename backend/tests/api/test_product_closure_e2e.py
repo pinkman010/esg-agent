@@ -4,9 +4,10 @@ import pytest
 from pypdf import PdfWriter
 
 from src.config.settings import get_settings
+from src.db.models import AssessmentRecord, AssessmentRiskRecord
 from src.db.repositories import Repository
-from src.domain.enums import AssessmentVerdict, ReviewStatus, RunStatus
-from src.domain.models import AnalysisStageEvent, DisclosureAssessment
+from src.domain.enums import AssessmentVerdict, EvidenceSourceMethod, ReviewStatus, RunStatus
+from src.domain.models import AnalysisStageEvent, DisclosureAssessment, EvidenceItem
 from src.services.analysis_runner import execute_analysis
 from src.services.risk_service import calculate_and_store_risk
 
@@ -47,12 +48,69 @@ async def test_product_closure_from_upload_to_formal_export(api_client, api_sess
                 disclosure_id="GRI 2-1",
                 requirement_id="GRI 2-1-a",
                 verdict=AssessmentVerdict.UNKNOWN,
-                rationale="未找到有效报告证据。",
-                missing_items=["组织法定名称"],
+                rationale="证据质量需要人工确认。",
+                missing_items=["可直接核实的组织法定名称"],
+                evidence=[
+                    EvidenceItem(
+                        evidence_id="evidence-e2e",
+                        run_id=run_id,
+                        report_id=report_id,
+                        source_text="测试公司",
+                        source_page=1,
+                        source_file_hash=source_file_hash,
+                        source_method=EvidenceSourceMethod.PDFPLUMBER,
+                        needs_ocr_or_vlm=True,
+                    )
+                ],
                 review_status=ReviewStatus.NEEDS_MANUAL_REVIEW,
             )
             self.repository.save_assessment(assessment)
-            calculate_and_store_risk(self.repository, assessment, trigger_event="analysis_completed")
+            self.repository.save_evidence_item(
+                assessment.assessment_id,
+                assessment.evidence[0],
+            )
+            calculate_and_store_risk(
+                self.repository,
+                assessment,
+                trigger_event="analysis_completed",
+                risk_rule_version="risk-v2.1",
+            )
+            self.repository.session.add_all(
+                [
+                    AssessmentRecord(
+                        assessment_id=f"assessment-e2e-{index:03d}",
+                        run_id=run_id,
+                        report_id=report_id,
+                        standard_id="GRI",
+                        standard_version="2021",
+                        disclosure_id=f"GRI TEST-{index}",
+                        requirement_id=f"GRI TEST-{index}-a",
+                        verdict="unknown",
+                        rationale="未找到有效报告证据。",
+                        missing_items=[],
+                        model_called=False,
+                        review_status="needs_manual_review",
+                    )
+                    for index in range(2, 578)
+                ]
+            )
+            self.repository.session.flush()
+            self.repository.session.add_all(
+                [
+                    AssessmentRiskRecord(
+                        risk_id=f"risk-e2e-{index:03d}",
+                        assessment_id=f"assessment-e2e-{index:03d}",
+                        risk_level="low",
+                        reason_codes=["unknown_verdict", "no_valid_evidence"],
+                        risk_rule_version="risk-v2.1",
+                        evidence_status="missing",
+                        applicability_status="undetermined",
+                        trigger_event="analysis_completed",
+                    )
+                    for index in range(2, 578)
+                ]
+            )
+            self.repository.session.commit()
             for stage_code in (
                 "file_validation",
                 "pdf_parsing",

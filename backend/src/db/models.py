@@ -160,6 +160,8 @@ class AssessmentRiskRecord(Base):
     risk_level: Mapped[str] = mapped_column(String(16), nullable=False, index=True)
     reason_codes: Mapped[list[str]] = mapped_column(JSONB, default=list, nullable=False)
     risk_rule_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    evidence_status: Mapped[str | None] = mapped_column(String(32), index=True)
+    applicability_status: Mapped[str | None] = mapped_column(String(32), index=True)
     trigger_event: Mapped[str] = mapped_column(String(64), nullable=False)
     calculated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
@@ -227,6 +229,7 @@ class ReviewSnapshotRecord(Base):
     reason_code: Mapped[str] = mapped_column(String(64), nullable=False)
     reviewer_note: Mapped[str] = mapped_column(Text, default="", nullable=False)
     reviewed_verdict: Mapped[str | None] = mapped_column(String(64))
+    reviewed_applicability_status: Mapped[str | None] = mapped_column(String(32))
     evidence_pages: Mapped[list[int] | None] = mapped_column(JSONB)
     evidence_preview: Mapped[str | None] = mapped_column(Text)
     rationale: Mapped[str | None] = mapped_column(Text)

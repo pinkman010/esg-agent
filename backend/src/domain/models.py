@@ -4,10 +4,12 @@ from typing import Any
 from pydantic import BaseModel, Field, model_validator
 
 from src.domain.enums import (
+    ApplicabilityStatus,
     AssessmentVerdict,
     ActionPriority,
     ActionStatus,
     EvidenceSourceMethod,
+    EvidenceStatus,
     PageQualityFlag,
     ReportStatus,
     RiskLevel,
@@ -70,6 +72,8 @@ class AssessmentRisk(BaseModel):
     risk_level: RiskLevel
     reason_codes: list[str] = Field(default_factory=list)
     risk_rule_version: str = "risk-v1"
+    evidence_status: EvidenceStatus | None = None
+    applicability_status: ApplicabilityStatus | None = None
     trigger_event: str
     calculated_at: datetime | None = None
 
@@ -234,6 +238,7 @@ class ReviewSnapshot(BaseModel):
     reason_code: str
     reviewer_note: str = ""
     reviewed_verdict: AssessmentVerdict | None = None
+    reviewed_applicability_status: ApplicabilityStatus | None = None
     evidence_pages: list[int] | None = None
     evidence_preview: str | None = None
     rationale: str | None = None

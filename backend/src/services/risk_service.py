@@ -1,11 +1,16 @@
 from dataclasses import dataclass
 
 from src.db.repositories import Repository
-from src.domain.enums import AssessmentVerdict, PageQualityFlag, RiskLevel
+from src.domain.enums import ApplicabilityStatus, AssessmentVerdict, PageQualityFlag, RiskLevel
 from src.domain.models import AssessmentRisk, DisclosureAssessment
+from src.domain.versions import CURRENT_RISK_RULE_VERSION, LEGACY_RISK_RULE_VERSION
+from src.services.review_priority_service import (
+    build_review_priority_context,
+    classify_review_priority,
+)
 
 
-RISK_RULE_VERSION = "risk-v1"
+RISK_RULE_VERSION = LEGACY_RISK_RULE_VERSION
 
 
 @dataclass(frozen=True)
@@ -57,15 +62,53 @@ def calculate_and_store_risk(
     *,
     trigger_event: str,
     snapshot_id: str | None = None,
+    risk_rule_version: str = RISK_RULE_VERSION,
+    applicability_status: ApplicabilityStatus | None = None,
+    analysis_failed: bool = False,
+    evidence_invalidated: bool = False,
+    page_conflict: bool = False,
+    source_conflict: bool = False,
+    reopened: bool = False,
+    formal_output_exception: bool = False,
+    commit: bool = True,
 ) -> AssessmentRisk:
-    classification = classify_assessment_risk(assessment)
+    evidence_status = None
+    classified_applicability = None
+    if risk_rule_version == LEGACY_RISK_RULE_VERSION:
+        classification = classify_assessment_risk(assessment)
+        risk_level = classification.risk_level
+        reason_codes = classification.reason_codes
+    elif risk_rule_version == CURRENT_RISK_RULE_VERSION:
+        classification = classify_review_priority(
+            build_review_priority_context(
+                assessment,
+                applicability_status=applicability_status,
+                analysis_failed=analysis_failed,
+                evidence_invalidated=evidence_invalidated,
+                page_conflict=page_conflict,
+                source_conflict=source_conflict,
+                reopened=reopened,
+                formal_output_exception=formal_output_exception,
+            )
+        )
+        risk_level = classification.review_priority
+        reason_codes = list(classification.reason_codes)
+        evidence_status = classification.evidence_status
+        classified_applicability = classification.applicability_status
+    else:
+        raise ValueError(f"unsupported risk rule version: {risk_rule_version}")
+
     risk = AssessmentRisk(
         risk_id=repo.new_risk_id(),
         assessment_id=assessment.assessment_id,
         snapshot_id=snapshot_id,
-        risk_level=classification.risk_level,
-        reason_codes=classification.reason_codes,
-        risk_rule_version=RISK_RULE_VERSION,
+        risk_level=risk_level,
+        reason_codes=reason_codes,
+        risk_rule_version=risk_rule_version,
+        evidence_status=evidence_status,
+        applicability_status=classified_applicability,
         trigger_event=trigger_event,
     )
-    return repo.save_assessment_risk(risk)
+    if commit:
+        return repo.save_assessment_risk(risk)
+    return repo.save_assessment_risk(risk, commit=False)

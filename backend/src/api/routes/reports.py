@@ -1,6 +1,7 @@
 from io import BytesIO
 from hashlib import sha256
 from pathlib import Path
+from typing import Literal
 from uuid import uuid4
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, UploadFile
@@ -16,6 +17,7 @@ from src.db.repositories import ReportMetadataLockedError, Repository
 from src.db.session import get_db_session
 from src.domain.enums import ReportStatus, RunStatus
 from src.domain.models import AnalysisRun, Report
+from src.domain.versions import CURRENT_RISK_RULE_VERSION
 from src.services.document_store import DocumentStore
 from src.services.metadata_detection import detect_report_metadata
 from src.services.analysis_job import execute_analysis_job
@@ -78,7 +80,11 @@ def get_report_file(report_id: str, session: Session = Depends(get_db_session)):
 
 
 @router.post("/upload", response_model=ReportUploadResponse)
-async def upload_report(file: UploadFile = File(...), session: Session = Depends(get_db_session)) -> dict:
+async def upload_report(
+    file: UploadFile = File(...),
+    duplicate_policy: Literal["reject", "create_new"] = Query(default="reject"),
+    session: Session = Depends(get_db_session),
+) -> dict:
     if not file.filename or not file.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF uploads are supported")
 
@@ -86,7 +92,7 @@ async def upload_report(file: UploadFile = File(...), session: Session = Depends
     file_hash = sha256(content).hexdigest()
     repo = Repository(session)
     existing = repo.find_report_by_hash(file_hash)
-    if existing is not None:
+    if existing is not None and duplicate_policy == "reject":
         raise HTTPException(
             status_code=409,
             detail={
@@ -114,7 +120,10 @@ async def upload_report(file: UploadFile = File(...), session: Session = Depends
             metadata_detected=detected.metadata,
         )
     )
-    repo.create_audit_event(None, "report_uploaded", {"report_id": report_id, "file_hash": saved.file_hash})
+    audit_payload = {"report_id": report_id, "file_hash": saved.file_hash}
+    if existing is not None:
+        audit_payload["duplicate_of_report_id"] = existing.report_id
+    repo.create_audit_event(None, "report_uploaded", audit_payload)
     return {
         "report_id": report_id,
         "original_filename": saved.original_filename,
@@ -178,6 +187,7 @@ def analyze_report(
                 report_id=report_id,
                 status=RunStatus.PENDING,
                 confirm_llm=request.confirm_llm,
+                risk_rule_version=CURRENT_RISK_RULE_VERSION,
                 eligible_requirement_count=577,
             )
         )

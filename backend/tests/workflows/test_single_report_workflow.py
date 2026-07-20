@@ -261,7 +261,13 @@ def test_single_report_workflow_completes_without_model_calls(repo_session):
     run = workflow.run("report-1", Path("report.pdf"), "hash-1", confirm_llm=False)
 
     assert run.status is RunStatus.COMPLETED
+    assert run.risk_rule_version == "risk-v2.1"
     assert repo_session.scalar(select(AssessmentRecord).where(AssessmentRecord.run_id == run.run_id)).model_called is False
+    assessment = repo.list_assessments_by_run(run.run_id)[0]
+    risk = repo.latest_risks_for_assessments([assessment.assessment_id])[assessment.assessment_id]
+    assert risk.risk_rule_version == "risk-v2.1"
+    assert risk.evidence_status is not None
+    assert risk.applicability_status is not None
 
 
 def test_single_report_workflow_preserves_successful_results_when_one_requirement_fails(repo_session):

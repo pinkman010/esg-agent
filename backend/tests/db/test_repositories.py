@@ -8,10 +8,22 @@ from sqlalchemy.orm import sessionmaker
 from src.db.base import Base
 from src.db.models import DisclosureTaskRecord, DocumentChunkRecord, DocumentPageRecord, RecommendationRecord
 from src.db.repositories import Repository
-from src.domain.enums import AssessmentVerdict, EvidenceSourceMethod, PageQualityFlag, ReportStatus, ReviewStatus, RunStatus
+from src.domain.enums import (
+    ApplicabilityStatus,
+    AssessmentVerdict,
+    EvidenceSourceMethod,
+    EvidenceStatus,
+    PageQualityFlag,
+    ReportStatus,
+    ReviewOperation,
+    ReviewStatus,
+    RiskLevel,
+    RunStatus,
+)
 from src.domain.models import (
     AnalysisRun,
     AnalysisStageEvent,
+    AssessmentRisk,
     DisclosureAssessment,
     DisclosureTask,
     DocumentChunk,
@@ -20,6 +32,7 @@ from src.domain.models import (
     Recommendation,
     Report,
     ReviewDecision,
+    ReviewSnapshot,
 )
 from tests.database import make_test_engine, reset_database
 
@@ -182,6 +195,21 @@ def test_repository_lists_and_confirms_report_metadata():
         assert confirmed.status == ReportStatus.READY_FOR_ANALYSIS
         assert confirmed.company_name == "测试公司"
         assert confirmed.metadata_confirmed_at is not None
+    finally:
+        session.close()
+        reset_database(engine)
+        engine.dispose()
+
+
+def test_repository_finds_latest_report_for_a_repeated_file_hash():
+    engine, session = make_session()
+    try:
+        repo = Repository(session)
+        repo.create_report(Report(report_id="report-1", original_filename="first.pdf", stored_path="first.pdf", file_hash="same-hash"))
+        time.sleep(0.01)
+        repo.create_report(Report(report_id="report-2", original_filename="second.pdf", stored_path="second.pdf", file_hash="same-hash"))
+
+        assert repo.find_report_by_hash("same-hash").report_id == "report-2"
     finally:
         session.close()
         reset_database(engine)
@@ -479,6 +507,87 @@ def test_repository_saves_pages_chunks_tasks_and_recommendations():
         )
         assert recommendation.recommendation_id == "recommendation-1"
         assert session.scalar(select(RecommendationRecord).where(RecommendationRecord.recommendation_id == "recommendation-1")).requirement_id == "GRI 302-1-a"
+    finally:
+        session.close()
+        reset_database(engine)
+        engine.dispose()
+
+
+def test_repository_round_trips_risk_v2_1_dimensions_and_reviewed_applicability():
+    engine, session = make_session()
+    try:
+        repo = Repository(session)
+        repo.create_report(
+            Report(
+                report_id="report-risk-v2-1",
+                original_filename="report.pdf",
+                stored_path="backend/data/runtime/uploads/report.pdf",
+                file_hash="hash-risk-v2-1",
+            )
+        )
+        repo.create_run(
+            AnalysisRun(
+                run_id="run-risk-v2-1",
+                report_id="report-risk-v2-1",
+                risk_rule_version="risk-v2.1",
+            )
+        )
+        assessment = DisclosureAssessment(
+            assessment_id="assessment-risk-v2-1",
+            run_id="run-risk-v2-1",
+            report_id="report-risk-v2-1",
+            standard_id="GRI",
+            standard_version="2021",
+            disclosure_id="GRI 2-1",
+            requirement_id="GRI 2-1-a",
+            verdict=AssessmentVerdict.UNKNOWN,
+            rationale="未发现有效证据。",
+            evidence=[],
+            review_status=ReviewStatus.NEEDS_MANUAL_REVIEW,
+        )
+        repo.save_assessment(assessment)
+
+        saved_risk = repo.save_assessment_risk(
+            AssessmentRisk(
+                risk_id="risk-v2-1",
+                assessment_id=assessment.assessment_id,
+                risk_level=RiskLevel.LOW,
+                reason_codes=["unknown_verdict", "no_valid_evidence"],
+                risk_rule_version="risk-v2.1",
+                trigger_event="analysis_completed",
+                evidence_status=EvidenceStatus.MISSING,
+                applicability_status=ApplicabilityStatus.UNDETERMINED,
+            )
+        )
+        saved_snapshot = repo.save_review_snapshot(
+            ReviewSnapshot(
+                snapshot_id="snapshot-risk-v2-1",
+                assessment_id=assessment.assessment_id,
+                run_id=assessment.run_id,
+                sequence=1,
+                operation_type=ReviewOperation.MODIFY,
+                reviewer_name="张三",
+                reason_code="applicability_reviewed",
+                reviewed_applicability_status=ApplicabilityStatus.APPLICABLE,
+            ),
+            [],
+        )
+
+        assert saved_risk.evidence_status is EvidenceStatus.MISSING
+        assert saved_risk.applicability_status is ApplicabilityStatus.UNDETERMINED
+        assert saved_snapshot.reviewed_applicability_status is ApplicabilityStatus.APPLICABLE
+        latest_risk = repo.latest_risks_for_assessments([assessment.assessment_id])[
+            assessment.assessment_id
+        ]
+        latest_snapshot = repo.latest_review_snapshot(assessment.assessment_id)
+        assert latest_risk.evidence_status is EvidenceStatus.MISSING
+        assert latest_risk.applicability_status is ApplicabilityStatus.UNDETERMINED
+        assert latest_snapshot.reviewed_applicability_status is ApplicabilityStatus.APPLICABLE
+
+        risk_columns = {column["name"] for column in inspect(engine).get_columns("assessment_risks")}
+        snapshot_columns = {column["name"] for column in inspect(engine).get_columns("review_snapshots")}
+        assert {"evidence_status", "applicability_status"}.issubset(risk_columns)
+        assert "reviewed_applicability_status" in snapshot_columns
     finally:
         session.close()
         reset_database(engine)

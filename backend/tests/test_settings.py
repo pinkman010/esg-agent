@@ -36,6 +36,22 @@ def test_demo_runtime_paths_resolve_from_project_root(monkeypatch):
     assert settings.derived_dir == project_root / "backend/data/runtime/demo/derived"
 
 
+def test_demo_example_env_file_is_parseable(monkeypatch):
+    backend_dir = Path(__file__).resolve().parents[1]
+    env_file = backend_dir / ".env.demo.example"
+    monkeypatch.chdir(backend_dir)
+    monkeypatch.delenv("BACKEND_CORS_ORIGINS", raising=False)
+
+    settings = Settings(_env_file=env_file)
+
+    assert settings.app_env == "demo"
+    assert settings.backend_cors_origins == ["http://localhost:3000"]
+    assert settings.database_url.endswith("/esg_agent_demo")
+    assert 'BACKEND_CORS_ORIGINS=\'["http://localhost:3000"]\'' in env_file.read_text(
+        encoding="utf-8"
+    )
+
+
 def test_demo_settings_reject_main_database():
     with pytest.raises(ValueError, match="esg_agent_demo"):
         Settings(

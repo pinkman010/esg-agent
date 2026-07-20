@@ -1,8 +1,22 @@
 import pytest
 from pydantic import ValidationError
 
-from src.domain.enums import AssessmentVerdict, EvidenceSourceMethod, ReviewStatus
-from src.domain.models import DisclosureAssessment, DisclosureTask, EvidenceItem
+from src.domain.enums import (
+    ApplicabilityStatus,
+    AssessmentVerdict,
+    EvidenceSourceMethod,
+    EvidenceStatus,
+    ReviewOperation,
+    ReviewStatus,
+    RiskLevel,
+)
+from src.domain.models import (
+    AssessmentRisk,
+    DisclosureAssessment,
+    DisclosureTask,
+    EvidenceItem,
+    ReviewSnapshot,
+)
 
 
 def make_evidence(**overrides):
@@ -147,3 +161,44 @@ def test_disclosure_task_can_carry_candidate_pdf_and_report_pages():
     assert task.candidate_pages == [1, 3, 6]
     assert task.candidate_pdf_pages == [1, 3, 6]
     assert task.candidate_report_pages == [None, 2, 5]
+
+
+def test_risk_v2_1_dimensions_are_explicit_and_legacy_risk_defaults_remain_compatible():
+    legacy = AssessmentRisk(
+        risk_id="risk-v1",
+        assessment_id="assessment-1",
+        risk_level=RiskLevel.HIGH,
+        reason_codes=["unknown_verdict"],
+        risk_rule_version="risk-v1",
+        trigger_event="analysis_completed",
+    )
+    current = AssessmentRisk(
+        risk_id="risk-v2-1",
+        assessment_id="assessment-1",
+        risk_level=RiskLevel.LOW,
+        reason_codes=["unknown_verdict", "no_valid_evidence"],
+        risk_rule_version="risk-v2.1",
+        trigger_event="analysis_completed",
+        evidence_status=EvidenceStatus.MISSING,
+        applicability_status=ApplicabilityStatus.UNDETERMINED,
+    )
+
+    assert legacy.evidence_status is None
+    assert legacy.applicability_status is None
+    assert current.evidence_status is EvidenceStatus.MISSING
+    assert current.applicability_status is ApplicabilityStatus.UNDETERMINED
+
+
+def test_review_snapshot_can_append_an_independent_applicability_decision():
+    snapshot = ReviewSnapshot(
+        snapshot_id="snapshot-1",
+        assessment_id="assessment-1",
+        run_id="run-1",
+        sequence=1,
+        operation_type=ReviewOperation.MODIFY,
+        reviewer_name="张三",
+        reason_code="applicability_reviewed",
+        reviewed_applicability_status=ApplicabilityStatus.APPLICABLE,
+    )
+
+    assert snapshot.reviewed_applicability_status is ApplicabilityStatus.APPLICABLE

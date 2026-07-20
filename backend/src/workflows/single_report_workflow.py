@@ -6,6 +6,7 @@ from src.agents.disclosure_agent import DisclosureAgent
 from src.db.repositories import Repository
 from src.domain.enums import PageQualityFlag, RunStatus
 from src.domain.models import AnalysisRun, AnalysisStageEvent, DisclosureTask, PageExtraction
+from src.domain.versions import CURRENT_RISK_RULE_VERSION
 from src.reports.profile import ReportProfile, load_report_profile
 from src.services.risk_service import calculate_and_store_risk
 from src.standards.evidence_contracts import get_requirement_contract
@@ -54,8 +55,12 @@ class SingleReportWorkflow:
                     report_id=report_id,
                     status=RunStatus.PENDING,
                     confirm_llm=confirm_llm,
+                    risk_rule_version=CURRENT_RISK_RULE_VERSION,
                 )
             )
+        current_run = self.repository.get_run(run_id)
+        if current_run is None:
+            raise LookupError(f"analysis run not found: {run_id}")
         self.repository.update_run_status(run_id, RunStatus.RUNNING)
         self.repository.create_audit_event(
             run_id,
@@ -115,6 +120,7 @@ class SingleReportWorkflow:
                         self.repository,
                         result.assessment,
                         trigger_event="analysis_completed",
+                        risk_rule_version=current_run.risk_rule_version,
                     )
                     succeeded += 1
                 except Exception as exc:

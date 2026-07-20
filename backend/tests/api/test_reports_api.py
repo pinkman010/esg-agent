@@ -1,6 +1,8 @@
 import pytest
 from pypdf import PdfWriter
+from sqlalchemy import select
 
+from src.db.models import AuditEventRecord
 from src.db.repositories import Repository
 from src.domain.enums import ReportStatus, RunStatus
 from src.domain.models import AnalysisRun, Report
@@ -93,6 +95,45 @@ async def test_upload_rejects_duplicate_file_hash_with_existing_report_id(api_cl
     assert duplicate.json()["detail"]["report_id"] == first.json()["report_id"]
     assert duplicate.json()["detail"]["existing_report_status"] == "uploaded"
     assert duplicate.json()["detail"]["can_start_new_demo"] is False
+
+
+async def test_upload_explicit_create_new_preserves_existing_report(api_client, api_session):
+    payload = make_pdf_bytes()
+    first = await api_client.post(
+        "/api/reports/upload",
+        files={"file": ("first.pdf", payload, "application/pdf")},
+    )
+
+    second = await api_client.post(
+        "/api/reports/upload",
+        params={"duplicate_policy": "create_new"},
+        files={"file": ("second.pdf", payload, "application/pdf")},
+    )
+    latest_duplicate = await api_client.post(
+        "/api/reports/upload",
+        files={"file": ("latest-duplicate.pdf", payload, "application/pdf")},
+    )
+
+    assert second.status_code == 200
+    assert second.json()["report_id"] != first.json()["report_id"]
+    assert second.json()["file_hash"] == first.json()["file_hash"]
+    assert latest_duplicate.status_code == 409
+    assert latest_duplicate.json()["detail"]["report_id"] == second.json()["report_id"]
+
+    reports = await api_client.get("/api/reports", params={"page": 1, "page_size": 10})
+    assert reports.status_code == 200
+    assert reports.json()["total"] == 2
+    assert {item["report_id"] for item in reports.json()["items"]} == {
+        first.json()["report_id"],
+        second.json()["report_id"],
+    }
+
+    upload_events = api_session.scalars(
+        select(AuditEventRecord)
+        .where(AuditEventRecord.event_type == "report_uploaded")
+        .order_by(AuditEventRecord.audit_event_id)
+    ).all()
+    assert upload_events[-1].event_payload["duplicate_of_report_id"] == first.json()["report_id"]
 
 
 async def test_reports_list_is_paginated_and_detail_exposes_metadata(api_client):
@@ -401,6 +442,36 @@ async def test_analyze_queues_background_job_with_identifiers_only(api_client, m
         "enable_ocr": True,
         "ocr_pages": [7],
     }
+
+
+async def test_analyze_creates_new_run_with_risk_v2_1(
+    api_client,
+    api_session,
+    monkeypatch,
+):
+    repo = Repository(api_session)
+    repo.create_report(
+        Report(
+            report_id="report-risk-v2-1",
+            original_filename="report.pdf",
+            stored_path="x",
+            file_hash="hash-risk-v2-1",
+            status=ReportStatus.READY_FOR_ANALYSIS,
+        )
+    )
+    monkeypatch.setattr(
+        "src.api.routes.reports.execute_analysis_job",
+        lambda **kwargs: None,
+    )
+
+    response = await api_client.post(
+        "/api/reports/report-risk-v2-1/analyze",
+        json={"confirm_llm": False},
+    )
+
+    assert response.status_code == 200
+    run = repo.get_run(response.json()["run_id"])
+    assert run.risk_rule_version == "risk-v2.1"
 
 
 async def test_reports_api_uses_real_gri_checklist_path():

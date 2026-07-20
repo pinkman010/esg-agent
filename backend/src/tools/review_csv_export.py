@@ -4,13 +4,17 @@ import json
 from enum import Enum
 from typing import Any
 
+from src.services.presentation_localization import localize_missing_items, localize_rationale
+
 
 REVIEW_CSV_FIELDS = [
     "requirement_id",
     "verdict",
     "review_status",
     "rationale",
+    "rationale_zh",
     "missing_items",
+    "missing_items_zh",
     "source_pdf_page",
     "source_report_page",
     "candidate_pdf_pages",
@@ -57,7 +61,11 @@ def _row_from_assessment(assessment: Any, evidence: Any) -> dict[str, str]:
         "verdict": _string(_get(assessment, "verdict")),
         "review_status": _string(_get(assessment, "review_status")),
         "rationale": _string(_get(assessment, "rationale")),
+        "rationale_zh": _string(localize_rationale(_get(assessment, "rationale"))),
         "missing_items": _json(_get(assessment, "missing_items", [])),
+        "missing_items_zh": _json(
+            localize_missing_items(_get(assessment, "missing_items", []))
+        ),
         "source_pdf_page": _string(_get(evidence, "source_pdf_page")),
         "source_report_page": _string(_get(evidence, "source_report_page")),
         "candidate_pdf_pages": _metadata_json(evidence, "candidate_pdf_pages"),

@@ -22,7 +22,7 @@ from src.db.models import (
     ReviewSnapshotRecord,
     ReviewChangeEventRecord,
 )
-from src.domain.enums import ActionPriority, ActionStatus, AssessmentVerdict, EvidenceSourceMethod, PageQualityFlag, ReportStatus, ReviewOperation, ReviewStatus, RiskLevel, RunStatus
+from src.domain.enums import ActionPriority, ActionStatus, ApplicabilityStatus, AssessmentVerdict, EvidenceSourceMethod, EvidenceStatus, PageQualityFlag, ReportStatus, ReviewOperation, ReviewStatus, RiskLevel, RunStatus
 from src.domain.models import AnalysisRun, AnalysisStageEvent, AssessmentRisk, DisclosureAssessment, DisclosureTask, DocumentChunk, EvidenceItem, ExportVersion, ImprovementAction, PageExtraction, Recommendation, Report, ReviewChangeEvent, ReviewDecision, ReviewSnapshot
 
 
@@ -84,7 +84,11 @@ class Repository:
         return self._report_from_record(record)
 
     def find_report_by_hash(self, file_hash: str) -> Report | None:
-        record = self.session.scalar(select(ReportRecord).where(ReportRecord.file_hash == file_hash))
+        record = self.session.scalar(
+            select(ReportRecord)
+            .where(ReportRecord.file_hash == file_hash)
+            .order_by(ReportRecord.created_at.desc(), ReportRecord.report_id.desc())
+        )
         return self._report_from_record(record) if record is not None else None
 
     def list_reports(
@@ -128,13 +132,22 @@ class Repository:
         self.session.refresh(record)
         return self._report_from_record(record)
 
-    def update_report_status(self, report_id: str, status: ReportStatus) -> Report:
+    def update_report_status(
+        self,
+        report_id: str,
+        status: ReportStatus,
+        *,
+        commit: bool = True,
+    ) -> Report:
         record = self.session.get(ReportRecord, report_id)
         if record is None:
             raise ValueError(f"report not found: {report_id}")
         record.status = status.value
         record.updated_at = func.now()
-        self.session.commit()
+        if commit:
+            self.session.commit()
+        else:
+            self.session.flush()
         self.session.refresh(record)
         return self._report_from_record(record)
 
@@ -391,6 +404,8 @@ class Repository:
         self,
         snapshot: ReviewSnapshot,
         changes: list[ReviewChangeEvent],
+        *,
+        commit: bool = True,
     ) -> ReviewSnapshot:
         record = ReviewSnapshotRecord(
             snapshot_id=snapshot.snapshot_id,
@@ -403,6 +418,11 @@ class Repository:
             reason_code=snapshot.reason_code,
             reviewer_note=snapshot.reviewer_note,
             reviewed_verdict=snapshot.reviewed_verdict.value if snapshot.reviewed_verdict else None,
+            reviewed_applicability_status=(
+                snapshot.reviewed_applicability_status.value
+                if snapshot.reviewed_applicability_status
+                else None
+            ),
             evidence_pages=snapshot.evidence_pages,
             evidence_preview=snapshot.evidence_preview,
             rationale=snapshot.rationale,
@@ -421,7 +441,10 @@ class Repository:
                     new_value=change.new_value,
                 )
             )
-        self.session.commit()
+        if commit:
+            self.session.commit()
+        else:
+            self.session.flush()
         self.session.refresh(record)
         return self._snapshot_from_record(record)
 
@@ -567,7 +590,12 @@ class Repository:
             record.status = "superseded"
             self.session.commit()
 
-    def save_assessment_risk(self, risk: AssessmentRisk) -> AssessmentRisk:
+    def save_assessment_risk(
+        self,
+        risk: AssessmentRisk,
+        *,
+        commit: bool = True,
+    ) -> AssessmentRisk:
         record = AssessmentRiskRecord(
             risk_id=risk.risk_id,
             assessment_id=risk.assessment_id,
@@ -575,10 +603,17 @@ class Repository:
             risk_level=risk.risk_level.value,
             reason_codes=risk.reason_codes,
             risk_rule_version=risk.risk_rule_version,
+            evidence_status=risk.evidence_status.value if risk.evidence_status else None,
+            applicability_status=(
+                risk.applicability_status.value if risk.applicability_status else None
+            ),
             trigger_event=risk.trigger_event,
         )
         self.session.add(record)
-        self.session.commit()
+        if commit:
+            self.session.commit()
+        else:
+            self.session.flush()
         self.session.refresh(record)
         return self._risk_from_record(record)
 
@@ -634,7 +669,14 @@ class Repository:
             decided_at=record.decided_at,
         )
 
-    def create_audit_event(self, run_id: str | None, event_type: str, payload: dict) -> None:
+    def create_audit_event(
+        self,
+        run_id: str | None,
+        event_type: str,
+        payload: dict,
+        *,
+        commit: bool = True,
+    ) -> None:
         self.session.add(
             AuditEventRecord(
                 run_id=run_id,
@@ -642,7 +684,10 @@ class Repository:
                 event_payload=payload,
             )
         )
-        self.session.commit()
+        if commit:
+            self.session.commit()
+        else:
+            self.session.flush()
 
     def count_audit_events(self, run_id: str) -> int:
         return len(self.session.scalars(select(AuditEventRecord).where(AuditEventRecord.run_id == run_id)).all())
@@ -856,6 +901,14 @@ class Repository:
             risk_level=RiskLevel(record.risk_level),
             reason_codes=record.reason_codes,
             risk_rule_version=record.risk_rule_version,
+            evidence_status=(
+                EvidenceStatus(record.evidence_status) if record.evidence_status else None
+            ),
+            applicability_status=(
+                ApplicabilityStatus(record.applicability_status)
+                if record.applicability_status
+                else None
+            ),
             trigger_event=record.trigger_event,
             calculated_at=record.calculated_at,
         )
@@ -872,6 +925,11 @@ class Repository:
             reason_code=record.reason_code,
             reviewer_note=record.reviewer_note,
             reviewed_verdict=AssessmentVerdict(record.reviewed_verdict) if record.reviewed_verdict else None,
+            reviewed_applicability_status=(
+                ApplicabilityStatus(record.reviewed_applicability_status)
+                if record.reviewed_applicability_status
+                else None
+            ),
             evidence_pages=record.evidence_pages,
             evidence_preview=record.evidence_preview,
             rationale=record.rationale,
