@@ -85,7 +85,7 @@
 
 ### 2.4 AssessmentDetail
 
-在 `AssessmentListItem` 基础上增加：`source_requirement_text`、`effective_requirement_text`、`context_requirement_ids`、`structure_status`、原始 `rationale` / `missing_items`、中文展示字段、evidence items、最新 snapshot id 和 `latest_ai_suggestion`。`risk_level` 为旧调用者保留，risk-v2.1 中与 `review_priority` 值相同。
+在 `AssessmentListItem` 基础上增加：`source_requirement_text`、`effective_requirement_text`、`context_requirement_ids`、`structure_status`、原始规则字段 `system_rationale` / `system_missing_items` 及中文展示字段、当前有效 `rationale` / `missing_items` 及中文展示字段、evidence items、最新 snapshot id 和 `latest_ai_suggestion`。规则字段不随人工 snapshot 改变；当前有效字段允许反映最新人工结果。`risk_level` 为旧调用者保留，risk-v2.1 中与 `review_priority` 值相同。
 
 EvidenceItem 对普通界面只返回：`evidence_id`、`source_pdf_page`、`source_report_page`、`page_label`、`evidence_preview`、`source_method`、`quality_flags`、`bbox`。内部 route metadata 不进入该 DTO。
 
@@ -213,7 +213,7 @@ multipart 上传 PDF。查询参数 `duplicate_policy` 取值为 `reject | creat
 
 ### `GET /api/runs/{run_id}/stages`
 
-返回已产生阶段的最新 `AnalysisStage` 事件，后端顺序为文件检查、PDF 解析、报告结构、requirement 匹配、证据判断、风险分级、AI 辅助、结果汇总。`confirm_llm=false` 时 AI 阶段为 skipped；尚未产生的阶段不由后端伪造。当前前端继续按七个规则业务阶段计算百分比，AI 阶段展示进入下一计划。服务启动时遗留的 `pending/running` run 会转为 `failed`。
+返回已产生阶段的最新 `AnalysisStage` 事件，后端和前端顺序均为文件检查、PDF 解析、报告结构、requirement 匹配、证据判断、风险分级、AI 辅助、结果汇总。`confirm_llm=false` 时 AI 阶段为 skipped；尚未产生的阶段不由后端伪造。前端按八阶段权重和真实 units 计算进度，终态强制 100% 且不保留运行转圈。服务启动时遗留的 `pending/running` run 会转为 `failed`。
 
 ### `POST /api/runs/{run_id}/retry-failed`
 

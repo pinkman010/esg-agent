@@ -4,7 +4,7 @@
 
 ## 项目状态
 
-确定性产品闭环和 AI 辅助后端已完成本地冻结验收：577 个标准核查单元被确定性编译为 493 个独立判断项、78 个父级上下文项和 6 个方法待确认项；规则 assessment、DeepSeek 独立建议和人工结果分层保存。225 条真实 AI 基线评估的一致率为 72.32%，证据越界、可比错页、schema 失败、模型失败和 guardrail 后的 false disclosed 均为 0；16 条 Sol/Pro 差异继续等待方法裁决。最终自动门禁为后端 626 项测试、前端 19 个测试文件 51 项测试、typecheck、production build、Envision v2 回归和 Goldwind 100 条人工 gold gate 全部通过。
+Envision 2024 中文报告的本地 MVP 已完成产品验收：577 个标准核查单元被确定性编译为 493 个独立判断项、78 个父级上下文项和 6 个方法待确认项；规则 assessment、DeepSeek 独立建议和人工结果分层保存。225 条真实 AI 工程基线评估的一致率为 72.32%，证据越界、可比错页、schema 失败、模型失败和 guardrail 后的 false disclosed 均为 0；16 条 Sol/Pro 差异继续等待方法裁决。最终门禁为后端 627 项测试、前端 22 个测试文件 80 项测试、typecheck、production build 和 Envision v2 回归全部通过。Goldwind 100 条历史 gate 继续保留，当前优先级低于 Envision 主线。
 
 ## 仓库结构
 
@@ -108,4 +108,4 @@ pnpm build
 
 当前数据库 head 为 `0011_ai_suggestions`。正式输出要求独立判断结果完整且全部高优先级项完成复核；草稿可随时生成，并明确披露未复核的中优先级和适用性待判定范围。完整产品验收说明见 `docs/DEVELOPMENT.md` 的“企业产品闭环验收”章节。
 
-当前处于 AI 辅助后端冻结检查点。前端尚未展示规则结论、AI 建议、人工结论三层交互，该部分进入下一份实施计划；已知风险和尚未实现的规划接口统一记录在 `docs/DEVELOPMENT.md`。
+当前已实现 metadata 显式 AI 授权、八阶段进度、规则/AI/人工三层复核、AI 建议采纳/修改/拒绝、493 个独立判断项定位和版本化草稿输出。完整结论与证据见 `docs/product/mvp-acceptance-report.md`；已知限制和尚未实现的规划接口记录在 `docs/DEVELOPMENT.md`。
