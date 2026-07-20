@@ -11,6 +11,23 @@ function response(body: unknown) {
 describe("ReviewWorkspace", () => {
   afterEach(() => vi.unstubAllGlobals());
 
+  it("opens a directly linked assessment after reviewer confirmation", async () => {
+    const fetchMock = vi.fn((input: string | URL | Request) => {
+      const url = String(input);
+      if (url.includes("/assessments/a-direct")) {
+        return Promise.resolve(response({ assessment_id: "a-direct", requirement_id: "GRI 2-22-a", requirement_text: "requirement", source_requirement_text: "source", effective_requirement_text: "effective", context_requirement_ids: [], structure_status: "verified", system_verdict: "disclosed", reviewed_verdict: null, effective_verdict: "disclosed", review_status: "pending_review", risk_level: "low", review_priority: "low", evidence_status: "valid_direct", applicability_status: "applicable", risk_reason_codes: [], rationale: "Evidence found.", rationale_display: "已找到直接证据。", missing_items: [], missing_items_display: [], evidence_items: [{ evidence_id: "e-direct", source_pdf_page: 13, source_report_page: 11, page_label: "PDF 第 13 页", evidence_preview: "evidence", source_method: "text", quality_flags: [], bbox: null }], latest_snapshot_id: null, latest_ai_suggestion: null }));
+      }
+      return Promise.resolve(response({ items: [], page: 1, page_size: 50, total: 0 }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    renderWithQuery(<ReviewWorkspace reportId="report-1" reviewerName="张三" initialAssessmentId="a-direct" />);
+
+    expect(await screen.findByRole("heading", { name: "GRI 2-22-a" })).toBeInTheDocument();
+    expect(screen.getByTitle("PDF 证据")).toHaveAttribute("src", expect.stringContaining("#page=13"));
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("/assessments/a-direct"), expect.anything());
+  });
+
   it("connects the risk queue, requirement detail, and PDF evidence columns", async () => {
     vi.stubGlobal("fetch", vi.fn()
       .mockResolvedValueOnce(response({ items: [{ assessment_id: "a-1", requirement_id: "GRI 2-1-a", requirement_name_zh: "组织法定名称", gri_topic: "GRI 2", system_verdict: "unknown", reviewed_verdict: null, effective_verdict: "unknown", risk_level: "high", review_priority: "high", evidence_status: "conflict", applicability_status: "applicable", risk_reason_codes: ["sufficiency_conflict"], review_status: "pending_review", evidence_count: 1, source_pdf_pages: [6], action_status: null }], page: 1, page_size: 50, total: 1 }))

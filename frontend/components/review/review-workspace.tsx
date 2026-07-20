@@ -8,9 +8,9 @@ import { PdfEvidenceViewer } from "@/components/evidence/pdf-evidence-viewer";
 import { AssessmentDetail } from "./assessment-detail";
 import { RiskQueue } from "./risk-queue";
 
-export function ReviewWorkspace({ reportId, reviewerName }: { reportId: string; reviewerName: string }) {
+export function ReviewWorkspace({ reportId, reviewerName, initialAssessmentId }: { reportId: string; reviewerName: string; initialAssessmentId?: string }) {
   const [queueType, setQueueType] = useState<"priority" | "applicability">("priority");
-  const [assessmentId, setAssessmentId] = useState<string | null>(null);
+  const [assessmentId, setAssessmentId] = useState<string | null>(initialAssessmentId || null);
   const [selectedPdfPage, setSelectedPdfPage] = useState<number | null>(null);
   const detail = useQuery({ queryKey: ["assessment-detail", reportId, assessmentId], queryFn: () => getAssessmentDetail(reportId, assessmentId ?? ""), enabled: assessmentId !== null });
 
