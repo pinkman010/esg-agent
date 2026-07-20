@@ -142,6 +142,10 @@ class AssessmentDetailResponse(BaseModel):
     context_requirement_ids: list[str]
     structure_status: str
     system_verdict: str
+    system_rationale: str
+    system_rationale_display: str
+    system_missing_items: list[str]
+    system_missing_items_display: list[str]
     reviewed_verdict: str | None = None
     effective_verdict: str
     review_status: str

@@ -149,8 +149,8 @@ export function buildRejectAIPayload(
       `人工拒绝 AI 建议并保留规则结论；AI suggestion_id=${suggestion.suggestion_id}`,
     ),
     reviewed_verdict: assessmentVerdict(detail.system_verdict),
-    rationale: detail.rationale,
-    missing_items: detail.missing_items,
+    rationale: detail.system_rationale ?? detail.rationale,
+    missing_items: detail.system_missing_items ?? detail.missing_items,
     evidence_pages: ruleEvidencePages(detail),
   };
 }

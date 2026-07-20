@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import type { AssessmentDetailResponse } from "@/lib/types";
@@ -15,6 +15,10 @@ function detail(assessmentId: string, requirementId: string): AssessmentDetailRe
     context_requirement_ids: [],
     structure_status: "verified",
     system_verdict: "unknown",
+    system_rationale: "No evidence was found.",
+    system_rationale_display: "未找到有效证据。",
+    system_missing_items: ["substantive disclosure"],
+    system_missing_items_display: ["实质披露内容"],
     reviewed_verdict: null,
     effective_verdict: "unknown",
     review_status: "pending_review",
@@ -60,6 +64,10 @@ describe("AssessmentDetail", () => {
       reviewed_verdict: "disclosed",
       effective_verdict: "disclosed",
       review_status: "reviewed_modified",
+      rationale: "人工采纳的 AI 依据。",
+      rationale_display: "人工采纳的 AI 依据。",
+      missing_items: [],
+      missing_items_display: [],
     } satisfies AssessmentDetailResponse;
 
     render(
@@ -72,6 +80,10 @@ describe("AssessmentDetail", () => {
     expect(screen.getByRole("heading", { name: "AI 辅助建议" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "人工复核" })).toBeInTheDocument();
     expect(screen.getByText("规则结论：待确认")).toBeInTheDocument();
+    const ruleAnalysis = screen.getByRole("region", { name: "规则分析" });
+    expect(within(ruleAnalysis).getByText("未找到有效证据。")).toBeInTheDocument();
+    expect(within(ruleAnalysis).getByText("实质披露内容")).toBeInTheDocument();
+    expect(within(ruleAnalysis).queryByText("人工采纳的 AI 依据。")).not.toBeInTheDocument();
     expect(screen.getByText("AI 建议结论")).toBeInTheDocument();
     expect(screen.getByText("当前有效结论：已披露")).toBeInTheDocument();
     expect(screen.getByText("当前复核状态：已修改")).toBeInTheDocument();

@@ -16,6 +16,9 @@ type Props = {
 };
 
 export function AssessmentDetail({ reportId, detail, reviewerName, onEvidencePage }: Props) {
+  const systemRationaleDisplay = detail.system_rationale_display ?? detail.rationale_display;
+  const systemMissingItemsDisplay = detail.system_missing_items_display ?? detail.missing_items_display;
+
   return (
     <div className="space-y-5 p-5">
       <header>
@@ -51,14 +54,14 @@ export function AssessmentDetail({ reportId, detail, reviewerName, onEvidencePag
 
         <div>
           <h4 className="text-sm font-semibold">判断依据</h4>
-          <p className="mt-2 text-sm leading-6">{detail.rationale_display}</p>
+          <p className="mt-2 text-sm leading-6">{systemRationaleDisplay}</p>
         </div>
 
         <div>
           <h4 className="text-sm font-semibold">缺失项</h4>
-          {detail.missing_items_display.length > 0 ? (
+          {systemMissingItemsDisplay.length > 0 ? (
             <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
-              {detail.missing_items_display.map((item) => <li key={item}>{item}</li>)}
+              {systemMissingItemsDisplay.map((item) => <li key={item}>{item}</li>)}
             </ul>
           ) : (
             <p className="mt-2 text-sm text-muted-foreground">无</p>

@@ -210,6 +210,41 @@ async def test_assessment_detail_keeps_audit_text_and_adds_chinese_display_field
     ]
 
 
+async def test_assessment_detail_keeps_rule_fields_separate_from_human_snapshot(
+    api_client,
+    api_session,
+):
+    seed_assessments(api_session)
+    ReviewService(Repository(api_session)).record(
+        "assessment-high",
+        operation_type=ReviewOperation.MODIFY,
+        reviewer_name="张三",
+        reason_code="ai_suggestion_accepted",
+        reviewer_note="人工采纳 AI 建议；AI suggestion_id=ai-suggestion-1",
+        reviewed_verdict=AssessmentVerdict.UNKNOWN,
+        rationale="AI 建议依据。",
+        missing_items=[],
+    )
+
+    response = await api_client.get(
+        "/api/reports/report-1/assessments/assessment-high"
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["rationale"] == "AI 建议依据。"
+    assert body["missing_items"] == []
+    assert body["system_rationale"].startswith("The report index contains")
+    assert body["system_rationale_display"] == (
+        "报告 GRI 内容索引包含从略说明，但未找到实质性披露证据。"
+    )
+    assert body["system_missing_items"][0].startswith("EVG&D source basis")
+    assert body["system_missing_items_display"] == [
+        "EVG&D 数据来源依据：经审计的财务报表或损益表，或经内部审计的管理账目",
+        "EVG&D 数据来源依据的适用性说明",
+    ]
+
+
 async def test_assessment_api_exposes_review_priority_alias_and_risk_v2_1_dimensions(
     api_client,
     api_session,

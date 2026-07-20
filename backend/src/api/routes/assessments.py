@@ -273,6 +273,12 @@ def assessment_detail(report_id: str, assessment_id: str, session: Session = Dep
         "context_requirement_ids": task.context_requirement_ids if task else [],
         "structure_status": task.structure_status if task else "legacy_unavailable",
         "system_verdict": assessment.verdict.value,
+        "system_rationale": assessment.rationale,
+        "system_rationale_display": localize_rationale(assessment.rationale),
+        "system_missing_items": assessment.missing_items,
+        "system_missing_items_display": localize_missing_items(
+            assessment.missing_items
+        ),
         "reviewed_verdict": snapshot.reviewed_verdict.value if snapshot and snapshot.reviewed_verdict else None,
         "effective_verdict": snapshot.reviewed_verdict.value if snapshot and snapshot.reviewed_verdict else assessment.verdict.value,
         "review_status": _review_status(snapshot),

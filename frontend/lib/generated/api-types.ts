@@ -914,6 +914,14 @@ export interface components {
             structure_status: string;
             /** System Verdict */
             system_verdict: string;
+            /** System Rationale */
+            system_rationale: string;
+            /** System Rationale Display */
+            system_rationale_display: string;
+            /** System Missing Items */
+            system_missing_items: string[];
+            /** System Missing Items Display */
+            system_missing_items_display: string[];
             /** Reviewed Verdict */
             reviewed_verdict?: string | null;
             /** Effective Verdict */

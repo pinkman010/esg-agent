@@ -38,6 +38,10 @@ const detail: AssessmentDetailResponse = {
   context_requirement_ids: [],
   structure_status: "verified",
   system_verdict: "unknown",
+  system_rationale: "No valid evidence was found.",
+  system_rationale_display: "未找到有效证据。",
+  system_missing_items: ["substantive disclosure"],
+  system_missing_items_display: ["实质披露内容"],
   reviewed_verdict: null,
   effective_verdict: "unknown",
   review_status: "pending_review",
@@ -114,7 +118,12 @@ describe("review draft", () => {
   });
 
   it("builds an auditable AI rejection payload from rule fields", () => {
-    expect(buildRejectAIPayload(detail, suggestion, "张三")).toMatchObject({
+    const reviewedDetail = {
+      ...detail,
+      rationale: "人工采纳的 AI 依据。",
+      missing_items: [],
+    };
+    expect(buildRejectAIPayload(reviewedDetail, suggestion, "张三")).toMatchObject({
       operation_type: "modify",
       reviewer_name: "张三",
       reason_code: "ai_suggestion_rejected",
