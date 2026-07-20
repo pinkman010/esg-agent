@@ -303,7 +303,7 @@ git commit -m "chore: checkpoint accepted deterministic mvp"
 - Create: `backend/data/manifests/gri_requirement_structure_v2.json`
 - Create: `backend/data/manifests/gri_requirement_checklist_v2.json`
 
-- [ ] **Step 1：先写结构模型和分类失败测试**
+- [x] **Step 1：先写结构模型和分类失败测试**
 
 测试必须覆盖以下接口：
 
@@ -366,7 +366,7 @@ uv run --no-sync pytest tests/standards/test_requirement_structure.py -q
 
 期望：因模块尚未存在而失败。
 
-- [ ] **Step 2：实现结构领域模型和编译器**
+- [x] **Step 2：实现结构领域模型和编译器**
 
 `requirement_structure.py` 必须定义：
 
@@ -417,7 +417,7 @@ class RequirementStructureDecision(BaseModel):
 - 对6条合并/拆分问题标记 `method_pending`。
 - 使用 `GRIAdapter._requirement_id_from_checklist_item()` 的等价公共 helper，把原始清单中的内部 ID（例如 `current_gap:GRI2:2-2:c:i`）稳定映射为人工工作簿 ID（例如 `GRI 2-2-c-i`）；双向映射不唯一时立即失败。
 
-- [ ] **Step 3：写工作簿导入测试**
+- [x] **Step 3：写工作簿导入测试**
 
 使用临时工作簿构造列 `requirement_id`、`standard_verified`、`primary_issue_type`、`review_note`、`second_review_note`，断言：
 
@@ -432,7 +432,7 @@ assert [item.issue_code for item in decisions] == [
 
 导入器只读取，不修改或另存人工工作簿。`missing_parent_context` 的父级 ID 优先从人工复核说明中的“依赖上级”提取，并与原始清单 `parent_requirement_id` 映射交叉验证；两者不一致或无法找到父级时停止生成。
 
-- [ ] **Step 4：实现确定性工作簿导入 CLI**
+- [x] **Step 4：实现确定性工作簿导入 CLI**
 
 CLI 只读取 Task 0 已归档并通过哈希校验的项目内工作簿：
 
@@ -462,7 +462,7 @@ uv run --no-sync python -m src.tools.build_requirement_structure_v2 `
 
 任一计数不一致时退出码为1，且不得覆盖已有 v2 文件。使用临时文件写完并通过校验后再原子替换目标。
 
-- [ ] **Step 5：运行结构测试和真实生成**
+- [x] **Step 5：运行结构测试和真实生成**
 
 ```powershell
 cd backend
@@ -476,7 +476,7 @@ uv run --no-sync python -m src.tools.build_requirement_structure_v2 `
 
 期望：测试通过；结构计数为 225/78/268/6；独立判断项为493；577个原始核查单元全部可映射。
 
-- [ ] **Step 6：提交标准结构产物**
+- [x] **Step 6：提交标准结构产物**
 
 ```powershell
 git add backend/src/standards/requirement_structure.py backend/src/tools/build_requirement_structure_v2.py backend/tests/standards/test_requirement_structure.py backend/tests/tools/test_build_requirement_structure_v2.py backend/data/manifests/gri_requirement_structure_v2.json backend/data/manifests/gri_requirement_checklist_v2.json
