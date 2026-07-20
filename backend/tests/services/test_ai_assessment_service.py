@@ -305,3 +305,29 @@ def test_assess_candidates_does_not_call_model_without_confirmation():
     assert client.calls == []
     assert suggestions[0].status is AISuggestionStatus.SKIPPED
     assert suggestions[0].guardrail_codes == ["external_model_not_confirmed"]
+
+
+def test_explicit_evaluation_calls_low_priority_and_no_evidence_candidates():
+    client = FakeLLMClient(
+        response={
+            "suggested_verdict": "unknown",
+            "evidence_ids": [],
+            "evidence_pdf_pages": [],
+            "rationale_zh": "输入中没有有效证据。",
+            "missing_items_zh": ["实质披露内容"],
+            "confidence": 0.7,
+        }
+    )
+    service = AIAssessmentService(client, max_calls_per_run=2)
+    candidates = [
+        _candidate(requirement_id="GRI 2-1-a", review_priority=RiskLevel.LOW),
+        _candidate(requirement_id="GRI 2-1-b", evidence=[]),
+    ]
+
+    suggestions = service.assess_explicit_candidates(
+        candidates,
+        confirm_llm=True,
+    )
+
+    assert len(client.calls) == 2
+    assert all(item.status is AISuggestionStatus.SUCCEEDED for item in suggestions)

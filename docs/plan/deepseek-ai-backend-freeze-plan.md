@@ -957,7 +957,7 @@ pnpm typecheck
 - Output local-only: `backend/data/runtime/evaluations/envision_2024/deepseek_225_evaluation_summary.json`
 - Modify: `backend/data/manifests/assets_manifest.json`
 
-- [ ] **Step 1：写评估读取和指标测试**
+- [x] **Step 1：写评估读取和指标测试**
 
 评估器只读取工作簿中：
 
@@ -973,7 +973,7 @@ missing_items_correct
 review_complete
 ```
 
-筛选条件为 `standard_verified=yes AND review_complete=complete`，预期225条。指标至少包括：
+筛选条件为 `standard_verified=yes AND review_complete=complete` 的224条，加上已由Sol与Pro独立确认的 `GRI 2-30-b` V1适用性例外1条，共225条。例外条目不伪造人工 verdict，单独计入 `applicability_exception_count`，因此 `verdict_evaluable_count=224`。指标至少包括：
 
 - `evaluated_count`；
 - `exact_verdict_agreement_count/rate`；
@@ -985,7 +985,7 @@ review_complete
 - `rules_ai_disagreement_count`；
 - 按人工 verdict 和系统 risk priority 的交叉分布。
 
-- [ ] **Step 2：实现无网络 dry-run**
+- [x] **Step 2：实现无网络 dry-run**
 
 CLI 必须支持：
 
@@ -999,7 +999,7 @@ uv run --no-sync python -m src.tools.evaluate_deepseek_against_manual_review `
 
 CLI 从工作簿“核查说明”读取 `report_id` 和 `run_id`，并验证数据库中对应报告、run和assessment均存在。评估器以 v2 manifest 的 `effective_requirement_text` 作为标准输入，以工作簿固定 run 的 evidence 作为证据输入，禁止继续使用旧 task 中不完整的叶子文本。dry-run 输出225条选择清单、预计调用数和预计输入字符，不实例化 LLM client。
 
-- [ ] **Step 3：运行 fake client 全量测试**
+- [x] **Step 3：运行 fake client 全量测试**
 
 ```powershell
 cd backend

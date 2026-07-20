@@ -42,6 +42,59 @@ class AIAssessmentCandidate:
     review_priority: RiskLevel
 
 
+def build_ai_assessment_messages(
+    candidate: AIAssessmentCandidate,
+) -> tuple[list[dict[str, str]], str]:
+    evidence_payload = [
+        {
+            "evidence_id": item.evidence_id,
+            "source_pdf_page": item.source_pdf_page or item.source_page,
+            "evidence_type": str(
+                item.metadata.get("evidence_type", "substantive_report_evidence")
+            ),
+            "quality_flags": [flag.value for flag in item.quality_flags],
+            "source_text": item.source_text[:MAX_EVIDENCE_TEXT_CHARS],
+        }
+        for item in candidate.assessment.evidence[:MAX_EVIDENCE_ITEMS]
+    ]
+    payload = {
+        "requirement_id": candidate.task.requirement_id,
+        "effective_requirement_text": candidate.task.requirement_text,
+        "source_requirement_text": candidate.task.source_requirement_text,
+        "context_requirement_ids": candidate.task.context_requirement_ids,
+        "rule_verdict": candidate.assessment.verdict.value,
+        "evidence": evidence_payload,
+        "required_json_output": {
+            "suggested_verdict": "disclosed|partially_disclosed|unknown",
+            "evidence_ids": [],
+            "evidence_pdf_pages": [],
+            "rationale_zh": "",
+            "missing_items_zh": [],
+            "confidence": 0.0,
+        },
+    }
+    messages = [
+        {"role": "system", "content": SYSTEM_MESSAGE.strip()},
+        {
+            "role": "user",
+            "content": json.dumps(
+                payload,
+                ensure_ascii=False,
+                sort_keys=True,
+                separators=(",", ":"),
+            ),
+        },
+    ]
+    canonical = json.dumps(
+        messages,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    input_hash = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+    return messages, input_hash
+
+
 class AIAssessmentService:
     def __init__(
         self,
@@ -73,52 +126,7 @@ class AIAssessmentService:
         self,
         candidate: AIAssessmentCandidate,
     ) -> tuple[list[dict[str, str]], str]:
-        evidence_payload = [
-            {
-                "evidence_id": item.evidence_id,
-                "source_pdf_page": item.source_pdf_page or item.source_page,
-                "evidence_type": self._evidence_type(item),
-                "quality_flags": [flag.value for flag in item.quality_flags],
-                "source_text": item.source_text[:MAX_EVIDENCE_TEXT_CHARS],
-            }
-            for item in self._prompt_evidence(candidate)
-        ]
-        payload = {
-            "requirement_id": candidate.task.requirement_id,
-            "effective_requirement_text": candidate.task.requirement_text,
-            "source_requirement_text": candidate.task.source_requirement_text,
-            "context_requirement_ids": candidate.task.context_requirement_ids,
-            "rule_verdict": candidate.assessment.verdict.value,
-            "evidence": evidence_payload,
-            "required_json_output": {
-                "suggested_verdict": "disclosed|partially_disclosed|unknown",
-                "evidence_ids": [],
-                "evidence_pdf_pages": [],
-                "rationale_zh": "",
-                "missing_items_zh": [],
-                "confidence": 0.0,
-            },
-        }
-        messages = [
-            {"role": "system", "content": SYSTEM_MESSAGE.strip()},
-            {
-                "role": "user",
-                "content": json.dumps(
-                    payload,
-                    ensure_ascii=False,
-                    sort_keys=True,
-                    separators=(",", ":"),
-                ),
-            },
-        ]
-        canonical = json.dumps(
-            messages,
-            ensure_ascii=False,
-            sort_keys=True,
-            separators=(",", ":"),
-        )
-        input_hash = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
-        return messages, input_hash
+        return build_ai_assessment_messages(candidate)
 
     def validate_response(
         self,
@@ -228,6 +236,43 @@ class AIAssessmentService:
             future_map = {
                 executor.submit(self._assess_one, candidate): index
                 for index, candidate in budgeted
+            }
+            for future in as_completed(future_map):
+                results[future_map[future]] = future.result()
+
+        return [result for result in results if result is not None]
+
+    def assess_explicit_candidates(
+        self,
+        candidates: list[AIAssessmentCandidate],
+        *,
+        confirm_llm: bool,
+    ) -> list[AIAssessmentSuggestion]:
+        ordered = sorted(
+            candidates,
+            key=lambda item: item.task.requirement_id,
+        )
+        if not confirm_llm:
+            return [
+                self._skipped_suggestion(candidate, "external_model_not_confirmed")
+                for candidate in ordered
+            ]
+
+        results: list[AIAssessmentSuggestion | None] = [None] * len(ordered)
+        budgeted = ordered[: self.max_calls_per_run]
+        for index, candidate in enumerate(
+            ordered[self.max_calls_per_run :],
+            start=self.max_calls_per_run,
+        ):
+            results[index] = self._skipped_suggestion(
+                candidate,
+                "call_budget_exhausted",
+            )
+
+        with ThreadPoolExecutor(max_workers=self.max_concurrency) as executor:
+            future_map = {
+                executor.submit(self._assess_one, candidate): index
+                for index, candidate in enumerate(budgeted)
             }
             for future in as_completed(future_map):
                 results[future_map[future]] = future.result()
