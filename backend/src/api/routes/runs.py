@@ -6,7 +6,7 @@ from src.db.repositories import Repository
 from src.db.session import get_db_session
 from src.domain.enums import ReportStatus
 from src.services.analysis_job import execute_analysis_job
-from src.api.schemas import AnalysisStageResponse
+from src.api.schemas import AnalysisRunResponse, AnalysisStageResponse
 from src.domain.models import AnalysisRun, AnalysisStageEvent, DisclosureAssessment, Recommendation
 
 router = APIRouter(prefix="/api/runs", tags=["runs"])
@@ -20,17 +20,38 @@ def dump_model(model):
     return model.model_dump(mode="json")
 
 
-@router.get("", response_model=list[AnalysisRun])
+def _run_response(repo: Repository, run: AnalysisRun) -> dict:
+    suggestions = repo.list_ai_suggestions_for_run(run.run_id)
+    stages = repo.list_latest_analysis_stages(run.run_id)
+    ai_stage = next(
+        (stage for stage in stages if stage.stage_code == "ai_assistance"),
+        None,
+    )
+    counts = {"succeeded": 0, "failed": 0, "skipped": 0}
+    for suggestion in suggestions:
+        counts[suggestion.status.value] += 1
+    return {
+        **dump_model(run),
+        "ai_summary": {
+            "eligible": ai_stage.total_units if ai_stage else 0,
+            **counts,
+        },
+    }
+
+
+@router.get("", response_model=list[AnalysisRunResponse])
 def list_runs(session: Session = Depends(get_db_session)) -> list[dict]:
-    return [dump_model(run) for run in Repository(session).list_runs()]
+    repo = Repository(session)
+    return [_run_response(repo, run) for run in repo.list_runs()]
 
 
-@router.get("/{run_id}", response_model=AnalysisRun)
+@router.get("/{run_id}", response_model=AnalysisRunResponse)
 def get_run(run_id: str, session: Session = Depends(get_db_session)) -> dict:
-    run = Repository(session).get_run(run_id)
+    repo = Repository(session)
+    run = repo.get_run(run_id)
     if run is None:
         raise HTTPException(status_code=404, detail="run not found")
-    return dump_model(run)
+    return _run_response(repo, run)
 
 
 @router.get("/{run_id}/assessments", response_model=list[DisclosureAssessment])

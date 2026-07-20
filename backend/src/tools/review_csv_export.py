@@ -15,6 +15,16 @@ REVIEW_CSV_FIELDS = [
     "rationale_zh",
     "missing_items",
     "missing_items_zh",
+    "structure_status",
+    "source_requirement_text",
+    "effective_requirement_text",
+    "ai_status",
+    "ai_suggested_verdict",
+    "ai_rationale_zh",
+    "ai_missing_items_zh",
+    "ai_evidence_pdf_pages",
+    "ai_model",
+    "ai_prompt_version",
     "source_pdf_page",
     "source_report_page",
     "candidate_pdf_pages",
@@ -56,6 +66,7 @@ def _evidence_sort_key(evidence: Any) -> tuple[int, int]:
 
 
 def _row_from_assessment(assessment: Any, evidence: Any) -> dict[str, str]:
+    ai_suggestion = _get(assessment, "latest_ai_suggestion") or {}
     row = {
         "requirement_id": _string(_get(assessment, "requirement_id")),
         "verdict": _string(_get(assessment, "verdict")),
@@ -66,6 +77,26 @@ def _row_from_assessment(assessment: Any, evidence: Any) -> dict[str, str]:
         "missing_items_zh": _json(
             localize_missing_items(_get(assessment, "missing_items", []))
         ),
+        "structure_status": _string(_get(assessment, "structure_status")),
+        "source_requirement_text": _string(
+            _get(assessment, "source_requirement_text")
+        ),
+        "effective_requirement_text": _string(
+            _get(assessment, "effective_requirement_text")
+        ),
+        "ai_status": _string(_get(ai_suggestion, "status")),
+        "ai_suggested_verdict": _string(
+            _get(ai_suggestion, "suggested_verdict")
+        ),
+        "ai_rationale_zh": _string(_get(ai_suggestion, "rationale_zh")),
+        "ai_missing_items_zh": _json(
+            _get(ai_suggestion, "missing_items_zh", [])
+        ),
+        "ai_evidence_pdf_pages": _json(
+            _get(ai_suggestion, "evidence_pdf_pages", [])
+        ),
+        "ai_model": _string(_get(ai_suggestion, "model")),
+        "ai_prompt_version": _string(_get(ai_suggestion, "prompt_version")),
         "source_pdf_page": _string(_get(evidence, "source_pdf_page")),
         "source_report_page": _string(_get(evidence, "source_report_page")),
         "candidate_pdf_pages": _metadata_json(evidence, "candidate_pdf_pages"),

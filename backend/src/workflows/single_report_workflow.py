@@ -4,11 +4,12 @@ from uuid import uuid4
 
 from src.agents.disclosure_agent import DisclosureAgent
 from src.db.repositories import Repository
-from src.domain.enums import PageQualityFlag, RunStatus
+from src.domain.enums import AISuggestionStatus, PageQualityFlag, RunStatus
 from src.domain.models import AnalysisRun, AnalysisStageEvent, DisclosureTask, PageExtraction
 from src.domain.versions import CURRENT_RISK_RULE_VERSION
 from src.reports.profile import ReportProfile, load_report_profile
 from src.services.risk_service import calculate_and_store_risk
+from src.services.ai_assessment_service import AIAssessmentCandidate, AIAssessmentService
 from src.standards.evidence_contracts import get_requirement_contract
 from src.standards.gri_report_index import build_report_index
 from src.tools.evidence_routing import EvidenceRouter
@@ -24,6 +25,7 @@ class SingleReportWorkflow:
         requirement_pack_path: Path | None = None,
         report_profile_path: Path | None = None,
         ocr_max_pages: int = 5,
+        ai_assessment_service: AIAssessmentService | None = None,
     ):
         self.repository = repository
         self.parser = parser
@@ -31,6 +33,7 @@ class SingleReportWorkflow:
         self.disclosure_agent = disclosure_agent
         self.requirement_pack_path = requirement_pack_path
         self.ocr_max_pages = ocr_max_pages
+        self.ai_assessment_service = ai_assessment_service
         self.report_profile: ReportProfile | None = (
             load_report_profile(report_profile_path) if report_profile_path is not None else None
         )
@@ -120,6 +123,7 @@ class SingleReportWorkflow:
             self._stage(run_id, "evidence_assessment", "running", 0, len(tasks))
             succeeded = 0
             failed_ids: list[str] = []
+            ai_candidates: list[AIAssessmentCandidate] = []
             for task in tasks:
                 self.repository.save_disclosure_task(task)
                 try:
@@ -130,11 +134,18 @@ class SingleReportWorkflow:
                         self.repository.save_evidence_item(result.assessment.assessment_id, evidence)
                     for recommendation in result.recommendations:
                         self.repository.save_recommendation(recommendation)
-                    calculate_and_store_risk(
+                    risk = calculate_and_store_risk(
                         self.repository,
                         result.assessment,
                         trigger_event="analysis_completed",
                         risk_rule_version=current_run.risk_rule_version,
+                    )
+                    ai_candidates.append(
+                        AIAssessmentCandidate(
+                            task=task,
+                            assessment=result.assessment,
+                            review_priority=risk.risk_level,
+                        )
                     )
                     succeeded += 1
                 except Exception as exc:
@@ -153,6 +164,11 @@ class SingleReportWorkflow:
                 len(tasks),
             )
             self._stage(run_id, "risk_classification", "completed", len(tasks), len(tasks))
+            self._run_ai_assistance(
+                run_id,
+                ai_candidates,
+                confirm_llm=confirm_llm,
+            )
             self._stage(run_id, "result_summary", "completed", len(tasks), len(tasks))
             self.repository.create_audit_event(run_id, "analysis_completed", {"report_id": report_id})
             status = RunStatus.COMPLETED
@@ -178,6 +194,71 @@ class SingleReportWorkflow:
             except Exception as persistence_exc:
                 self.repository.rollback()
                 raise exc from persistence_exc
+
+    def _run_ai_assistance(
+        self,
+        run_id: str,
+        candidates: list[AIAssessmentCandidate],
+        *,
+        confirm_llm: bool,
+    ) -> None:
+        if not confirm_llm:
+            self._stage(run_id, "ai_assistance", "skipped", 0, 0)
+            return
+        if self.ai_assessment_service is None:
+            self._stage(
+                run_id,
+                "ai_assistance",
+                "skipped",
+                0,
+                0,
+                "AI assistance service is not configured",
+            )
+            return
+
+        eligible_count = sum(
+            self.ai_assessment_service.should_call(candidate)
+            for candidate in candidates
+        )
+        if eligible_count == 0:
+            self._stage(run_id, "ai_assistance", "skipped", 0, 0)
+            return
+
+        self._stage(run_id, "ai_assistance", "running", 0, eligible_count)
+        suggestions = self.ai_assessment_service.assess_candidates(
+            candidates,
+            confirm_llm=True,
+        )
+        attempted_assessment_ids: list[str] = []
+        for suggestion in suggestions:
+            self.repository.append_ai_suggestion(suggestion)
+            if suggestion.status is not AISuggestionStatus.SKIPPED:
+                attempted_assessment_ids.append(suggestion.assessment_id)
+        self.repository.mark_assessments_model_called(attempted_assessment_ids)
+
+        failed_count = sum(
+            suggestion.status is AISuggestionStatus.FAILED
+            for suggestion in suggestions
+        )
+        if failed_count == eligible_count:
+            status = "failed"
+        elif failed_count:
+            status = "partially_failed"
+        else:
+            status = "completed"
+        error_summary = (
+            f"{failed_count} AI suggestion call(s) failed"
+            if failed_count
+            else None
+        )
+        self._stage(
+            run_id,
+            "ai_assistance",
+            status,
+            eligible_count,
+            eligible_count,
+            error_summary,
+        )
 
     def _stage(
         self,

@@ -604,6 +604,86 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AIAssessmentSuggestion */
+        AIAssessmentSuggestion: {
+            /** Suggestion Id */
+            suggestion_id: string;
+            /** Assessment Id */
+            assessment_id: string;
+            /** Run Id */
+            run_id: string;
+            status: components["schemas"]["AISuggestionStatus"];
+            /** Provider */
+            provider: string;
+            /** Model */
+            model: string;
+            /** Prompt Version */
+            prompt_version: string;
+            /** Input Hash */
+            input_hash: string;
+            suggested_verdict?: components["schemas"]["AssessmentVerdict"] | null;
+            /** Rationale Zh */
+            rationale_zh?: string | null;
+            /** Missing Items Zh */
+            missing_items_zh?: string[];
+            /** Evidence Ids */
+            evidence_ids?: string[];
+            /** Evidence Pdf Pages */
+            evidence_pdf_pages?: number[];
+            /** Confidence */
+            confidence?: number | null;
+            /** Guardrail Codes */
+            guardrail_codes?: string[];
+            /** Usage */
+            usage?: {
+                [key: string]: unknown;
+            };
+            /** Finish Reason */
+            finish_reason?: string | null;
+            /** Latency Ms */
+            latency_ms?: number | null;
+            /**
+             * Retry Count
+             * @default 0
+             */
+            retry_count: number;
+            /** Error Code */
+            error_code?: string | null;
+            /** Error Message */
+            error_message?: string | null;
+            /** Raw Response */
+            raw_response?: unknown | null;
+            /** Created At */
+            created_at?: string | null;
+        };
+        /**
+         * AISuggestionStatus
+         * @enum {string}
+         */
+        AISuggestionStatus: "succeeded" | "failed" | "skipped";
+        /** AISummaryResponse */
+        AISummaryResponse: {
+            /**
+             * Eligible
+             * @default 0
+             */
+            eligible: number;
+            /**
+             * Succeeded
+             * @default 0
+             */
+            succeeded: number;
+            /**
+             * Failed
+             * @default 0
+             */
+            failed: number;
+            /**
+             * Skipped
+             * @default 0
+             */
+            skipped: number;
+        };
         /**
          * ActionPriority
          * @enum {string}
@@ -646,10 +726,25 @@ export interface components {
              */
             risk_rule_version: string;
             /**
+             * Standard Unit Count
+             * @default 577
+             */
+            standard_unit_count: number;
+            /**
              * Eligible Requirement Count
              * @default 577
              */
             eligible_requirement_count: number;
+            /**
+             * Context Only Count
+             * @default 0
+             */
+            context_only_count: number;
+            /**
+             * Method Pending Count
+             * @default 0
+             */
+            method_pending_count: number;
             /**
              * Succeeded Requirement Count
              * @default 0
@@ -664,6 +759,73 @@ export interface components {
             failure_summary?: {
                 [key: string]: unknown;
             };
+        };
+        /** AnalysisRunResponse */
+        AnalysisRunResponse: {
+            /** Run Id */
+            run_id: string;
+            /** Report Id */
+            report_id: string;
+            /** @default pending */
+            status: components["schemas"]["RunStatus"];
+            /**
+             * Confirm Llm
+             * @default false
+             */
+            confirm_llm: boolean;
+            /** Started At */
+            started_at?: string | null;
+            /** Completed At */
+            completed_at?: string | null;
+            /** Error Message */
+            error_message?: string | null;
+            /** Parent Run Id */
+            parent_run_id?: string | null;
+            /**
+             * Engine Version
+             * @default rules-v1
+             */
+            engine_version: string;
+            /**
+             * Risk Rule Version
+             * @default risk-v1
+             */
+            risk_rule_version: string;
+            /**
+             * Standard Unit Count
+             * @default 577
+             */
+            standard_unit_count: number;
+            /**
+             * Eligible Requirement Count
+             * @default 577
+             */
+            eligible_requirement_count: number;
+            /**
+             * Context Only Count
+             * @default 0
+             */
+            context_only_count: number;
+            /**
+             * Method Pending Count
+             * @default 0
+             */
+            method_pending_count: number;
+            /**
+             * Succeeded Requirement Count
+             * @default 0
+             */
+            succeeded_requirement_count: number;
+            /**
+             * Failed Requirement Count
+             * @default 0
+             */
+            failed_requirement_count: number;
+            /** Failure Summary */
+            failure_summary?: {
+                [key: string]: unknown;
+            };
+            ai_summary: components["schemas"]["AISummaryResponse"];
         };
         /** AnalysisStageResponse */
         AnalysisStageResponse: {
@@ -742,6 +904,14 @@ export interface components {
             requirement_id: string;
             /** Requirement Text */
             requirement_text: string;
+            /** Source Requirement Text */
+            source_requirement_text: string;
+            /** Effective Requirement Text */
+            effective_requirement_text: string;
+            /** Context Requirement Ids */
+            context_requirement_ids: string[];
+            /** Structure Status */
+            structure_status: string;
             /** System Verdict */
             system_verdict: string;
             /** Reviewed Verdict */
@@ -772,6 +942,7 @@ export interface components {
             evidence_items: components["schemas"]["BusinessEvidenceItem"][];
             /** Latest Snapshot Id */
             latest_snapshot_id?: string | null;
+            latest_ai_suggestion?: components["schemas"]["AIAssessmentSuggestion"] | null;
         };
         /** AssessmentListItem */
         AssessmentListItem: {
@@ -1878,7 +2049,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AnalysisRun"][];
+                    "application/json": components["schemas"]["AnalysisRunResponse"][];
                 };
             };
         };
@@ -1900,7 +2071,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AnalysisRun"];
+                    "application/json": components["schemas"]["AnalysisRunResponse"];
                 };
             };
             /** @description Validation Error */

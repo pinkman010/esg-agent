@@ -5,13 +5,15 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import sessionmaker
 
-from src.agents.disclosure_agent import DisclosureAgent
+from src.agents.disclosure_agent import DisclosureAgent, DisclosureAgentResult
 from src.db.base import Base
 from src.db.models import AnalysisStageEventRecord, AssessmentRecord, AuditEventRecord, DisclosureTaskRecord, EvidenceItemRecord, RecommendationRecord
 from src.db.repositories import Repository
-from src.domain.enums import EvidenceSourceMethod, RunStatus
-from src.domain.models import AnalysisRun, DisclosureRequirement, DocumentChunk, PageExtraction, Report
+from src.domain.enums import AssessmentVerdict, EvidenceSourceMethod, RunStatus
+from src.domain.models import AnalysisRun, DisclosureAssessment, DisclosureRequirement, DocumentChunk, EvidenceItem, PageExtraction, Report
+from src.services.ai_assessment_service import AIAssessmentService
 from src.services.document_parser import ParsedDocument
+from src.tools.llm_client import LLMCompletionError, LLMCompletionResult
 from src.workflows.single_report_workflow import SingleReportWorkflow
 from tests.database import make_test_engine, reset_database
 
@@ -166,6 +168,71 @@ class SelectiveFailingAgent:
         return self.delegate.analyze(task, chunks, confirm_llm=confirm_llm)
 
 
+class DirectEvidenceAgent:
+    def analyze(self, task, chunks, confirm_llm=False):
+        evidence = EvidenceItem(
+            evidence_id=f"evidence-{task.requirement_id}",
+            run_id=task.run_id,
+            report_id=task.report_id,
+            source_text="报告披露了与当前要求直接相关的事实。",
+            source_page=1,
+            source_pdf_page=1,
+            source_file_hash="hash-1",
+            source_method=EvidenceSourceMethod.PDFPLUMBER,
+            metadata={
+                "evidence_type": "substantive_report_evidence",
+                "evidence_quality_warning": True,
+            },
+        )
+        return DisclosureAgentResult(
+            assessment=DisclosureAssessment(
+                assessment_id=f"assessment-{task.requirement_id}",
+                run_id=task.run_id,
+                report_id=task.report_id,
+                standard_id=task.standard_id,
+                standard_version=task.standard_version,
+                disclosure_id=task.disclosure_id,
+                requirement_id=task.requirement_id,
+                verdict=AssessmentVerdict.PARTIALLY_DISCLOSED,
+                rationale="规则判断为部分披露。",
+                missing_items=["剩余披露项"],
+                evidence=[evidence],
+            ),
+            recommendations=[],
+        )
+
+
+class WorkflowFakeLLMClient:
+    model = "deepseek-v4-flash"
+
+    def __init__(self, fail_requirement_ids=None):
+        self.calls = []
+        self.fail_requirement_ids = set(fail_requirement_ids or [])
+
+    def complete_json(self, *, messages, confirm_llm):
+        payload = json.loads(messages[1]["content"])
+        requirement_id = payload["requirement_id"]
+        self.calls.append(requirement_id)
+        if requirement_id in self.fail_requirement_ids:
+            raise LLMCompletionError(error_code="llm_connection_error", retry_count=2)
+        evidence = payload["evidence"][0]
+        return LLMCompletionResult(
+            content={
+                "suggested_verdict": "disclosed",
+                "evidence_ids": [evidence["evidence_id"]],
+                "evidence_pdf_pages": [evidence["source_pdf_page"]],
+                "rationale_zh": "输入证据直接支持当前要求。",
+                "missing_items_zh": [],
+                "confidence": 0.9,
+            },
+            model=self.model,
+            finish_reason="stop",
+            usage={"total_tokens": 50},
+            latency_ms=10,
+            retry_count=0,
+        )
+
+
 class RollbackRequiredRepository:
     def __init__(self):
         self.runs = {}
@@ -278,6 +345,127 @@ def test_single_report_workflow_completes_without_model_calls(repo_session):
     assert risk.risk_rule_version == "risk-v2.1"
     assert risk.evidence_status is not None
     assert risk.applicability_status is not None
+    ai_stage = next(
+        stage for stage in repo.list_latest_analysis_stages(run.run_id)
+        if stage.stage_code == "ai_assistance"
+    )
+    assert ai_stage.status == "skipped"
+    assert (ai_stage.completed_units, ai_stage.total_units) == (0, 0)
+    assert [stage.stage_code for stage in repo.list_latest_analysis_stages(run.run_id)] == [
+        "file_validation",
+        "pdf_parsing",
+        "report_structure",
+        "requirement_matching",
+        "evidence_assessment",
+        "risk_classification",
+        "ai_assistance",
+        "result_summary",
+    ]
+
+
+def test_single_report_workflow_appends_ai_suggestions_without_overwriting_rule_verdicts(
+    repo_session,
+):
+    repo = Repository(repo_session)
+    seed_report(repo)
+    client = WorkflowFakeLLMClient()
+    workflow = SingleReportWorkflow(
+        repo,
+        FakeParser(),
+        TwoTaskAdapter(),
+        DirectEvidenceAgent(),
+        ai_assessment_service=AIAssessmentService(client, max_calls_per_run=2),
+    )
+
+    run = workflow.run("report-1", Path("report.pdf"), "hash-1", confirm_llm=True)
+
+    assert run.status is RunStatus.COMPLETED
+    assert sorted(client.calls) == ["GRI 2-1-a", "GRI 2-1-b"]
+    assessments = repo.list_assessments_by_run(run.run_id)
+    assert {item.verdict for item in assessments} == {AssessmentVerdict.PARTIALLY_DISCLOSED}
+    assert all(item.model_called for item in assessments)
+    suggestions = repo.list_ai_suggestions_for_run(run.run_id)
+    assert len(suggestions) == 2
+    assert all(item.status.value == "succeeded" for item in suggestions)
+    ai_stage = next(
+        stage for stage in repo.list_latest_analysis_stages(run.run_id)
+        if stage.stage_code == "ai_assistance"
+    )
+    assert ai_stage.status == "completed"
+    assert (ai_stage.completed_units, ai_stage.total_units) == (2, 2)
+
+
+def test_ai_timeout_only_marks_ai_stage_partially_failed(repo_session):
+    repo = Repository(repo_session)
+    seed_report(repo)
+    client = WorkflowFakeLLMClient(fail_requirement_ids={"GRI 2-1-b"})
+    workflow = SingleReportWorkflow(
+        repo,
+        FakeParser(),
+        TwoTaskAdapter(),
+        DirectEvidenceAgent(),
+        ai_assessment_service=AIAssessmentService(client, max_calls_per_run=2),
+    )
+
+    run = workflow.run("report-1", Path("report.pdf"), "hash-1", confirm_llm=True)
+
+    assert run.status is RunStatus.COMPLETED
+    suggestions = repo.list_ai_suggestions_for_run(run.run_id)
+    assert {item.status.value for item in suggestions} == {"succeeded", "failed"}
+    ai_stage = next(
+        stage for stage in repo.list_latest_analysis_stages(run.run_id)
+        if stage.stage_code == "ai_assistance"
+    )
+    assert ai_stage.status == "partially_failed"
+
+
+def test_all_ai_failures_do_not_fail_rule_run(repo_session):
+    repo = Repository(repo_session)
+    seed_report(repo)
+    client = WorkflowFakeLLMClient(
+        fail_requirement_ids={"GRI 2-1-a", "GRI 2-1-b"}
+    )
+    workflow = SingleReportWorkflow(
+        repo,
+        FakeParser(),
+        TwoTaskAdapter(),
+        DirectEvidenceAgent(),
+        ai_assessment_service=AIAssessmentService(client, max_calls_per_run=2),
+    )
+
+    run = workflow.run("report-1", Path("report.pdf"), "hash-1", confirm_llm=True)
+
+    assert run.status is RunStatus.COMPLETED
+    assert len(repo.list_assessments_by_run(run.run_id)) == 2
+    assert all(
+        item.status.value == "failed"
+        for item in repo.list_ai_suggestions_for_run(run.run_id)
+    )
+    ai_stage = next(
+        stage for stage in repo.list_latest_analysis_stages(run.run_id)
+        if stage.stage_code == "ai_assistance"
+    )
+    assert ai_stage.status == "failed"
+
+
+def test_ai_budget_skips_do_not_mark_assessment_model_called(repo_session):
+    repo = Repository(repo_session)
+    seed_report(repo)
+    client = WorkflowFakeLLMClient()
+    workflow = SingleReportWorkflow(
+        repo,
+        FakeParser(),
+        TwoTaskAdapter(),
+        DirectEvidenceAgent(),
+        ai_assessment_service=AIAssessmentService(client, max_calls_per_run=1),
+    )
+
+    run = workflow.run("report-1", Path("report.pdf"), "hash-1", confirm_llm=True)
+
+    assessments = repo.list_assessments_by_run(run.run_id)
+    assert sum(item.model_called for item in assessments) == 1
+    suggestions = repo.list_ai_suggestions_for_run(run.run_id)
+    assert sum(item.status.value == "skipped" for item in suggestions) == 1
 
 
 def test_single_report_workflow_persists_standard_scope_counts(repo_session):

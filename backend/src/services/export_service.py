@@ -15,6 +15,9 @@ from src.services.presentation_localization import localize_missing_items, local
 from src.domain.versions import CURRENT_RISK_RULE_VERSION
 
 
+AI_DISCLAIMER = "AI建议未经人工确认时不构成最终披露结论。"
+
+
 class ExportGateError(PermissionError):
     def __init__(self, code: str, remaining: int):
         super().__init__(f"{code}: {remaining}")
@@ -25,6 +28,8 @@ class ExportGateError(PermissionError):
 def assessments_rows(repository: Repository, run_id: str) -> list[dict]:
     rows = []
     for assessment in repository.list_assessments_by_run(run_id):
+        task = repository.get_disclosure_task(run_id, assessment.requirement_id)
+        ai_suggestion = repository.get_latest_ai_suggestion(assessment.assessment_id)
         first_evidence = assessment.evidence[0] if assessment.evidence else None
         source_pdf_page = first_evidence.source_pdf_page if first_evidence else None
         source_report_page = first_evidence.source_report_page if first_evidence else None
@@ -39,6 +44,13 @@ def assessments_rows(repository: Repository, run_id: str) -> list[dict]:
                 "standard_version": assessment.standard_version,
                 "disclosure_id": assessment.disclosure_id,
                 "requirement_id": assessment.requirement_id,
+                "structure_status": task.structure_status if task else "legacy_unavailable",
+                "source_requirement_text": (
+                    task.source_requirement_text if task and task.source_requirement_text else assessment.requirement_id
+                ),
+                "effective_requirement_text": (
+                    task.requirement_text if task else assessment.requirement_id
+                ),
                 "verdict": assessment.verdict.value,
                 "rationale": assessment.rationale,
                 "rationale_zh": localize_rationale(assessment.rationale),
@@ -58,6 +70,17 @@ def assessments_rows(repository: Repository, run_id: str) -> list[dict]:
                 "requires_vlm": first_evidence.requires_vlm if first_evidence else False,
                 "ocr_or_vlm_reason": first_evidence.ocr_or_vlm_reason if first_evidence else None,
                 "evidence_preview": first_evidence.evidence_preview if first_evidence else None,
+                "ai_status": ai_suggestion.status.value if ai_suggestion else None,
+                "ai_suggested_verdict": (
+                    ai_suggestion.suggested_verdict.value
+                    if ai_suggestion and ai_suggestion.suggested_verdict
+                    else None
+                ),
+                "ai_rationale_zh": ai_suggestion.rationale_zh if ai_suggestion else None,
+                "ai_missing_items_zh": ai_suggestion.missing_items_zh if ai_suggestion else [],
+                "ai_evidence_pdf_pages": ai_suggestion.evidence_pdf_pages if ai_suggestion else [],
+                "ai_model": ai_suggestion.model if ai_suggestion else None,
+                "ai_prompt_version": ai_suggestion.prompt_version if ai_suggestion else None,
             }
         )
     return rows
@@ -233,6 +256,7 @@ class VersionedExportService:
             workbook = Workbook()
             sheet = workbook.active
             sheet.title = "GRI核查"
+            sheet.append([AI_DISCLAIMER])
             if rows:
                 sheet.append(list(rows[0].keys()))
                 for row in rows:
@@ -246,11 +270,12 @@ class VersionedExportService:
             doc.drawString(50, 800, "ESG 管理层摘要" + ("（草稿）" if is_draft else ""))
             doc.setFont("STSong-Light", 10)
             doc.drawString(50, 775, f"报告：{report_id}  核查条目：{len(rows)}")
+            doc.drawString(50, 755, AI_DISCLAIMER)
             doc.save()
         elif format_name == "print_html":
             path = destination / "print.html"
             label = "<strong>草稿</strong>" if is_draft else "正式版本"
-            path.write_text(f"<!doctype html><html lang='zh'><meta charset='utf-8'><title>ESG 核查</title><body><h1>ESG 核查表</h1><p>{label}</p><p>共 {len(rows)} 条</p></body></html>", encoding="utf-8")
+            path.write_text(f"<!doctype html><html lang='zh'><meta charset='utf-8'><title>ESG 核查</title><body><h1>ESG 核查表</h1><p>{label}</p><p>{AI_DISCLAIMER}</p><p>共 {len(rows)} 条</p></body></html>", encoding="utf-8")
         else:
             raise ValueError(f"unsupported export format: {format_name}")
         content = path.read_bytes()

@@ -229,6 +229,8 @@ def assessment_detail(report_id: str, assessment_id: str, session: Session = Dep
         raise HTTPException(status_code=404, detail="assessment not found")
     risk = repo.latest_risks_for_assessments([assessment_id]).get(assessment_id)
     snapshot = repo.latest_review_snapshot(assessment_id)
+    task = repo.get_disclosure_task(assessment.run_id, assessment.requirement_id)
+    ai_suggestion = repo.get_latest_ai_suggestion(assessment_id)
     evidence_items = []
     for evidence in assessment.evidence:
         pdf_page = evidence.source_pdf_page or evidence.source_page
@@ -263,7 +265,13 @@ def assessment_detail(report_id: str, assessment_id: str, session: Session = Dep
     return {
         "assessment_id": assessment.assessment_id,
         "requirement_id": assessment.requirement_id,
-        "requirement_text": assessment.requirement_id,
+        "requirement_text": task.requirement_text if task else assessment.requirement_id,
+        "source_requirement_text": (
+            task.source_requirement_text if task and task.source_requirement_text else assessment.requirement_id
+        ),
+        "effective_requirement_text": task.requirement_text if task else assessment.requirement_id,
+        "context_requirement_ids": task.context_requirement_ids if task else [],
+        "structure_status": task.structure_status if task else "legacy_unavailable",
         "system_verdict": assessment.verdict.value,
         "reviewed_verdict": snapshot.reviewed_verdict.value if snapshot and snapshot.reviewed_verdict else None,
         "effective_verdict": snapshot.reviewed_verdict.value if snapshot and snapshot.reviewed_verdict else assessment.verdict.value,
@@ -284,4 +292,7 @@ def assessment_detail(report_id: str, assessment_id: str, session: Session = Dep
         "missing_items_display": localize_missing_items(missing_items),
         "evidence_items": evidence_items,
         "latest_snapshot_id": snapshot.snapshot_id if snapshot else None,
+        "latest_ai_suggestion": (
+            ai_suggestion.model_dump(mode="json") if ai_suggestion else None
+        ),
     }

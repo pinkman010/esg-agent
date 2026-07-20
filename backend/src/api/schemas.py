@@ -4,6 +4,8 @@ from typing import Any, Literal
 from pydantic import BaseModel
 
 from src.domain.enums import ReportStatus, RunStatus
+from src.domain.ai_models import AIAssessmentSuggestion
+from src.domain.models import AnalysisRun
 
 
 class ReportUploadResponse(BaseModel):
@@ -67,6 +69,17 @@ class AnalysisStageResponse(BaseModel):
     created_at: datetime | None = None
 
 
+class AISummaryResponse(BaseModel):
+    eligible: int = 0
+    succeeded: int = 0
+    failed: int = 0
+    skipped: int = 0
+
+
+class AnalysisRunResponse(AnalysisRun):
+    ai_summary: AISummaryResponse
+
+
 class AssessmentListItem(BaseModel):
     assessment_id: str
     requirement_id: str
@@ -124,6 +137,10 @@ class AssessmentDetailResponse(BaseModel):
     assessment_id: str
     requirement_id: str
     requirement_text: str
+    source_requirement_text: str
+    effective_requirement_text: str
+    context_requirement_ids: list[str]
+    structure_status: str
     system_verdict: str
     reviewed_verdict: str | None = None
     effective_verdict: str
@@ -139,6 +156,7 @@ class AssessmentDetailResponse(BaseModel):
     missing_items_display: list[str]
     evidence_items: list[BusinessEvidenceItem]
     latest_snapshot_id: str | None = None
+    latest_ai_suggestion: AIAssessmentSuggestion | None = None
 
 
 class AuditEvent(BaseModel):

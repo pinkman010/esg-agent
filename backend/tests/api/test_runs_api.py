@@ -3,7 +3,8 @@ import pytest
 pytestmark = pytest.mark.anyio
 
 from src.db.repositories import Repository
-from src.domain.enums import AssessmentVerdict, EvidenceSourceMethod, ReviewStatus, RunStatus
+from src.domain.ai_models import AIAssessmentSuggestion
+from src.domain.enums import AISuggestionStatus, AssessmentVerdict, EvidenceSourceMethod, ReviewStatus, RunStatus
 from src.domain.models import AnalysisRun, AnalysisStageEvent, DisclosureAssessment, EvidenceItem, Recommendation, Report
 
 
@@ -42,6 +43,56 @@ async def test_runs_api_lists_run_detail_assessments_and_recommendations(api_cli
     assert detail.json()["status"] == "completed"
     assert assessments.json()[0]["evidence"][0]["source_page"] == 1
     assert recommendations.json()[0]["recommendation_id"] == "recommendation-1"
+
+
+async def test_run_detail_exposes_structure_counts_and_ai_summary(api_client, api_session):
+    seed_run(api_session)
+    repo = Repository(api_session)
+    repo.update_run_status(
+        "run-1",
+        RunStatus.COMPLETED,
+        standard_unit_count=577,
+        eligible_requirement_count=493,
+        context_only_count=78,
+        method_pending_count=6,
+    )
+    repo.append_ai_suggestion(
+        AIAssessmentSuggestion(
+            suggestion_id="ai-suggestion-1",
+            assessment_id="assessment-1",
+            run_id="run-1",
+            status=AISuggestionStatus.SUCCEEDED,
+            provider="deepseek",
+            model="deepseek-v4-flash",
+            prompt_version="deepseek-gri-assist-v1",
+            input_hash="a" * 64,
+            suggested_verdict=AssessmentVerdict.DISCLOSED,
+        )
+    )
+    repo.append_analysis_stage_event(
+        AnalysisStageEvent(
+            run_id="run-1",
+            stage_code="ai_assistance",
+            status="completed",
+            completed_units=1,
+            total_units=1,
+        )
+    )
+
+    response = await api_client.get("/api/runs/run-1")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["standard_unit_count"] == 577
+    assert body["eligible_requirement_count"] == 493
+    assert body["context_only_count"] == 78
+    assert body["method_pending_count"] == 6
+    assert body["ai_summary"] == {
+        "eligible": 1,
+        "succeeded": 1,
+        "failed": 0,
+        "skipped": 0,
+    }
 
 
 async def test_runs_api_returns_latest_stage_events(api_client, api_session):

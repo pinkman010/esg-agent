@@ -272,6 +272,7 @@ class Repository:
             "requirement_matching",
             "evidence_assessment",
             "risk_classification",
+            "ai_assistance",
             "result_summary",
         ]
         order = {code: index for index, code in enumerate(stage_order)}
@@ -890,6 +891,37 @@ class Repository:
         self.session.commit()
         return task
 
+    def get_disclosure_task(
+        self,
+        run_id: str,
+        requirement_id: str,
+    ) -> DisclosureTask | None:
+        record = self.session.scalar(
+            select(DisclosureTaskRecord).where(
+                DisclosureTaskRecord.run_id == run_id,
+                DisclosureTaskRecord.requirement_id == requirement_id,
+            )
+        )
+        return self._disclosure_task_from_record(record) if record is not None else None
+
+    def list_disclosure_tasks_by_run(self, run_id: str) -> list[DisclosureTask]:
+        records = self.session.scalars(
+            select(DisclosureTaskRecord)
+            .where(DisclosureTaskRecord.run_id == run_id)
+            .order_by(DisclosureTaskRecord.requirement_id, DisclosureTaskRecord.task_id)
+        ).all()
+        return [self._disclosure_task_from_record(record) for record in records]
+
+    def mark_assessments_model_called(self, assessment_ids: list[str]) -> None:
+        if not assessment_ids:
+            return
+        records = self.session.scalars(
+            select(AssessmentRecord).where(AssessmentRecord.assessment_id.in_(assessment_ids))
+        ).all()
+        for record in records:
+            record.model_called = True
+        self.session.commit()
+
     def save_recommendation(self, recommendation: Recommendation) -> Recommendation:
         record = RecommendationRecord(
             recommendation_id=recommendation.recommendation_id,
@@ -921,6 +953,22 @@ class Repository:
             requirement_id=record.requirement_id,
             recommendation_text=record.recommendation_text,
             created_at=record.created_at,
+        )
+
+    def _disclosure_task_from_record(self, record: DisclosureTaskRecord) -> DisclosureTask:
+        return DisclosureTask(
+            task_id=record.task_id,
+            run_id=record.run_id,
+            report_id=record.report_id,
+            standard_id=record.standard_id,
+            standard_version=record.standard_version,
+            disclosure_id=record.disclosure_id,
+            requirement_id=record.requirement_id,
+            requirement_text=record.requirement_text,
+            source_requirement_text=record.source_requirement_text,
+            context_requirement_ids=record.context_requirement_ids or [],
+            structure_status=record.structure_status or "legacy_unavailable",
+            keywords=record.keywords,
         )
 
     def _review_decision_from_record(self, record: ReviewDecisionRecord) -> ReviewDecision:

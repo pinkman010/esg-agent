@@ -1,4 +1,5 @@
 import pytest
+from openpyxl import load_workbook
 
 pytestmark = pytest.mark.anyio
 
@@ -6,8 +7,9 @@ from sqlalchemy import select
 
 from src.db.models import AuditEventRecord
 from src.db.repositories import Repository
-from src.domain.enums import AssessmentVerdict, EvidenceSourceMethod, PageQualityFlag, ReportStatus, ReviewOperation, ReviewStatus, RunStatus
-from src.domain.models import AnalysisRun, DisclosureAssessment, EvidenceItem, Report, ReviewDecision
+from src.domain.ai_models import AIAssessmentSuggestion
+from src.domain.enums import AISuggestionStatus, AssessmentVerdict, EvidenceSourceMethod, PageQualityFlag, ReportStatus, ReviewOperation, ReviewStatus, RunStatus
+from src.domain.models import AnalysisRun, DisclosureAssessment, DisclosureTask, EvidenceItem, Report, ReviewDecision
 from src.services.risk_service import calculate_and_store_risk
 from src.services.review_service import ReviewService
 
@@ -56,6 +58,39 @@ def seed_export_data(session):
     )
     repo.save_assessment(assessment)
     repo.save_evidence_item("assessment-1", assessment.evidence[0])
+    repo.save_disclosure_task(
+        DisclosureTask(
+            task_id="task-1",
+            run_id="run-1",
+            report_id="report-1",
+            standard_id="GRI",
+            standard_version="2021",
+            disclosure_id="GRI 302",
+            requirement_id="GRI 302-1-a",
+            requirement_text="披露组织内部能源消耗量。",
+            source_requirement_text="组织内部能源消耗量",
+            context_requirement_ids=["GRI 302-1"],
+            structure_status="verified",
+        )
+    )
+    repo.append_ai_suggestion(
+        AIAssessmentSuggestion(
+            suggestion_id="ai-suggestion-1",
+            assessment_id="assessment-1",
+            run_id="run-1",
+            status=AISuggestionStatus.SUCCEEDED,
+            provider="deepseek",
+            model="deepseek-v4-flash",
+            prompt_version="deepseek-gri-assist-v1",
+            input_hash="a" * 64,
+            suggested_verdict=AssessmentVerdict.UNKNOWN,
+            rationale_zh="输入证据不足以支持完整披露。",
+            missing_items_zh=["实质披露内容"],
+            evidence_ids=["evidence-1"],
+            evidence_pdf_pages=[77],
+            confidence=0.6,
+        )
+    )
     calculate_and_store_risk(repo, assessment, trigger_event="analysis_completed")
     repo.save_review_decision(ReviewDecision(decision_id="decision-1", run_id="run-1", assessment_id="assessment-1", review_status=ReviewStatus.APPROVED, reviewer_note="Checked."))
 
@@ -83,6 +118,13 @@ async def test_export_api_returns_json_and_csv(api_client, api_session):
     assert assessments_json.json()[0]["rationale_zh"] == "报告 GRI 内容索引包含从略说明，但未找到实质性披露证据。"
     assert assessments_json.json()[0]["missing_items"][0].startswith("EVG&D source basis")
     assert assessments_json.json()[0]["missing_items_zh"][1] == "EVG&D 数据来源依据的适用性说明"
+    assert assessments_json.json()[0]["structure_status"] == "verified"
+    assert assessments_json.json()[0]["source_requirement_text"] == "组织内部能源消耗量"
+    assert assessments_json.json()[0]["effective_requirement_text"] == "披露组织内部能源消耗量。"
+    assert assessments_json.json()[0]["ai_status"] == "succeeded"
+    assert assessments_json.json()[0]["ai_suggested_verdict"] == "unknown"
+    assert assessments_json.json()[0]["ai_evidence_pdf_pages"] == [77]
+    assert assessments_json.json()[0]["ai_model"] == "deepseek-v4-flash"
     assert assessments_csv.status_code == 200
     assert "assessment_id" in assessments_csv.text
     assert "source_pdf_page" in assessments_csv.text
@@ -97,6 +139,7 @@ async def test_export_api_returns_json_and_csv(api_client, api_session):
     assert "candidate_report_pages" in assessments_csv.text
     assert "rationale_zh" in assessments_csv.text
     assert "missing_items_zh" in assessments_csv.text
+    assert "ai_suggested_verdict" in assessments_csv.text
     assert review_json.json()[0]["decision_id"] == "decision-1"
     assert "decision_id" in review_csv.text
     event_types = api_session.scalars(
@@ -110,6 +153,28 @@ async def test_export_api_returns_json_and_csv(api_client, api_session):
         "review_json_exported",
         "review_csv_exported",
     ]
+
+
+async def test_assessment_xlsx_places_ai_disclaimer_before_headers(
+    api_client,
+    api_session,
+):
+    seed_export_data(api_session)
+
+    response = await api_client.post(
+        "/api/reports/report-1/exports/draft",
+        json={"formats": ["assessment_xlsx"], "created_by": "张三"},
+    )
+
+    assert response.status_code == 200
+    path = response.json()["file_manifest"][0]["path"]
+    workbook = load_workbook(path, read_only=True)
+    sheet = workbook["GRI核查"]
+    assert "AI建议未经人工确认时不构成最终披露结论" in sheet["A1"].value
+    headers = [cell.value for cell in sheet[2]]
+    assert "structure_status" in headers
+    assert "ai_suggested_verdict" in headers
+    workbook.close()
 
 
 async def test_versioned_export_rejects_unimplemented_actions_xlsx(

@@ -6,9 +6,11 @@ from src.db.repositories import Repository
 from src.domain.enums import ReportStatus, RunStatus
 from src.domain.models import AnalysisRun, Report
 from src.services.document_parser import DocumentParser
+from src.services.ai_assessment_service import AIAssessmentService
 from src.services.ocr import run_ocr_for_pages
 from src.standards.gri import GRIAdapter
 from src.workflows.single_report_workflow import SingleReportWorkflow
+from src.tools.llm_client import LLMClient
 
 
 DATA_ROOT = Path(__file__).resolve().parents[2] / "data"
@@ -45,6 +47,24 @@ def execute_analysis(
         if ENVISION_2024_PROFILE_PATH.exists() and Path(report.original_filename).name == "Envision Energy 2024-zh.pdf"
         else None
     )
+    llm_client = LLMClient(
+        model=settings.llm_model,
+        api_key=settings.openai_compatible_api_key,
+        base_url=settings.openai_compatible_api_base,
+        thinking_type=settings.llm_thinking_type,
+        reasoning_effort=settings.llm_reasoning_effort,
+        response_format=settings.llm_response_format,
+        max_tokens=settings.llm_max_tokens,
+        timeout_seconds=settings.llm_timeout_seconds,
+        max_retries=settings.llm_max_retries,
+        retry_delay_seconds=settings.llm_retry_delay_seconds,
+    )
+    ai_assessment_service = AIAssessmentService(
+        llm_client,
+        prompt_version=settings.llm_prompt_version,
+        max_concurrency=settings.llm_max_concurrency,
+        max_calls_per_run=settings.llm_max_calls_per_run,
+    )
     workflow = SingleReportWorkflow(
         repo,
         DocumentParser(ocr_runner=ocr_runner),
@@ -53,6 +73,7 @@ def execute_analysis(
         requirement_pack_path=GRI_REQUIREMENT_PACK_PATH,
         report_profile_path=profile_path,
         ocr_max_pages=settings.ocr_max_pages,
+        ai_assessment_service=ai_assessment_service,
     )
     result = workflow.run(
         report.report_id,

@@ -861,7 +861,7 @@ uv run --no-sync pytest tests/services/test_ai_assessment_service.py -q
 - Modify: `backend/tests/tools/test_review_csv_export.py`
 - Regenerate: `frontend/lib/generated/api-types.ts`
 
-- [ ] **Step 1：写 workflow 失败与降级测试**
+- [x] **Step 1：写 workflow 失败与降级测试**
 
 测试必须证明：
 
@@ -871,7 +871,7 @@ uv run --no-sync pytest tests/services/test_ai_assessment_service.py -q
 4. 全部模型调用失败：规则结果仍完整，run不因AI失败变成 `failed`。
 5. `model_called` 只对实际尝试调用的 assessment 为true；预算跳过和结构跳过为false。
 
-- [ ] **Step 2：增加第八阶段 `ai_assistance`**
+- [x] **Step 2：增加第八阶段 `ai_assistance`**
 
 阶段顺序固定为：
 
@@ -888,7 +888,7 @@ result_summary
 
 `ai_assistance.total_units` 等于本次符合调用条件的条目数；关闭LLM时为 `skipped, 0/0`；失败只影响本阶段摘要。
 
-- [ ] **Step 3：扩展 assessment detail 和 run API**
+- [x] **Step 3：扩展 assessment detail 和 run API**
 
 assessment detail 新增：
 
@@ -921,11 +921,11 @@ run 新增结构统计和 AI 摘要：
 
 旧字段和旧路由继续返回。
 
-- [ ] **Step 4：扩展导出**
+- [x] **Step 4：扩展导出**
 
 JSON/CSV/XLSX 输出增加 `structure_status`、`source_requirement_text`、`effective_requirement_text`、`ai_status`、`ai_suggested_verdict`、`ai_rationale_zh`、`ai_missing_items_zh`、`ai_evidence_pdf_pages`、`ai_model`、`ai_prompt_version`。正式导出页首注明：AI建议未经人工确认时不构成最终披露结论。
 
-- [ ] **Step 5：运行 focused API 和 workflow 测试**
+- [x] **Step 5：运行 focused API 和 workflow 测试**
 
 ```powershell
 cd backend
@@ -934,7 +934,7 @@ uv run --no-sync pytest tests/workflows/test_single_report_workflow.py tests/api
 
 期望：全部通过，旧 API 响应字段仍存在。
 
-- [ ] **Step 6：生成并验证前端 API 类型**
+- [x] **Step 6：生成并验证前端 API 类型**
 
 后端启动并提供 `/openapi.json` 后运行：
 

@@ -2,7 +2,9 @@ import pytest
 
 from src.db.models import AssessmentRecord, AssessmentRiskRecord, ReviewSnapshotRecord
 from src.db.repositories import Repository
+from src.domain.ai_models import AIAssessmentSuggestion
 from src.domain.enums import (
+    AISuggestionStatus,
     ApplicabilityStatus,
     AssessmentVerdict,
     EvidenceSourceMethod,
@@ -12,7 +14,7 @@ from src.domain.enums import (
     RiskLevel,
     RunStatus,
 )
-from src.domain.models import AnalysisRun, AssessmentRisk, DisclosureAssessment, EvidenceItem, Report
+from src.domain.models import AnalysisRun, AssessmentRisk, DisclosureAssessment, DisclosureTask, EvidenceItem, Report
 from src.services.risk_service import calculate_and_store_risk
 from src.services.review_service import ReviewService
 from src.domain.enums import ReviewOperation
@@ -132,6 +134,59 @@ async def test_assessment_detail_exposes_business_evidence_without_internal_rout
     assert body["evidence_items"][0]["source_pdf_page"] == 1
     assert "metadata" not in body["evidence_items"][0]
     assert "candidate_pdf_pages" not in str(body)
+
+
+async def test_assessment_detail_exposes_requirement_structure_and_latest_ai_suggestion(
+    api_client,
+    api_session,
+):
+    seed_assessments(api_session)
+    repo = Repository(api_session)
+    repo.save_disclosure_task(
+        DisclosureTask(
+            task_id="task-1",
+            run_id="run-1",
+            report_id="report-1",
+            standard_id="GRI",
+            standard_version="2021",
+            disclosure_id="GRI 2-1",
+            requirement_id="GRI 2-1-a",
+            requirement_text="披露组织的法定名称。",
+            source_requirement_text="法定名称",
+            context_requirement_ids=["GRI 2-1"],
+            structure_status="normalized",
+        )
+    )
+    repo.append_ai_suggestion(
+        AIAssessmentSuggestion(
+            suggestion_id="ai-suggestion-1",
+            assessment_id="assessment-low",
+            run_id="run-1",
+            status=AISuggestionStatus.SUCCEEDED,
+            provider="deepseek",
+            model="deepseek-v4-flash",
+            prompt_version="deepseek-gri-assist-v1",
+            input_hash="a" * 64,
+            suggested_verdict=AssessmentVerdict.DISCLOSED,
+            rationale_zh="报告直接披露了法定名称。",
+            evidence_ids=["evidence-1"],
+            evidence_pdf_pages=[1],
+            confidence=0.91,
+        )
+    )
+
+    response = await api_client.get(
+        "/api/reports/report-1/assessments/assessment-low"
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["source_requirement_text"] == "法定名称"
+    assert body["effective_requirement_text"] == "披露组织的法定名称。"
+    assert body["context_requirement_ids"] == ["GRI 2-1"]
+    assert body["structure_status"] == "normalized"
+    assert body["latest_ai_suggestion"]["suggested_verdict"] == "disclosed"
+    assert body["system_verdict"] == "disclosed"
 
 
 async def test_assessment_detail_keeps_audit_text_and_adds_chinese_display_fields(
