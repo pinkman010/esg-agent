@@ -47,8 +47,8 @@ export function parseEvidencePages(value: string): number[] {
 export function draftFromDetail(detail: AssessmentDetailResponse): ReviewDraft {
   return {
     verdict: assessmentVerdict(detail.reviewed_verdict ?? detail.system_verdict),
-    rationale: detail.rationale,
-    missingItemsText: detail.missing_items.join("\n"),
+    rationale: detail.rationale_display,
+    missingItemsText: detail.missing_items_display.join("\n"),
     evidencePagesText: ruleEvidencePages(detail).join(", "),
     note: "",
     sourceSuggestionId: null,

@@ -5,7 +5,7 @@ import { Check, Save } from "lucide-react";
 import { useState } from "react";
 
 import { ApiError, saveReviewSnapshot } from "@/lib/api";
-import { verdictLabels } from "@/lib/business-labels";
+import { reviewStatusLabels, verdictLabels } from "@/lib/business-labels";
 import type {
   ApplicabilityBatchReviewRequest,
   AssessmentDetailResponse,
@@ -111,7 +111,13 @@ export function ReviewEditor({ detail, reviewerName, onEvidencePage }: Props) {
 
       <section aria-labelledby="human-review-heading" className="space-y-4">
         <div>
-          <h3 id="human-review-heading" className="text-sm font-semibold">人工复核与最终决定</h3>
+          <h3 id="human-review-heading" className="text-sm font-semibold">人工复核</h3>
+          <p className="mt-2 text-sm font-medium">
+            当前有效结论：{verdictLabels[detail.effective_verdict] ?? detail.effective_verdict}
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            当前复核状态：{reviewStatusLabels[detail.review_status] ?? detail.review_status}
+          </p>
           <p className="mt-1 text-xs text-muted-foreground">只有人工保存的复核记录会成为当前有效结论。</p>
         </div>
 

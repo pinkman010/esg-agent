@@ -80,8 +80,8 @@ describe("review draft", () => {
   it("creates an editable draft from the current rule or reviewed result", () => {
     expect(draftFromDetail(detail)).toEqual({
       verdict: "unknown",
-      rationale: "No valid evidence was found.",
-      missingItemsText: "substantive disclosure",
+      rationale: "未找到有效证据。",
+      missingItemsText: "实质披露内容",
       evidencePagesText: "41, 67",
       note: "",
       sourceSuggestionId: null,

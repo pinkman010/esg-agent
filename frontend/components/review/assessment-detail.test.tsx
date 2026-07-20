@@ -28,11 +28,56 @@ function detail(assessmentId: string, requirementId: string): AssessmentDetailRe
     missing_items: ["substantive disclosure"],
     missing_items_display: ["实质披露内容"],
     evidence_items: [],
-    latest_snapshot_id: null,
+    latest_snapshot_id: "snapshot-1",
+    latest_ai_suggestion: {
+      suggestion_id: `suggestion-${assessmentId}`,
+      assessment_id: assessmentId,
+      run_id: "run-1",
+      status: "succeeded",
+      provider: "deepseek",
+      model: "deepseek-v4-flash",
+      prompt_version: "ai-assessment-v1",
+      input_hash: "hash-1",
+      suggested_verdict: "partially_disclosed",
+      rationale_zh: "AI 建议补充核对披露范围。",
+      missing_items_zh: ["披露范围"],
+      evidence_ids: [],
+      evidence_pdf_pages: [],
+      confidence: 0.8,
+      guardrail_codes: [],
+      retry_count: 0,
+    },
   };
 }
 
 describe("AssessmentDetail", () => {
+  it("separates rule analysis, AI advice and the current human-reviewed result", () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    const reviewed = {
+      ...detail("assessment-1", "GRI 2-5-a"),
+      reviewed_verdict: "disclosed",
+      effective_verdict: "disclosed",
+      review_status: "reviewed_modified",
+    } satisfies AssessmentDetailResponse;
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <AssessmentDetail reportId="report-1" detail={reviewed} reviewerName="张三" onEvidencePage={() => undefined} />
+      </QueryClientProvider>,
+    );
+
+    expect(screen.getByRole("heading", { name: "规则分析" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "AI 辅助建议" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "人工复核" })).toBeInTheDocument();
+    expect(screen.getByText("规则结论：待确认")).toBeInTheDocument();
+    expect(screen.getByText("AI 建议结论")).toBeInTheDocument();
+    expect(screen.getByText("当前有效结论：已披露")).toBeInTheDocument();
+    expect(screen.getByText("当前复核状态：已修改")).toBeInTheDocument();
+    expect(screen.queryByText("AI最终结论")).not.toBeInTheDocument();
+  });
+
   it("resets review and action form state when switching requirements", () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
