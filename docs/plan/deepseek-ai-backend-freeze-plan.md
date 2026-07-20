@@ -1008,7 +1008,7 @@ uv run --no-sync pytest tests/services/test_ai_evaluation_service.py tests/tools
 
 期望：模拟225条全部完成；重试、失败、越界引用和摘要计数均精确匹配 fixture。
 
-- [ ] **Step 4：真实调用前人工停止点**
+- [x] **Step 4：真实调用前人工停止点**
 
 只输出以下非敏感检查：
 
@@ -1025,7 +1025,7 @@ max_concurrency=8
 
 向用户报告预计发送字段、预计调用次数和预算上限。收到明确“批准真实225条评估”后继续；不显示 API Key 明文或长度。
 
-- [ ] **Step 5：一次性运行真实225条评估**
+- [x] **Step 5：一次性运行真实225条评估**
 
 ```powershell
 cd backend
@@ -1039,7 +1039,7 @@ uv run --no-sync python -m src.tools.evaluate_deepseek_against_manual_review `
 
 本步骤不进行30条或其他分批试点。
 
-- [ ] **Step 6：执行AI硬门禁**
+- [x] **Step 6：执行AI硬门禁**
 
 必须满足：
 
@@ -1052,6 +1052,10 @@ false_disclosed_count=0（guardrail后的最终AI建议）
 ```
 
 允许记录模型原始建议被 guardrail 降级的数量。`exact_verdict_agreement_rate` 作为质量指标完整披露，不为追求比例而修改人工基线或硬编码答案。模型或网络失败可以重跑失败项，但必须保留第一次失败 suggestion 和 retry audit。
+
+实际执行时，Pro 提出的16条差异仍等待GRI方法裁决。这16条继续纳入225条全量评估和差异展示，只从依赖人工金标准的 `false_disclosed_count`、`wrong_source_page_count` 硬门禁中排除；结构、模型、schema和证据ID越界门禁仍覆盖全部225条。`wrong_source_page_count` 只在人工与AI结论一致且人工存在已确认页时比较，结论不一致所伴随的页差异单列为 `manual_evidence_page_disagreement_count`，避免用页码指标重复表达结论分歧。
+
+2026-07-20执行结果：225条完成；累计定向补跑18次并保留首次suggestion；`exact_verdict_agreement_rate=72.32%`；`false_disclosed_count=0`、`unsupported_evidence_reference_count=0`、`wrong_source_page_count=0`、`schema_failure_count=0`、`model_failure_count=0`；待方法裁决16条，人工与AI证据页差异4条。
 
 评估完成后，把两个输出文件的 `target_path`、SHA256、大小、模型、Prompt版本、固定报告/run和执行日期追加到 `backend/data/manifests/assets_manifest.json`；manifest不得包含API Key、完整Prompt或模型原始响应。
 

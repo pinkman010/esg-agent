@@ -44,9 +44,12 @@ def _candidate(
     structure_status: str = "verified",
     review_priority: RiskLevel = RiskLevel.HIGH,
     evidence: list[EvidenceItem] | None = None,
+    verdict: AssessmentVerdict | None = None,
 ) -> AIAssessmentCandidate:
     evidence = [_evidence()] if evidence is None else evidence
-    verdict = AssessmentVerdict.PARTIALLY_DISCLOSED if evidence else AssessmentVerdict.UNKNOWN
+    verdict = verdict or (
+        AssessmentVerdict.PARTIALLY_DISCLOSED if evidence else AssessmentVerdict.UNKNOWN
+    )
     task = DisclosureTask(
         task_id=f"task-{requirement_id}",
         run_id="run-1",
@@ -143,6 +146,7 @@ def test_prompt_contract_is_bounded_deterministic_and_contains_required_json_exa
     assert payload["effective_requirement_text"]
     assert payload["source_requirement_text"]
     assert payload["context_requirement_ids"] == ["GRI 403-9"]
+    assert payload["rule_missing_items"] == ["控制层级"]
     assert len(payload["evidence"]) == 5
     assert all(len(item["source_text"]) <= 1200 for item in payload["evidence"])
     assert payload["required_json_output"]["suggested_verdict"].startswith("disclosed")
@@ -258,6 +262,28 @@ def test_unknown_response_may_succeed_without_evidence():
     assert suggestion.suggested_verdict is AssessmentVerdict.UNKNOWN
 
 
+def test_disclosed_upgrade_from_non_disclosed_rule_requires_human_review():
+    service = AIAssessmentService(FakeLLMClient())
+    candidate = _candidate()
+
+    suggestion = service.validate_response(
+        response={
+            "suggested_verdict": "disclosed",
+            "evidence_ids": ["evidence-1"],
+            "evidence_pdf_pages": [41],
+            "rationale_zh": "报告原文直接披露了控制措施。",
+            "missing_items_zh": [],
+            "confidence": 0.9,
+        },
+        candidate=candidate,
+        input_hash="a" * 64,
+    )
+
+    assert suggestion.status is AISuggestionStatus.FAILED
+    assert "verdict_upgrade_requires_human_review" in suggestion.guardrail_codes
+    assert suggestion.raw_response["suggested_verdict"] == "disclosed"
+
+
 def test_assess_candidates_enforces_call_budget_and_bounded_concurrency():
     lock = threading.Lock()
     state = {"active": 0, "max_active": 0, "calls": 0}
@@ -277,6 +303,7 @@ def test_assess_candidates_enforces_call_budget_and_bounded_concurrency():
         _candidate(
             requirement_id=f"GRI 403-9-{index}",
             evidence=[_evidence(page=41)],
+            verdict=AssessmentVerdict.DISCLOSED,
         )
         for index in range(6)
     ]

@@ -2,6 +2,7 @@ import argparse
 import csv
 import hashlib
 import json
+from collections import Counter
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -18,6 +19,7 @@ from src.services.ai_assessment_service import (
 from src.services.ai_evaluation_service import (
     AIEvaluationCase,
     evaluate_ai_suggestions,
+    load_adjudication_pending_ids,
     load_manual_review_baseline,
 )
 from src.standards.gri import GRIAdapter
@@ -28,6 +30,10 @@ BACKEND_ROOT = Path(__file__).resolve().parents[2]
 PROJECT_ROOT = BACKEND_ROOT.parent
 DEFAULT_REQUIREMENTS = BACKEND_ROOT / "data/manifests/gri_requirement_checklist_v2.json"
 DEFAULT_ASSETS_MANIFEST = BACKEND_ROOT / "data/manifests/assets_manifest.json"
+DEFAULT_ADJUDICATION_RECOMMENDATIONS = (
+    BACKEND_ROOT
+    / "data/review_inputs/envision_2024/manual/envision_2024_577_Pro_second_review_recommendations_20260719.csv"
+)
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -40,6 +46,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--output-summary", type=Path, required=True)
     parser.add_argument("--max-calls", type=int, default=225)
     parser.add_argument("--expected-count", type=int, default=225)
+    parser.add_argument(
+        "--adjudication-recommendations",
+        type=Path,
+        default=DEFAULT_ADJUDICATION_RECOMMENDATIONS,
+    )
+    parser.add_argument("--retry-hard-gate-failures", action="store_true")
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--dry-run", action="store_true")
     mode.add_argument("--confirm-llm", action="store_true")
@@ -124,6 +136,11 @@ def run_evaluation(
         requirements_path=args.requirements,
         expected_count=args.expected_count,
     )
+    adjudication_pending_ids = load_adjudication_pending_ids(
+        args.adjudication_recommendations
+    )
+    selected_ids = {case.manual.requirement_id for case in cases}
+    adjudication_pending_ids &= selected_ids
     prompt_details = []
     for case in cases:
         messages, input_hash = build_ai_assessment_messages(case.candidate)
@@ -152,6 +169,9 @@ def run_evaluation(
                     else ""
                 ),
                 "is_applicability_exception": case.manual.is_applicability_exception,
+                "is_adjudication_pending": (
+                    case.manual.requirement_id in adjudication_pending_ids
+                ),
                 "rule_verdict": case.candidate.assessment.verdict.value,
                 "review_priority": case.candidate.review_priority.value,
                 "dry_run": True,
@@ -169,6 +189,7 @@ def run_evaluation(
             "applicability_exception_count": sum(
                 case.manual.is_applicability_exception for case in cases
             ),
+            "adjudication_pending_count": len(adjudication_pending_ids),
             "estimated_call_count": min(len(cases), args.max_calls),
             "estimated_input_characters": sum(
                 detail["estimated_input_characters"] for detail in prompt_details
@@ -198,8 +219,47 @@ def run_evaluation(
         max_concurrency=settings.llm_max_concurrency,
         max_calls_per_run=args.max_calls,
     )
+    retry_requirement_ids: set[str] = set()
+    if args.retry_hard_gate_failures:
+        existing_suggestions = [
+            suggestion
+            for case in cases
+            if (
+                suggestion := repository.get_latest_ai_suggestion(
+                    case.candidate.assessment.assessment_id
+                )
+            )
+        ]
+        if len(existing_suggestions) != len(cases):
+            raise ValueError(
+                "targeted retry requires an existing suggestion for every evaluation case"
+            )
+        existing_result = evaluate_ai_suggestions(
+            cases,
+            existing_suggestions,
+            adjudication_pending_ids=adjudication_pending_ids,
+        )
+        retry_requirement_ids = {
+            row["requirement_id"]
+            for row in existing_result.rows
+            if row["unsupported_evidence_reference"]
+            or row["schema_failure"]
+            or row["model_failure"]
+            or (
+                not row["is_adjudication_pending"]
+                and (row["false_disclosed"] or row["wrong_source_page"])
+            )
+        }
+        call_cases = [
+            case
+            for case in cases
+            if case.manual.requirement_id in retry_requirement_ids
+        ]
+    else:
+        call_cases = cases
+
     suggestions = service.assess_explicit_candidates(
-        [case.candidate for case in cases],
+        [case.candidate for case in call_cases],
         confirm_llm=True,
     )
     attempted_ids: list[str] = []
@@ -209,7 +269,39 @@ def run_evaluation(
             attempted_ids.append(suggestion.assessment_id)
     repository.mark_assessments_model_called(attempted_ids)
 
-    result = evaluate_ai_suggestions(cases, suggestions)
+    latest_suggestions = [
+        suggestion
+        for case in cases
+        if (
+            suggestion := repository.get_latest_ai_suggestion(
+                case.candidate.assessment.assessment_id
+            )
+        )
+    ]
+    if len(latest_suggestions) != len(cases):
+        raise ValueError("evaluation result is missing persisted AI suggestions")
+    assessment_to_requirement = {
+        case.candidate.assessment.assessment_id: case.manual.requirement_id
+        for case in cases
+    }
+    suggestion_history_counts = Counter(
+        suggestion.assessment_id
+        for suggestion in repository.list_ai_suggestions_for_run(run_id)
+        if suggestion.assessment_id in assessment_to_requirement
+    )
+    cumulative_retry_count = sum(
+        max(count - 1, 0) for count in suggestion_history_counts.values()
+    )
+    cumulative_retry_requirement_ids = sorted(
+        assessment_to_requirement[assessment_id]
+        for assessment_id, count in suggestion_history_counts.items()
+        if count > 1
+    )
+    result = evaluate_ai_suggestions(
+        cases,
+        latest_suggestions,
+        adjudication_pending_ids=adjudication_pending_ids,
+    )
     summary = {
         **result.summary,
         "dry_run": False,
@@ -217,6 +309,12 @@ def run_evaluation(
         "run_id": run_id,
         "model": settings.llm_model,
         "prompt_version": settings.llm_prompt_version,
+        "prompt_versions": sorted(
+            {suggestion.prompt_version for suggestion in latest_suggestions}
+        ),
+        "evaluation_retry_attempt_count": cumulative_retry_count,
+        "evaluation_retry_requirement_ids": cumulative_retry_requirement_ids,
+        "latest_invocation_call_count": len(call_cases),
         "executed_at": date.today().isoformat(),
     }
     _write_outputs(args.output_csv, args.output_summary, result.rows, summary)
@@ -247,7 +345,7 @@ def register_evaluation_assets(
     output_paths: list[Path],
     summary: dict[str, Any],
 ) -> None:
-    raw = json.loads(assets_manifest.read_text(encoding="utf-8"))
+    raw = json.loads(assets_manifest.read_text(encoding="utf-8-sig"))
     target_paths = {
         path.resolve().relative_to(PROJECT_ROOT.resolve()).as_posix(): path
         for path in output_paths

@@ -8,6 +8,7 @@ from src.services.ai_evaluation_service import (
     AIEvaluationCase,
     ManualReviewRecord,
     evaluate_ai_suggestions,
+    load_adjudication_pending_ids,
     load_manual_review_baseline,
 )
 from src.services.ai_assessment_service import AIAssessmentService
@@ -76,6 +77,16 @@ def test_manual_review_loader_selects_224_complete_rows_plus_v1_exception(tmp_pa
     exception = next(item for item in baseline.records if item.requirement_id == "GRI 2-30-b")
     assert exception.suggested_verdict is None
     assert exception.is_applicability_exception is True
+
+
+def test_adjudication_recommendations_loader_reads_unique_requirement_ids(tmp_path):
+    path = tmp_path / "recommendations.csv"
+    path.write_text(
+        "requirement_id,Pro_reason\nGRI 2-17-a,reason\nGRI 403-9-e,reason\n",
+        encoding="utf-8",
+    )
+
+    assert load_adjudication_pending_ids(path) == {"GRI 2-17-a", "GRI 403-9-e"}
 
 
 def _manual(
@@ -163,26 +174,82 @@ def test_evaluation_metrics_count_failures_pages_false_disclosed_and_cross_distr
         ),
     ]
 
-    result = evaluate_ai_suggestions(cases, suggestions)
+    result = evaluate_ai_suggestions(
+        cases,
+        suggestions,
+        adjudication_pending_ids={"GRI 2-1-a"},
+    )
 
     assert result.summary["evaluated_count"] == 4
     assert result.summary["verdict_evaluable_count"] == 3
     assert result.summary["exact_verdict_agreement_count"] == 1
+    assert result.summary["wrong_source_page_count"] == 0
+    assert result.summary["manual_evidence_page_disagreement_count"] == 1
+    assert result.summary["all_rows_false_disclosed_count"] == 1
     assert result.summary["false_disclosed_count"] == 1
-    assert result.summary["wrong_source_page_count"] == 1
+    assert result.summary["adjudication_pending_count"] == 1
     assert result.summary["unsupported_evidence_reference_count"] == 1
     assert result.summary["schema_failure_count"] == 1
     assert result.summary["model_failure_count"] == 0
     assert result.summary["rules_ai_disagreement_count"] == 2
     assert result.summary["manual_verdict_by_review_priority"]["disclosed|low"] == 1
     assert result.summary["manual_verdict_by_review_priority"]["unknown|medium"] == 1
+    assert result.rows[0]["is_adjudication_pending"] is True
+
+
+def test_pending_adjudication_is_reported_but_excluded_from_gold_dependent_gates():
+    false_case = AIEvaluationCase(
+        manual=_manual("GRI 2-17-a", AssessmentVerdict.UNKNOWN, []),
+        candidate=_candidate("GRI 2-17-a", review_priority=RiskLevel.MEDIUM),
+    )
+    wrong_page_case = AIEvaluationCase(
+        manual=_manual("GRI 403-9-e", AssessmentVerdict.DISCLOSED, [42]),
+        candidate=_candidate("GRI 403-9-e", review_priority=RiskLevel.LOW),
+    )
+    suggestions = [
+        _suggestion("assessment-GRI 2-17-a", pages=[41]),
+        _suggestion("assessment-GRI 403-9-e", pages=[41]),
+    ]
+
+    result = evaluate_ai_suggestions(
+        [false_case, wrong_page_case],
+        suggestions,
+        adjudication_pending_ids={"GRI 2-17-a", "GRI 403-9-e"},
+    )
+
+    assert result.summary["all_rows_false_disclosed_count"] == 1
+    assert result.summary["all_rows_wrong_source_page_count"] == 1
+    assert result.summary["false_disclosed_count"] == 0
+    assert result.summary["wrong_source_page_count"] == 0
+
+
+def test_unknown_citation_is_not_counted_as_wrong_disclosure_source_page():
+    case = AIEvaluationCase(
+        manual=_manual("GRI 2-1-a", AssessmentVerdict.UNKNOWN, []),
+        candidate=_candidate("GRI 2-1-a", review_priority=RiskLevel.MEDIUM),
+    )
+    suggestion = _suggestion(
+        "assessment-GRI 2-1-a",
+        verdict=AssessmentVerdict.UNKNOWN,
+        pages=[41],
+    )
+
+    result = evaluate_ai_suggestions([case], [suggestion])
+
+    assert result.summary["wrong_source_page_count"] == 0
+    assert result.summary["manual_evidence_page_disagreement_count"] == 0
+    assert result.rows[0]["wrong_source_page"] is False
 
 
 def test_fake_225_evaluation_completes_with_exact_metrics():
     cases = []
     for index in range(225):
         requirement_id = f"GRI 2-1-{index}"
-        candidate = _candidate(requirement_id, review_priority=RiskLevel.LOW)
+        candidate = _candidate(
+            requirement_id,
+            review_priority=RiskLevel.LOW,
+            verdict=AssessmentVerdict.DISCLOSED,
+        )
         cases.append(
             AIEvaluationCase(
                 manual=_manual(requirement_id, AssessmentVerdict.DISCLOSED, [41]),

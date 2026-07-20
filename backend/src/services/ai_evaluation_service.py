@@ -1,3 +1,4 @@
+import csv
 import json
 from collections import Counter
 from dataclasses import dataclass
@@ -23,6 +24,21 @@ MANUAL_REVIEW_FIELDS = (
     "review_complete",
 )
 V1_APPLICABILITY_EXCEPTION_IDS = frozenset({"GRI 2-30-b"})
+
+
+def load_adjudication_pending_ids(path: Path) -> set[str]:
+    with path.open("r", encoding="utf-8-sig", newline="") as file:
+        reader = csv.DictReader(file)
+        if "requirement_id" not in (reader.fieldnames or []):
+            raise ValueError("adjudication recommendations missing requirement_id")
+        requirement_ids = {
+            _text(row.get("requirement_id"))
+            for row in reader
+            if _text(row.get("requirement_id"))
+        }
+    if not requirement_ids:
+        raise ValueError("adjudication recommendations contain no requirement_id")
+    return requirement_ids
 
 
 @dataclass(frozen=True)
@@ -126,7 +142,10 @@ def load_manual_review_baseline(
 def evaluate_ai_suggestions(
     cases: list[AIEvaluationCase],
     suggestions: list[AIAssessmentSuggestion],
+    *,
+    adjudication_pending_ids: set[str] | None = None,
 ) -> AIEvaluationResult:
+    adjudication_pending_ids = adjudication_pending_ids or set()
     suggestion_by_assessment = {
         suggestion.assessment_id: suggestion for suggestion in suggestions
     }
@@ -138,11 +157,15 @@ def evaluate_ai_suggestions(
     schema_failure_count = 0
     model_failure_count = 0
     disagreement_count = 0
+    manual_page_disagreement_count = 0
     verdict_evaluable_count = 0
     cross_distribution: Counter[str] = Counter()
+    all_rows_false_disclosed_count = 0
+    all_rows_wrong_page_count = 0
 
     for case in cases:
         manual = case.manual
+        is_adjudication_pending = manual.requirement_id in adjudication_pending_ids
         candidate = case.candidate
         suggestion = suggestion_by_assessment.get(candidate.assessment.assessment_id)
         manual_label = (
@@ -169,7 +192,8 @@ def evaluate_ai_suggestions(
             ai_verdict is AssessmentVerdict.DISCLOSED
             and manual.suggested_verdict is not AssessmentVerdict.DISCLOSED
         )
-        false_disclosed_count += int(false_disclosed)
+        all_rows_false_disclosed_count += int(false_disclosed)
+        false_disclosed_count += int(false_disclosed and not is_adjudication_pending)
 
         guardrail_codes = suggestion.guardrail_codes if suggestion else []
         unsupported = "evidence_reference_out_of_scope" in guardrail_codes
@@ -179,8 +203,20 @@ def evaluate_ai_suggestions(
 
         cited_pages = suggestion.evidence_pdf_pages if suggestion and ai_verdict else []
         correct_pages = set(manual.correct_pdf_pages)
-        wrong_page = bool(cited_pages and any(page not in correct_pages for page in cited_pages))
-        wrong_page_count += int(wrong_page)
+        manual_page_disagreement = bool(
+            ai_verdict is not None
+            and ai_verdict is not AssessmentVerdict.UNKNOWN
+            and cited_pages
+            and any(page not in correct_pages for page in cited_pages)
+        )
+        manual_page_disagreement_count += int(manual_page_disagreement)
+        wrong_page = bool(
+            manual_page_disagreement
+            and manual.suggested_verdict is ai_verdict
+            and bool(correct_pages)
+        )
+        all_rows_wrong_page_count += int(wrong_page)
+        wrong_page_count += int(wrong_page and not is_adjudication_pending)
 
         model_failure = bool(
             suggestion is None
@@ -205,6 +241,7 @@ def evaluate_ai_suggestions(
                 "manual_applicability": manual.manual_applicability,
                 "manual_verdict": manual.suggested_verdict.value if manual.suggested_verdict else "",
                 "is_applicability_exception": manual.is_applicability_exception,
+                "is_adjudication_pending": is_adjudication_pending,
                 "manual_evidence_validity": manual.evidence_validity,
                 "manual_correct_pdf_pages": manual.correct_pdf_pages,
                 "rule_verdict": candidate.assessment.verdict.value,
@@ -220,6 +257,7 @@ def evaluate_ai_suggestions(
                 "false_disclosed": false_disclosed,
                 "unsupported_evidence_reference": unsupported,
                 "wrong_source_page": wrong_page,
+                "manual_evidence_page_disagreement": manual_page_disagreement,
                 "schema_failure": schema_failure,
                 "model_failure": model_failure,
                 "rules_ai_disagreement": disagreement,
@@ -236,8 +274,14 @@ def evaluate_ai_suggestions(
             exact_count / verdict_evaluable_count if verdict_evaluable_count else 0.0
         ),
         "false_disclosed_count": false_disclosed_count,
+        "all_rows_false_disclosed_count": all_rows_false_disclosed_count,
         "unsupported_evidence_reference_count": unsupported_count,
         "wrong_source_page_count": wrong_page_count,
+        "all_rows_wrong_source_page_count": all_rows_wrong_page_count,
+        "manual_evidence_page_disagreement_count": manual_page_disagreement_count,
+        "adjudication_pending_count": sum(
+            case.manual.requirement_id in adjudication_pending_ids for case in cases
+        ),
         "schema_failure_count": schema_failure_count,
         "model_failure_count": model_failure_count,
         "rules_ai_disagreement_count": disagreement_count,

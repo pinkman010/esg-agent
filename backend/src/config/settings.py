@@ -32,7 +32,7 @@ class Settings(BaseSettings):
     llm_retry_delay_seconds: float = Field(default=2, ge=0, le=60)
     llm_max_concurrency: int = Field(default=8, ge=1, le=16)
     llm_max_calls_per_run: int = Field(default=200, ge=1, le=1000)
-    llm_prompt_version: str = "deepseek-gri-assist-v1"
+    llm_prompt_version: str = "deepseek-gri-assist-v1.2"
 
     @field_validator("upload_dir", "derived_dir")
     @classmethod

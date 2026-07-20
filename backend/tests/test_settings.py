@@ -10,7 +10,7 @@ def test_default_runtime_paths_resolve_from_project_root(monkeypatch):
     project_root = backend_dir.parent
     monkeypatch.chdir(backend_dir)
 
-    settings = Settings()
+    settings = Settings(_env_file=None)
 
     assert settings.upload_dir == project_root / "backend" / "data" / "runtime" / "uploads"
     assert settings.derived_dir == project_root / "backend" / "data" / "runtime" / "derived"
@@ -21,7 +21,7 @@ def test_default_environment_is_main():
 
 
 def test_llm_defaults_match_deepseek_json_configuration():
-    settings = Settings()
+    settings = Settings(_env_file=None)
 
     assert settings.openai_compatible_api_base == "https://api.deepseek.com"
     assert settings.llm_model == "deepseek-v4-flash"
@@ -34,7 +34,7 @@ def test_llm_defaults_match_deepseek_json_configuration():
     assert settings.llm_retry_delay_seconds == 2
     assert settings.llm_max_concurrency == 8
     assert settings.llm_max_calls_per_run == 200
-    assert settings.llm_prompt_version == "deepseek-gri-assist-v1"
+    assert settings.llm_prompt_version == "deepseek-gri-assist-v1.2"
 
 
 def test_llm_settings_reject_unsafe_or_out_of_range_values():
