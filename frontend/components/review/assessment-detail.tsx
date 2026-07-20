@@ -21,7 +21,7 @@ export function AssessmentDetail({ reportId, detail, reviewerName, onEvidencePag
       <section><h3 className="text-sm font-semibold">判断依据</h3><p className="mt-2 text-sm leading-6">{detail.rationale_display}</p></section>
       <section><h3 className="text-sm font-semibold">缺失项</h3><ul className="mt-2 space-y-1 text-sm text-muted-foreground">{detail.missing_items_display.map((item) => <li key={item}>{item}</li>)}</ul></section>
       <section><h3 className="text-sm font-semibold">证据</h3><div className="mt-2 space-y-2">{detail.evidence_items.map((item) => <button type="button" key={item.evidence_id} className="w-full border-l-2 border-accent py-2 pl-3 text-left text-sm" onClick={() => onEvidencePage(item.source_pdf_page)}><span className="block text-xs font-medium text-accent">{item.page_label}</span><span className="mt-1 block leading-5 text-muted-foreground">{item.evidence_preview}</span></button>)}</div></section>
-      <ReviewEditor key={`review-${detail.assessment_id}`} assessmentId={detail.assessment_id} reviewerName={reviewerName} />
+      <ReviewEditor key={`review-${detail.assessment_id}`} detail={detail} reviewerName={reviewerName} onEvidencePage={onEvidencePage} />
       <ActionCreator key={`action-${detail.assessment_id}`} reportId={reportId} assessmentId={detail.assessment_id} requirementId={detail.requirement_id} reviewerName={reviewerName} missingItems={detail.missing_items_display} />
     </div>
   );
