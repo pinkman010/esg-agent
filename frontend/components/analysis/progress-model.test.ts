@@ -12,6 +12,19 @@ const completed = (stage_code: string) => ({
 });
 
 describe("calculateAnalysisProgress", () => {
+  it("uses the backend eight-stage order", () => {
+    expect(analysisStages.map(([code]) => code)).toEqual([
+      "file_validation",
+      "pdf_parsing",
+      "report_structure",
+      "requirement_matching",
+      "evidence_assessment",
+      "risk_classification",
+      "ai_assistance",
+      "result_summary",
+    ]);
+  });
+
   it("uses review-priority wording for the classification stage", () => {
     expect(analysisStages.find(([code]) => code === "risk_classification")?.[1]).toBe("复核优先级计算");
   });
@@ -34,7 +47,7 @@ describe("calculateAnalysisProgress", () => {
       { stage_code: "evidence_assessment", status: "running", completed_units: 288, total_units: 577, error_summary: null, created_at: null },
     ];
 
-    expect(calculateAnalysisProgress("running", stages)).toEqual({ percent: 59, currentStageCode: "evidence_assessment" });
+    expect(calculateAnalysisProgress("running", stages)).toEqual({ percent: 57, currentStageCode: "evidence_assessment" });
   });
 
   it("forces successful and partial terminal runs to one hundred percent", () => {
@@ -70,7 +83,21 @@ describe("calculateAnalysisProgress", () => {
       { stage_code: "risk_classification", status: "running", completed_units: 50, total_units: 100, error_summary: null, created_at: null },
     ];
 
-    expect(calculateAnalysisProgress("running", stages)).toEqual({ percent: 92, currentStageCode: "risk_classification" });
+    expect(calculateAnalysisProgress("running", stages)).toEqual({ percent: 87, currentStageCode: "risk_classification" });
+  });
+
+  it("counts a skipped AI stage as complete without pretending it called a model", () => {
+    const stages = [
+      completed("file_validation"),
+      completed("pdf_parsing"),
+      completed("report_structure"),
+      completed("requirement_matching"),
+      completed("evidence_assessment"),
+      completed("risk_classification"),
+      { ...completed("ai_assistance"), status: "skipped" },
+    ];
+
+    expect(calculateAnalysisProgress("running", stages)).toEqual({ percent: 95, currentStageCode: null });
   });
 
   it("does not move backwards as a run advances through stages", () => {
@@ -83,7 +110,7 @@ describe("calculateAnalysisProgress", () => {
     ];
     const percentages = snapshots.map((stages) => calculateAnalysisProgress("running", stages).percent);
 
-    expect(percentages).toEqual([5, 15, 30, 61]);
+    expect(percentages).toEqual([5, 15, 30, 58]);
   });
 
   it("marks only stale running runs as stalled", () => {

@@ -7,6 +7,7 @@ export const analysisStages = [
   ["requirement_matching", "GRI requirement 匹配"],
   ["evidence_assessment", "证据与结论生成"],
   ["risk_classification", "复核优先级计算"],
+  ["ai_assistance", "AI 辅助分析"],
   ["result_summary", "结果汇总"],
 ] as const;
 
@@ -15,8 +16,9 @@ export const analysisStageWeights = {
   pdf_parsing: 10,
   report_structure: 5,
   requirement_matching: 10,
-  evidence_assessment: 60,
+  evidence_assessment: 55,
   risk_classification: 5,
+  ai_assistance: 5,
   result_summary: 5,
 } as const satisfies Record<(typeof analysisStages)[number][0], number>;
 
@@ -36,7 +38,7 @@ export function calculateAnalysisProgress(
     const stage = byCode.get(stageCode);
     if (!stage) continue;
     const weight = analysisStageWeights[stageCode];
-    if (stage?.status === "completed" || stage?.status === "partially_failed") {
+    if (stage?.status === "completed" || stage?.status === "partially_failed" || stage?.status === "skipped") {
       weightedProgress += weight;
       continue;
     }

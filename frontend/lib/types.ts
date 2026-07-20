@@ -19,7 +19,7 @@ export type DemoResetResponse = {
 };
 export type ConfirmReportMetadataRequest = components["schemas"]["ConfirmReportMetadataRequest"];
 export type AnalyzeResponse = components["schemas"]["AnalyzeResponse"];
-export type AnalysisRun = components["schemas"]["AnalysisRun"];
+export type AnalysisRun = components["schemas"]["AnalysisRunResponse"];
 export type AnalysisStageResponse = components["schemas"]["AnalysisStageResponse"];
 export type AIAssessmentSuggestion = components["schemas"]["AIAssessmentSuggestion"];
 export type AISummaryResponse = components["schemas"]["AISummaryResponse"];

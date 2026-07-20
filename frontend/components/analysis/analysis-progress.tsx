@@ -14,6 +14,7 @@ const stageStatusLabels: Record<string, string> = {
   pending: "等待中",
   running: "进行中",
   completed: "已完成",
+  skipped: "未启用或无需调用",
   partially_failed: "部分失败",
   failed: "失败",
 };
@@ -53,6 +54,7 @@ export function AnalysisProgress({ reportId, runId }: { reportId: string; runId:
     ? `${report.company_name}${report.report_year ? ` · ${report.report_year} 年` : ""}`
     : report?.original_filename ?? "ESG 报告";
   const resultAvailable = run?.status === "completed" || run?.status === "partially_completed";
+  const runIsTerminal = terminalStatuses.has(run?.status ?? "");
 
   const statusMessage = !run
     ? "正在读取进度..."
@@ -80,6 +82,13 @@ export function AnalysisProgress({ reportId, runId }: { reportId: string; runId:
       </div>
       <div className="py-6">
         <p className="text-sm font-semibold">{statusMessage}</p>
+        {resultAvailable && run && (
+          <p className="mt-2 text-sm text-muted-foreground">
+            {run.confirm_llm
+              ? `AI 辅助建议：成功 ${run.ai_summary.succeeded} 条，失败 ${run.ai_summary.failed} 条，跳过 ${run.ai_summary.skipped} 条`
+              : "本次分析未启用 AI 辅助"}
+          </p>
+        )}
         {run?.status === "running" && currentStageLabel && (
           <p className="mt-1 text-sm text-muted-foreground">当前阶段：{currentStageLabel}</p>
         )}
@@ -95,12 +104,20 @@ export function AnalysisProgress({ reportId, runId }: { reportId: string; runId:
           {analysisStages.map(([code, label]) => {
             const stage = byCode.get(code);
             const status = stage?.status ?? "pending";
-            const Icon = status === "completed" ? Check : status === "failed" || status === "partially_failed" ? AlertTriangle : status === "running" ? LoaderCircle : Circle;
+            const staleTerminalRunning = runIsTerminal && status === "running";
+            const Icon = status === "completed" || status === "skipped"
+              ? Check
+              : status === "failed" || status === "partially_failed" || staleTerminalRunning
+                ? AlertTriangle
+                : status === "running"
+                  ? LoaderCircle
+                  : Circle;
+            const displayStatus = staleTerminalRunning ? "状态未同步" : stageStatusLabels[status] ?? "等待中";
             return (
               <div key={code} className="grid grid-cols-[24px_1fr_auto] items-center gap-3 py-3">
-                <Icon aria-hidden="true" className={`h-4 w-4 ${status === "running" ? "animate-spin text-accent" : status.includes("failed") ? "text-amber-600" : "text-muted-foreground"}`} />
+                <Icon aria-hidden="true" className={`h-4 w-4 ${status === "running" && !staleTerminalRunning ? "animate-spin text-accent" : status.includes("failed") || staleTerminalRunning ? "text-amber-600" : "text-muted-foreground"}`} />
                 <span className="text-sm font-medium">{label}</span>
-                <span className="text-xs text-muted-foreground">{stageStatusLabels[status] ?? "等待中"}</span>
+                <span className="text-xs text-muted-foreground">{displayStatus}</span>
               </div>
             );
           })}

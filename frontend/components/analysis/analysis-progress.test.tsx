@@ -26,12 +26,17 @@ const report = {
   updated_at: null,
 };
 
-function runResponse(status: string, failedRequirementCount = 0) {
+function runResponse(
+  status: string,
+  failedRequirementCount = 0,
+  confirmLlm = false,
+  aiSummary = { eligible: 0, succeeded: 0, failed: 0, skipped: 0 },
+) {
   return {
     run_id: "run-1",
     report_id: report.report_id,
     status,
-    confirm_llm: false,
+    confirm_llm: confirmLlm,
     started_at: null,
     completed_at: null,
     error_message: null,
@@ -42,6 +47,7 @@ function runResponse(status: string, failedRequirementCount = 0) {
     succeeded_requirement_count: 577 - failedRequirementCount,
     failed_requirement_count: failedRequirementCount,
     failure_summary: { failed_requirement_ids: failedRequirementCount ? ["GRI 2-1-b"] : [] },
+    ai_summary: aiSummary,
   };
 }
 
@@ -109,11 +115,58 @@ describe("AnalysisProgress", () => {
   it("offers dashboard and high-priority review after completion", async () => {
     stubProgressApi("completed");
 
-    renderWithQuery(<AnalysisProgress reportId={report.report_id} runId="run-1" />);
+    const view = renderWithQuery(<AnalysisProgress reportId={report.report_id} runId="run-1" />);
 
     expect(await screen.findByText("分析完成")).toBeInTheDocument();
+    expect(screen.getByText("本次分析未启用 AI 辅助")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "查看分析结果" })).toHaveAttribute("href", `/reports/${report.report_id}/dashboard`);
     expect(screen.getByRole("link", { name: "进入高优先级复核" })).toHaveAttribute("href", `/reports/${report.report_id}/review`);
+    expect(view.container.querySelector(".animate-spin")).toBeNull();
+  });
+
+  it("shows the AI summary for an explicitly authorized completed run", async () => {
+    vi.stubGlobal("fetch", vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith(`/api/reports/${report.report_id}`)) return Promise.resolve(jsonResponse(report));
+      if (url.endsWith("/api/runs/run-1/stages")) {
+        return Promise.resolve(jsonResponse([
+          { stage_code: "ai_assistance", status: "completed", completed_units: 3, total_units: 3, error_summary: null, created_at: null },
+        ]));
+      }
+      if (url.endsWith("/api/runs/run-1")) {
+        return Promise.resolve(jsonResponse(runResponse("completed", 0, true, {
+          eligible: 3,
+          succeeded: 2,
+          failed: 1,
+          skipped: 0,
+        })));
+      }
+      throw new Error(`unexpected request: ${url}`);
+    }));
+
+    renderWithQuery(<AnalysisProgress reportId={report.report_id} runId="run-1" />);
+
+    expect(await screen.findByText("AI 辅助建议：成功 2 条，失败 1 条，跳过 0 条")).toBeInTheDocument();
+    expect(screen.getByText("AI 辅助分析").parentElement).toHaveTextContent("已完成");
+  });
+
+  it("labels a skipped AI stage without showing it as pending", async () => {
+    vi.stubGlobal("fetch", vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith(`/api/reports/${report.report_id}`)) return Promise.resolve(jsonResponse(report));
+      if (url.endsWith("/api/runs/run-1/stages")) {
+        return Promise.resolve(jsonResponse([
+          { stage_code: "ai_assistance", status: "skipped", completed_units: 0, total_units: 0, error_summary: null, created_at: null },
+        ]));
+      }
+      if (url.endsWith("/api/runs/run-1")) return Promise.resolve(jsonResponse(runResponse("completed")));
+      throw new Error(`unexpected request: ${url}`);
+    }));
+
+    renderWithQuery(<AnalysisProgress reportId={report.report_id} runId="run-1" />);
+
+    expect(await screen.findByText("未启用或无需调用")).toBeInTheDocument();
+    expect(screen.getByText("AI 辅助分析").parentElement).toHaveTextContent("未启用或无需调用");
   });
 
   it("keeps results available while allowing failed requirements to retry", async () => {
