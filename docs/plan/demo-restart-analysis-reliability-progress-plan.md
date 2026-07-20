@@ -2,13 +2,159 @@
 
 > **执行要求：** 使用 `superpowers:subagent-driven-development` 或 `superpowers:executing-plans` 按任务顺序实施；所有代码改动遵循 TDD。保持在 `main`，不新建分支，不回退现有改动，不自动 commit 或 push。真实清理 `esg_agent_demo` 前必须再次取得用户授权。
 
-**目标：** 让同一份远景 2024 中文 ESG 报告能够通过明确的“开始新演示”流程重新上传和分析；重复分析、事务异常或服务重启不能留下永久 `running` run；进度百分比能够反映各阶段实际工作量。
+**目标：** 让同一份远景 2024 中文 ESG 报告能够在保留已有报告的前提下重新上传和分析；重复分析、事务异常或服务重启不能留下永久 `running` run；进度百分比能够反映各阶段实际工作量。
 
-**架构：** 后台分析任务只接收 ID 和分析参数，并在任务内部创建独立数据库会话。报告解析产物按 `report_id` 事务性替换，保证保存幂等；任何异常先 rollback，再写入 failed run、failed stage 和审计事件。数据库用部分唯一索引限制同一报告最多一个 active run。演示环境提供仅 `APP_ENV=demo + esg_agent_demo + demo runtime` 可用的显式逻辑清理接口，前端二次确认后清理并重新上传用户已经选择的 PDF。进度采用固定阶段权重和阶段内部真实完成量，不使用虚假匀速动画。
+**架构：** 后台分析任务只接收 ID 和分析参数，并在任务内部创建独立数据库会话。报告解析产物按 `report_id` 事务性替换，保证保存幂等；任何异常先 rollback，再写入 failed run、failed stage 和审计事件。数据库用部分唯一索引限制同一报告最多一个 active run。重复文件默认返回 `409 duplicate_report`；用户明确选择重新上传后，上传接口以 `duplicate_policy=create_new` 创建新的 `report_id`、独立解析产物和独立分析 run，同时保留已有报告。进度采用固定阶段权重和阶段内部真实完成量，不使用虚假匀速动画。
 
 **技术栈：** FastAPI、SQLAlchemy、PostgreSQL、Alembic、Pydantic、pytest、Next.js、TanStack Query、Vitest、React Testing Library。
 
 ---
+
+## 2026-07-18 产品语义纠偏（当前有效设计）
+
+本节覆盖本文后续仍保留的“清空演示库后重新上传”历史方案。历史内容只用于解释已有 reset 能力及其测试来源，不再作为普通产品流程或本轮验收前提。
+
+### 1. 第一性原理
+
+1. 用户上传 PDF 的目标是创建一次独立分析；文件字节相同不代表用户没有重新分析的意图。
+2. `file_hash` 用于发现重复文件并避免误操作，不作为禁止创建新分析的唯一键。
+3. 每次明确重新上传都创建新的 `report_id`，从 metadata 确认开始完整执行分析；已有报告、复核、整改任务和输出版本永久保留。
+4. 清空数据库属于维护能力，不进入普通产品页面，也不作为真实验收的准备步骤。
+
+### 2. API 与数据流
+
+1. `POST /api/reports/upload` 默认采用 `duplicate_policy=reject`。发现相同 `file_hash` 时继续返回 `409 duplicate_report`，并返回可打开的已有 `report_id`。
+2. 用户点击“重新上传并分析”后，前端使用同一文件再次调用上传接口，并显式传入 `duplicate_policy=create_new`。
+3. `create_new` 只绕过重复哈希门禁，仍执行 PDF 类型校验、文件保存、metadata 本地识别、报告创建和上传审计。
+4. 新记录使用新的 `report_id` 和唯一存储路径；审计载荷记录 `duplicate_of_report_id`，便于追踪来源。
+5. `reports.file_hash` 当前只有普通索引，允许多条记录使用相同哈希，因此本次不新增 Alembic migration。
+6. 现有 `/api/demo/reset` 和离线 reset 工具保留为维护能力，前端上传组件不再调用。
+
+### 3. 前端行为
+
+重复上传提示只提供两个主操作：
+
+- “查看已有报告”：打开已有报告 dashboard；
+- “重新上传并分析”：创建新报告并进入 metadata 确认页。
+
+页面不再展示“开始新演示”“清空演示库”及相关二次确认。重新上传失败时保留当前文件，并显示可重试的中文错误，不影响已有报告。
+
+### 4. 后端冻结与验收门禁
+
+本次只修改重复上传契约、上传审计、前端交互及对应文档和测试。完成下列门禁后冻结后端；此后只有阻塞完整闭环的 P0/P1 问题允许修改后端：
+
+1. 默认重复上传仍返回结构化 `409 duplicate_report`；
+2. `create_new` 创建新 `report_id`，相同 `file_hash` 可共存，已有记录保持不变；
+3. 新报告必须从 metadata 确认开始，不能继承已有报告的分析、复核或输出状态；
+4. 同一报告 active run 并发门禁继续生效；
+5. 后端全量测试、前端 typecheck/test/build 和 Envision 577 gate 通过；
+6. 普通浏览器或独立 Edge 完成“重复上传 → 两个选择 → 新报告分析 → 结果 → 复核 → 输出”的人工验收。
+
+### 5. 最小影响文件
+
+| 文件 | 修改目的 |
+|---|---|
+| `backend/src/api/routes/reports.py` | 增加显式 duplicate policy 并记录重复来源 |
+| `backend/tests/api/test_reports_api.py` | 覆盖默认拒绝、新建成功和历史保留 |
+| `frontend/lib/api.ts` | 支持显式新建上传 |
+| `frontend/components/upload/report-upload-panel.tsx` | 将清库流程替换为两个产品选项 |
+| `frontend/components/upload/report-upload-panel.test.tsx` | 覆盖打开已有报告和重新上传新建报告 |
+| `docs/DESIGN.md`、`docs/DEVELOPMENT.md`、`docs/product/api-contract.md` | 同步当前有效契约和验收路径 |
+
+### 6. 当前纠偏实施清单
+
+> 本清单采用 inline execution，不新建分支，不自动 commit 或 push。每项生产代码均先完成 RED 测试。
+
+#### 任务 A：冻结重复上传后端契约
+
+- [x] 在 `backend/tests/api/test_reports_api.py` 新增失败测试：先上传相同 payload，再请求 `POST /api/reports/upload?duplicate_policy=create_new`；断言第二次返回成功、新旧 `report_id` 不同、`file_hash` 相同、报告列表保留两条记录。
+- [x] 运行 `uv run --no-sync pytest tests/api/test_reports_api.py -k "duplicate" -q`，确认新增测试因第二次仍返回 `409` 而失败。
+- [x] 在 `backend/src/api/routes/reports.py` 将 `duplicate_policy` 限定为 `reject | create_new`，默认 `reject`；仅 `create_new` 绕过重复哈希门禁，并在 `report_uploaded` 审计载荷加入 `duplicate_of_report_id`。
+- [x] 再次运行相同测试，确认默认拒绝和显式新建均通过。
+
+期望接口形态：
+
+```python
+@router.post("/upload", response_model=ReportUploadResponse)
+async def upload_report(
+    file: UploadFile = File(...),
+    duplicate_policy: Literal["reject", "create_new"] = Query(default="reject"),
+    session: Session = Depends(get_db_session),
+) -> dict:
+    ...
+```
+
+#### 任务 B：替换前端清库交互
+
+- [x] 在 `frontend/components/upload/report-upload-panel.test.tsx` 先把“开始新演示”测试改为“重新上传并分析”：断言第一次请求返回 `409`，第二次请求使用 `duplicate_policy=create_new`，成功后进入新报告 metadata 确认页；断言不调用 `/api/demo/reset`。
+- [x] 运行 `pnpm exec vitest run components/upload/report-upload-panel.test.tsx`，确认测试因按钮和请求仍使用 reset 而失败。
+- [x] 修改 `frontend/lib/api.ts`，让 `uploadReport(file, "create_new")` 只在显式新建时追加查询参数。
+- [x] 修改 `frontend/components/upload/report-upload-panel.tsx`：保留“查看已有报告”，将 reset 状态和提示替换为“重新上传并分析” mutation，失败时显示中文重试信息。
+- [x] 再次运行组件测试并确认通过。
+
+期望客户端形态：
+
+```typescript
+export function uploadReport(file: File, duplicatePolicy: "reject" | "create_new" = "reject") {
+  const suffix = duplicatePolicy === "create_new" ? "?duplicate_policy=create_new" : "";
+  return request<ReportUploadResponse>(`/api/reports/upload${suffix}`, { method: "POST", body: formData });
+}
+```
+
+#### 任务 C：同步契约与文档
+
+- [x] 从运行中的后端 OpenAPI 重新生成 `frontend/lib/generated/api-types.ts`，运行 `pnpm generate:api`；生成文件按项目既有规则处理，不手工编辑生成结构。
+- [x] 更新 `docs/DESIGN.md`、`docs/DEVELOPMENT.md` 和 `docs/product/api-contract.md`，删除普通验收对 demo reset 的依赖，保留维护接口说明。
+- [x] 运行 `rg -n "开始新演示|确认清空并重新上传" frontend docs/DESIGN.md docs/DEVELOPMENT.md docs/product/api-contract.md`，产品页面与当前契约不得残留旧文案。
+
+#### 任务 D：后端冻结门禁
+
+- [x] 运行重复上传相关后端测试和 changed-file Ruff。
+- [x] 运行 `uv run --no-sync pytest -q`，记录总通过数。
+- [x] 运行 Envision 577 regeneration gate，不启用外部模型、OCR 或 VLM；确认 577 个唯一 requirement、审计通过且 verdict delta 为 0。
+- [x] 后端进入冻结状态；后续人工验收只允许修复阻塞闭环的 P0/P1 后端问题。
+
+#### 任务 E：前端优化与真实验收
+
+- [x] 运行 `pnpm typecheck`、`pnpm test` 和 `pnpm build`。
+- [x] 启动 PostgreSQL、冻结后的后端和前端；验证 `http://localhost:8000/api/health`、`http://localhost:8000/docs` 和 `http://localhost:3000`。
+- [x] 使用普通 Chrome 验收：重复上传远景报告，分别验证“查看已有报告”和“重新上传并分析”，随后完成 metadata、inline 分析、577 结果分页、两个复核队列、整改任务和版本化输出。
+- [x] 记录复现步骤、严重程度、影响范围和建议；修复阻塞问题后重跑相关测试与最终门禁。
+
+### 7. 2026-07-18 人工验收记录
+
+本轮明确连接 `APP_ENV=demo`、数据库 `esg_agent_demo` 和 `backend/data/runtime/demo/`，未执行 reset、数据库清空、历史回写、外部模型、OCR 或 VLM。重复上传创建新报告 `report-1069b7fed5174cfb8d6d9ba8c7246785`，分析 run `run-1fa6f29a4aac44b9832e6ecf36aae78b` 完成 577 条结果。
+
+人工路径通过：
+
+- 重复上传同时提供“查看已有结果”和“重新上传并分析”；新报告从 metadata 确认开始，旧报告保留；
+- 七阶段完成态无转圈，进度页不提前展示 577，并提供结果与高优先级复核入口；
+- dashboard 为高 12、中 60、低 505，适用性待判定 343；
+- 完整核查表第 1–50 条至第 551–577 条均可访问，末页 27 条；
+- 高优先级队列 12 条，适用性队列 343 条，末页为第 301–343 条；
+- 三栏详情和 PDF iframe 正常，PDF 地址指向报告文件接口，下载目录没有新增文件；
+- 逐条读取 577 个详情后，`rationale_display` 和 `missing_items_display` 的全英文展示残留均为 0；
+- 从 `GRI 2-5-a` 创建整改任务并更新为“进行中”，未修改 assessment 结论；
+- 草稿输出生成 3 个文件；正式输出因 12 条高优先级尚未复核而被正确阻止，并明确中优先级、适用性和 577 条人工确认边界。
+
+现场缺陷与修复：
+
+| 严重度 | 复现与影响 | 根因 | 修复与验证 |
+|---|---|---|---|
+| P1 | 同一哈希存在多份报告时，“查看已有结果”可能打开最早的 risk-v1 报告，演示出现 355 条旧高风险 | `find_report_by_hash` 无排序 | 按 `created_at DESC, report_id DESC` 选最新报告；repository/API 测试先失败后通过，现场 409 返回最新新报告 |
+| P1 | 整改页只能查看，普通用户无法创建或更新任务，API 闭环无法在产品界面演示 | 前端只实现 `GET` 列表 | 在复核详情增加任务创建，在整改页增加负责人、状态和说明更新，dashboard 增加整改与输出入口；组件测试和真实 demo 任务通过 |
+| P1 | 切换复核条目后，上一条备注和整改表单可能保留，并可能提交到新 assessment；任务创建成功后仍可重复点击 | 表单组件在同一 React 位置复用，成功态未参与按钮禁用条件 | 按 `assessment_id` 重建复核与整改表单，创建成功即禁用提交；两条回归测试均先失败后通过 |
+| P2 | 分析完成页及历史状态仍显示“高风险复核”“风险分级” | risk-v1 展示文案未随 risk-v2.1 完整迁移 | 统一为“高优先级复核”“复核优先级计算”，增加组件与进度模型回归测试 |
+
+最终自动门禁：后端 555 项测试通过；前端 19 个测试文件、51 项测试、typecheck 和 production build 通过；Envision regeneration 为 803 行证据展开记录、577 个唯一 requirement，audit `ok=true`、0 错误、0 警告，verdict delta=0，false disclosed、wrong source page 和 unknown leakage 均为 0。
+
+最终复跑时，Windows 占用默认 `tmp/pytest-current` 导致首轮出现 115 个同源 setup error，均为临时目录 `WinError 5`，没有业务断言失败；保留现场并改用独立 `--basetemp` 后，555 项全部通过。
+
+---
+
+## 以下为历史实施记录
+
+以下章节记录已经完成的分析可靠性、进度语义和 demo reset 安全能力。凡涉及“开始新演示”“清空演示库后重新上传”的产品行为，均由上方“2026-07-18 产品语义纠偏”覆盖；其余 active run 门禁、事务恢复和进度规则继续有效。
 
 ## 一、已确认故障与实施边界
 

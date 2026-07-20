@@ -65,6 +65,116 @@
                        "material_status":  "derived_metadata",
                        "copied_at":  "2026-07-02",
                        "source_protection":  "source copied only; original source directory was not modified"
+                   },
+                   {
+                       "source_path":  "tmp/review/envision_2024_577_manual_review_v1.xlsx",
+                       "target_path":  "backend/data/review_inputs/envision_2024/manual/envision_2024_577_manual_review_v1.xlsx",
+                       "sha256":  "657e2ddd7882474282c6496166cfa3284a379df8971179898b783d792ee7b9a1",
+                       "size_bytes":  327128,
+                       "asset_type":  "manual_review_workbook",
+                       "migration_reason":  "Preserves the first manual review baseline used for deterministic ESG acceptance.",
+                       "material_status":  "review_input",
+                       "copied_at":  "2026-07-20",
+                       "source_protection":  "source copied only; original project tmp file was not modified"
+                   },
+                   {
+                       "source_path":  "${ESG_SECOND_REVIEW_WORKBOOK_SOURCE}",
+                       "target_path":  "backend/data/review_inputs/envision_2024/manual/envision_2024_577_manual_review_second_review_Pro_20260719.xlsx",
+                       "sha256":  "f1eeb37444de1eeda86b8ae0813dbfd6e88c94719781b98a8de659d9fbd7ddea",
+                       "size_bytes":  395999,
+                       "asset_type":  "manual_second_review_workbook",
+                       "migration_reason":  "Preserves the completed second review and 352 standard-structure findings used for backend freeze.",
+                       "material_status":  "review_input",
+                       "copied_at":  "2026-07-20",
+                       "source_protection":  "source copied only; original external file was not modified"
+                   },
+                   {
+                       "source_path":  "${ESG_SECOND_REVIEW_RECOMMENDATIONS_SOURCE}",
+                       "target_path":  "backend/data/review_inputs/envision_2024/manual/envision_2024_577_Pro_second_review_recommendations_20260719.csv",
+                       "sha256":  "713505f54e53ecccfe292de7d209126d9293845b0df460b90bf522bca83ac29d",
+                       "size_bytes":  3774,
+                       "asset_type":  "manual_second_review_recommendations",
+                       "migration_reason":  "Preserves the 16 adjudication recommendations without overwriting the first review.",
+                       "material_status":  "review_input",
+                       "copied_at":  "2026-07-20",
+                       "source_protection":  "source copied only; original external file was not modified"
+                   },
+                   {
+                       "source_path":  "tmp/review/current_577_review_after_profile_routing.csv",
+                       "target_path":  "backend/data/review_inputs/envision_2024/baselines/current_577_review_after_profile_routing.csv",
+                       "sha256":  "3672299aa3d4e85312b8707270e4d405fc3b2f3ea7c4e2b8eefb626d50f7b99e",
+                       "size_bytes":  1932871,
+                       "asset_type":  "deterministic_review_baseline",
+                       "migration_reason":  "Preserves the approved post-profile-routing 577-row rule baseline.",
+                       "material_status":  "derived_validation_data",
+                       "copied_at":  "2026-07-20",
+                       "source_protection":  "source copied only; original project tmp file was not modified"
+                   },
+                   {
+                       "source_path":  "tmp/review/current_577_review_after_profile_routing_audit.json",
+                       "target_path":  "backend/data/review_inputs/envision_2024/baselines/current_577_review_after_profile_routing_audit.json",
+                       "sha256":  "91d7ac5163131843cb867fa3b4ba06b7ca8098d08710709b53c393d6b5fbcdf9",
+                       "size_bytes":  39,
+                       "asset_type":  "deterministic_review_audit",
+                       "migration_reason":  "Preserves the audit result associated with the post-profile-routing baseline.",
+                       "material_status":  "derived_validation_data",
+                       "copied_at":  "2026-07-20",
+                       "source_protection":  "source copied only; original project tmp file was not modified"
+                   },
+                   {
+                       "source_path":  "tmp/review/current_577_review_profile_routing_diff.csv",
+                       "target_path":  "backend/data/review_inputs/envision_2024/baselines/current_577_review_profile_routing_diff.csv",
+                       "sha256":  "dfd2aafb49b0729fdf57c6ea593549e5ec74b79469bafc2697da0ebdafda40f5",
+                       "size_bytes":  38,
+                       "asset_type":  "deterministic_review_diff",
+                       "migration_reason":  "Preserves the row-level profile-routing regression diff.",
+                       "material_status":  "derived_validation_data",
+                       "copied_at":  "2026-07-20",
+                       "source_protection":  "source copied only; original project tmp file was not modified"
+                   },
+                   {
+                       "source_path":  "tmp/review/current_577_review_profile_routing_diff_summary.json",
+                       "target_path":  "backend/data/review_inputs/envision_2024/baselines/current_577_review_profile_routing_diff_summary.json",
+                       "sha256":  "8f29d823f25528c49e9fd65acb2d80a1d026b9c9c2295ccd92118d4abcb7365f",
+                       "size_bytes":  450,
+                       "asset_type":  "deterministic_review_diff_summary",
+                       "migration_reason":  "Preserves the profile-routing regression summary used by the acceptance gate.",
+                       "material_status":  "derived_validation_data",
+                       "copied_at":  "2026-07-20",
+                       "source_protection":  "source copied only; original project tmp file was not modified"
+                   },
+                   {
+                       "source_path":  "tmp/review/current_577_review_regenerated.csv",
+                       "target_path":  "backend/data/review_inputs/envision_2024/baselines/current_577_review_regenerated.csv",
+                       "sha256":  "20ca95e8a60a4f93999ce7b13bacf529570783284d51573f1d0d650fadcfe299",
+                       "size_bytes":  2009195,
+                       "asset_type":  "deterministic_review_regeneration",
+                       "migration_reason":  "Preserves the latest accepted 577-row deterministic regeneration output.",
+                       "material_status":  "derived_validation_data",
+                       "copied_at":  "2026-07-20",
+                       "source_protection":  "source copied only; original project tmp file was not modified"
+                   },
+                   {
+                       "source_path":  "tmp/review/current_577_review_regenerated_audit.json",
+                       "target_path":  "backend/data/review_inputs/envision_2024/baselines/current_577_review_regenerated_audit.json",
+                       "sha256":  "42bcde6af5a675e135e77c9fda8ee137a12b3d6d5866de78f2d1eb3f0883c83b",
+                       "size_bytes":  56,
+                       "asset_type":  "deterministic_review_regeneration_audit",
+                       "migration_reason":  "Preserves the audit result associated with the accepted deterministic regeneration.",
+                       "material_status":  "derived_validation_data",
+                       "copied_at":  "2026-07-20",
+                       "source_protection":  "source copied only; original project tmp file was not modified"
+                   },
+                   {
+                       "source_path":  "tmp/review/current_577_review_regeneration_diff_summary.json",
+                       "target_path":  "backend/data/review_inputs/envision_2024/baselines/current_577_review_regeneration_diff_summary.json",
+                       "sha256":  "ee8bbd74eb14ed9e1933d1dda0f119f115114f7e5bd31d082a7d34073f67a2ab",
+                       "size_bytes":  503,
+                       "asset_type":  "deterministic_review_regeneration_diff_summary",
+                       "migration_reason":  "Preserves the accepted deterministic verdict-delta summary.",
+                       "material_status":  "derived_validation_data",
+                       "copied_at":  "2026-07-20",
+                       "source_protection":  "source copied only; original project tmp file was not modified"
                    }
                ],
     "notes":  [

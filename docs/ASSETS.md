@@ -145,3 +145,19 @@ Get-FileHash "backend/data/reports/Envision Energy 2024-zh.pdf" -Algorithm SHA25
 
 恢复资产时只复制原始文件，不覆盖、删改来源目录。派生文件、上传文件、OCR 文件和导出文件仍写入 `backend/data/runtime/`。
 
+### 10.1 人工复核与模型评估资产
+
+人工复核工作簿、复核建议和确定性回归基线本地保存到：
+
+- `backend/data/review_inputs/envision_2024/manual/`
+- `backend/data/review_inputs/envision_2024/baselines/`
+
+真实模型评估、冻结验收摘要和迁移前数据库备份本地保存到：
+
+- `backend/data/runtime/evaluations/`
+- `backend/data/runtime/backups/`
+
+这些目录中的内容不提交 Git。每项持久化资产必须在 `backend/data/manifests/assets_manifest.json` 登记项目相对目标路径、SHA256、大小、来源标识、用途和保护方式。外部来源只记录环境变量名，不记录本机绝对路径。
+
+模型评估资产不得包含 API Key、数据库连接信息、完整 Prompt 或未经筛选的外部模型原始响应。桌面和 `tmp/` 来源在目标文件存在且哈希一致前不得清理；清理由用户人工执行。
+

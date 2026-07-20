@@ -94,6 +94,9 @@ backend/data/runtime/exports/*
 # 项目临时文件
 tmp/
 
+# 本地人工复核和验收输入；只提交 SHA256 资产清单
+backend/data/review_inputs/**
+
 # 日志文件
 *.log
 
