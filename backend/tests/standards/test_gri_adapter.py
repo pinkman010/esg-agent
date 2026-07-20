@@ -580,3 +580,107 @@ def test_gri_adapter_adds_chinese_keywords_for_energy_and_water_300_rules(tmp_pa
     assert "范围二（基于位置）" in keywords_by_id["GRI 305-2-a"]
     assert "范围二（基于市场）" in keywords_by_id["GRI 305-2-b"]
     assert "温室气体种类" in keywords_by_id["GRI 305-2-c"]
+
+
+def test_gri_adapter_loads_only_v2_independent_requirements_with_effective_text(tmp_path):
+    path = tmp_path / "gri-checklist-v2.json"
+    path.write_text(
+        json.dumps(
+            {
+                "metadata": {
+                    "manifest_version": "gri-requirement-checklist-v2",
+                    "standard_unit_count": 3,
+                    "independent_assessment_count": 1,
+                    "context_only_count": 1,
+                    "method_pending_count": 1,
+                },
+                "requirements": [
+                    {
+                        "requirement_id": "current_gap:GRI2:2-2:c",
+                        "canonical_disclosure_id": "2-2",
+                        "requirement_text": "parent scope:",
+                        "source_requirement_text": "parent scope:",
+                        "effective_requirement_text": "parent scope:",
+                        "evaluation_role": "context_only",
+                        "structure_status": "normalized",
+                        "context_requirement_ids": [],
+                        "requirement_type": "requirement",
+                        "is_mandatory": True,
+                        "scoring_role": "hard_score",
+                        "standard_year": "2021",
+                        "assessment_mode": "current_gap",
+                    },
+                    {
+                        "requirement_id": "current_gap:GRI2:2-2:c:i",
+                        "canonical_disclosure_id": "2-2",
+                        "requirement_text": "child leaf;",
+                        "source_requirement_text": "child leaf;",
+                        "effective_requirement_text": "parent scope: child leaf;",
+                        "evaluation_role": "independent",
+                        "structure_status": "normalized",
+                        "context_requirement_ids": ["GRI 2-2-c"],
+                        "requirement_type": "requirement",
+                        "is_mandatory": True,
+                        "scoring_role": "hard_score",
+                        "standard_year": "2021",
+                        "assessment_mode": "current_gap",
+                    },
+                    {
+                        "requirement_id": "current_gap:GRI302:302-1:c",
+                        "canonical_disclosure_id": "302-1",
+                        "requirement_text": "merged leaves",
+                        "source_requirement_text": "merged leaves",
+                        "effective_requirement_text": "merged leaves",
+                        "evaluation_role": "method_pending",
+                        "structure_status": "method_pending",
+                        "context_requirement_ids": [],
+                        "requirement_type": "requirement",
+                        "is_mandatory": True,
+                        "scoring_role": "hard_score",
+                        "standard_year": "2021",
+                        "assessment_mode": "current_gap",
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    adapter = GRIAdapter(path)
+    requirements = adapter.load_requirements()
+    tasks = adapter.build_tasks(run_id="run-1", report_id="report-1")
+
+    assert [item.requirement_id for item in requirements] == ["GRI 2-2-c-i"]
+    assert requirements[0].requirement_text == "parent scope: child leaf;"
+    assert requirements[0].source_requirement_text == "child leaf;"
+    assert requirements[0].context_requirement_ids == ["GRI 2-2-c"]
+    assert requirements[0].structure_status == "normalized"
+    assert tasks[0].source_requirement_text == "child leaf;"
+    assert adapter.get_scope_summary() == {
+        "standard_unit_count": 3,
+        "independent_assessment_count": 1,
+        "context_only_count": 1,
+        "method_pending_count": 1,
+    }
+
+
+def test_gri_adapter_rejects_v2_metadata_count_mismatch(tmp_path):
+    path = tmp_path / "invalid-v2.json"
+    path.write_text(
+        json.dumps(
+            {
+                "metadata": {
+                    "manifest_version": "gri-requirement-checklist-v2",
+                    "standard_unit_count": 2,
+                    "independent_assessment_count": 1,
+                    "context_only_count": 0,
+                    "method_pending_count": 0,
+                },
+                "requirements": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="invalid GRI v2 structure counts"):
+        GRIAdapter(path).load_requirements()

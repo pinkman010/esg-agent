@@ -48,6 +48,7 @@ class SingleReportWorkflow:
         requirement_ids: set[str] | None = None,
     ) -> AnalysisRun:
         run_id = run_id or f"run-{uuid4().hex}"
+        scope_summary = self._standard_scope_summary()
         if self.repository.get_run(run_id) is None:
             self.repository.create_run(
                 AnalysisRun(
@@ -56,12 +57,25 @@ class SingleReportWorkflow:
                     status=RunStatus.PENDING,
                     confirm_llm=confirm_llm,
                     risk_rule_version=CURRENT_RISK_RULE_VERSION,
+                    standard_unit_count=scope_summary.get("standard_unit_count", 577),
+                    eligible_requirement_count=scope_summary.get(
+                        "independent_assessment_count", 577
+                    ),
+                    context_only_count=scope_summary.get("context_only_count", 0),
+                    method_pending_count=scope_summary.get("method_pending_count", 0),
                 )
             )
         current_run = self.repository.get_run(run_id)
         if current_run is None:
             raise LookupError(f"analysis run not found: {run_id}")
-        self.repository.update_run_status(run_id, RunStatus.RUNNING)
+        self.repository.update_run_status(
+            run_id,
+            RunStatus.RUNNING,
+            standard_unit_count=scope_summary.get("standard_unit_count"),
+            eligible_requirement_count=scope_summary.get("independent_assessment_count"),
+            context_only_count=scope_summary.get("context_only_count"),
+            method_pending_count=scope_summary.get("method_pending_count"),
+        )
         self.repository.create_audit_event(
             run_id,
             "analysis_started",
@@ -184,6 +198,13 @@ class SingleReportWorkflow:
                 error_summary=error_summary,
             )
         )
+
+    def _standard_scope_summary(self) -> dict[str, int]:
+        getter = getattr(self.standard_adapter, "get_scope_summary", None)
+        if getter is None:
+            return {}
+        summary = getter()
+        return dict(summary) if summary else {}
 
     def _explicit_ocr_pages(self, enable_ocr: bool, ocr_pages: list[int] | None) -> list[int] | None:
         if not enable_ocr:

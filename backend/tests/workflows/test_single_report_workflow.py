@@ -146,6 +146,16 @@ class TwoTaskAdapter(FakeAdapter):
         return [requirement_to_task(requirement, run_id, report_id) for requirement in self.load_requirements()]
 
 
+class ScopeAwareAdapter(FakeAdapter):
+    def get_scope_summary(self):
+        return {
+            "standard_unit_count": 3,
+            "independent_assessment_count": 1,
+            "context_only_count": 1,
+            "method_pending_count": 1,
+        }
+
+
 class SelectiveFailingAgent:
     def __init__(self):
         self.delegate = DisclosureAgent()
@@ -268,6 +278,24 @@ def test_single_report_workflow_completes_without_model_calls(repo_session):
     assert risk.risk_rule_version == "risk-v2.1"
     assert risk.evidence_status is not None
     assert risk.applicability_status is not None
+
+
+def test_single_report_workflow_persists_standard_scope_counts(repo_session):
+    repo = Repository(repo_session)
+    seed_report(repo)
+    workflow = SingleReportWorkflow(
+        repo,
+        FakeParser(),
+        ScopeAwareAdapter(),
+        DisclosureAgent(),
+    )
+
+    run = workflow.run("report-1", Path("report.pdf"), "hash-1", confirm_llm=False)
+
+    assert run.standard_unit_count == 3
+    assert run.eligible_requirement_count == 1
+    assert run.context_only_count == 1
+    assert run.method_pending_count == 1
 
 
 def test_single_report_workflow_preserves_successful_results_when_one_requirement_fails(repo_session):

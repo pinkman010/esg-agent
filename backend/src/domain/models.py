@@ -113,7 +113,16 @@ class DisclosureRequirement(BaseModel):
     disclosure_id: str
     requirement_id: str
     requirement_text: str
+    source_requirement_text: str | None = None
+    context_requirement_ids: list[str] = Field(default_factory=list)
+    structure_status: str = "verified"
     keywords: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def default_source_requirement_text(self) -> "DisclosureRequirement":
+        if self.source_requirement_text is None:
+            self.source_requirement_text = self.requirement_text
+        return self
 
 
 class DisclosureTask(BaseModel):

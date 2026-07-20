@@ -60,6 +60,28 @@ def test_parse_args_accepts_baseline_and_diff_outputs(tmp_path: Path):
     assert args.diff_summary_output.name == "diff.json"
 
 
+def test_parse_args_accepts_v2_requirements_and_scope_summary(tmp_path: Path):
+    args = parse_args(
+        [
+            "--report-id",
+            "envision_2024_v2",
+            "--pdf",
+            "backend/data/reports/Envision Energy 2024-zh.pdf",
+            "--profile",
+            "backend/data/reports/profiles/envision_2024.json",
+            "--requirements",
+            "backend/data/manifests/gri_requirement_checklist_v2.json",
+            "--output",
+            str(tmp_path / "out.csv"),
+            "--scope-summary-output",
+            str(tmp_path / "scope.json"),
+        ]
+    )
+
+    assert args.requirements.name == "gri_requirement_checklist_v2.json"
+    assert args.scope_summary_output.name == "scope.json"
+
+
 def test_run_single_report_regeneration_uses_workflow_without_llm_or_ocr(monkeypatch, tmp_path):
     calls = {}
 

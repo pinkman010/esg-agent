@@ -276,6 +276,7 @@ class GRIAdapter:
         self.requirements_path = Path(requirements_path)
         self.standard_version = standard_version
         self.max_requirements = max_requirements
+        self._scope_summary: dict[str, int] | None = None
 
     def load_requirements(self) -> list[DisclosureRequirement]:
         try:
@@ -283,6 +284,7 @@ class GRIAdapter:
             if isinstance(raw_data, list):
                 return [DisclosureRequirement(**item) for item in raw_data]
             if isinstance(raw_data, dict) and isinstance(raw_data.get("requirements"), list):
+                self._scope_summary = self._validate_scope_summary(raw_data)
                 return self._convert_checklist_requirements(raw_data["requirements"])
             raise TypeError("unsupported GRI requirement data shape")
         except (OSError, json.JSONDecodeError, TypeError, ValidationError) as exc:
@@ -301,6 +303,9 @@ class GRIAdapter:
                     disclosure_id=requirement.disclosure_id,
                     requirement_id=requirement.requirement_id,
                     requirement_text=requirement.requirement_text,
+                    source_requirement_text=requirement.source_requirement_text,
+                    context_requirement_ids=requirement.context_requirement_ids,
+                    structure_status=requirement.structure_status,
                     keywords=requirement.keywords,
                 )
             )
@@ -318,9 +323,24 @@ class GRIAdapter:
                     standard_version=str(item.get("standard_year") or self.standard_version),
                     disclosure_id=self._disclosure_id_from_checklist_item(item),
                     requirement_id=requirement_id,
-                    requirement_text=str(item.get("requirement_text") or "").strip(),
+                    requirement_text=str(
+                        item.get("effective_requirement_text")
+                        or item.get("requirement_text")
+                        or ""
+                    ).strip(),
+                    source_requirement_text=str(
+                        item.get("source_requirement_text")
+                        or item.get("requirement_text")
+                        or ""
+                    ).strip(),
+                    context_requirement_ids=list(item.get("context_requirement_ids") or []),
+                    structure_status=str(item.get("structure_status") or "verified"),
                     keywords=self._keywords_from_text(
-                        str(item.get("requirement_text") or ""),
+                        str(
+                            item.get("effective_requirement_text")
+                            or item.get("requirement_text")
+                            or ""
+                        ),
                         requirement_id=requirement_id,
                     ),
                 )
@@ -330,12 +350,62 @@ class GRIAdapter:
         return requirements
 
     def _is_current_gap_requirement(self, item: dict[str, Any]) -> bool:
-        return (
+        is_current = (
             item.get("assessment_mode") == "current_gap"
             and item.get("requirement_type") == "requirement"
             and item.get("is_mandatory") is True
             and item.get("scoring_role") == "hard_score"
         )
+        if not is_current:
+            return False
+        if "evaluation_role" not in item and "structure_status" not in item:
+            return True
+        return (
+            item.get("evaluation_role") == "independent"
+            and item.get("structure_status") in {"verified", "normalized"}
+        )
+
+    def get_scope_summary(self) -> dict[str, int]:
+        if self._scope_summary is None:
+            self.load_requirements()
+        return dict(self._scope_summary or {})
+
+    def _validate_scope_summary(self, raw_data: dict[str, Any]) -> dict[str, int]:
+        raw_items = raw_data["requirements"]
+        current_items = [
+            item
+            for item in raw_items
+            if item.get("assessment_mode") == "current_gap"
+            and item.get("requirement_type") == "requirement"
+            and item.get("is_mandatory") is True
+            and item.get("scoring_role") == "hard_score"
+        ]
+        metadata = dict(raw_data.get("metadata") or {})
+        is_v2 = metadata.get("manifest_version") == "gri-requirement-checklist-v2"
+        if not is_v2:
+            return {
+                "standard_unit_count": len(current_items),
+                "independent_assessment_count": len(current_items),
+                "context_only_count": 0,
+                "method_pending_count": 0,
+            }
+        actual = {
+            "standard_unit_count": len(current_items),
+            "independent_assessment_count": sum(
+                item.get("evaluation_role") == "independent"
+                and item.get("structure_status") in {"verified", "normalized"}
+                for item in current_items
+            ),
+            "context_only_count": sum(
+                item.get("evaluation_role") == "context_only" for item in current_items
+            ),
+            "method_pending_count": sum(
+                item.get("evaluation_role") == "method_pending" for item in current_items
+            ),
+        }
+        if any(metadata.get(key) != value for key, value in actual.items()):
+            raise ValueError("invalid GRI v2 structure counts")
+        return actual
 
     def _standard_id_from_checklist_item(self, item: dict[str, Any]) -> str:
         raw_id = str(item.get("requirement_id") or "")

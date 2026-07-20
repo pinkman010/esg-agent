@@ -598,7 +598,7 @@ uv run --no-sync alembic current
 - Modify: `backend/tests/standards/test_gri_adapter.py`
 - Modify: `backend/tests/workflows/test_single_report_workflow.py`
 
-- [ ] **Step 1：写 v2 Adapter 失败测试**
+- [x] **Step 1：写 v2 Adapter 失败测试**
 
 测试输入同时包含 `independent`、`context_only`、`method_pending`，断言：
 
@@ -611,7 +611,7 @@ assert requirements[0].context_requirement_ids == ["GRI PARENT"]
 assert requirements[0].structure_status == "normalized"
 ```
 
-- [ ] **Step 2：扩展 requirement/task 数据契约**
+- [x] **Step 2：扩展 requirement/task 数据契约**
 
 `DisclosureRequirement` 和 `DisclosureTask` 增加：
 
@@ -623,7 +623,7 @@ structure_status: str
 
 `requirement_text` 作为运行时完整有效文本；`source_requirement_text` 保留原始叶子文本。
 
-- [ ] **Step 3：让 GRIAdapter 读取 v2 清单**
+- [x] **Step 3：让 GRIAdapter 读取 v2 清单**
 
 修改 `_is_current_gap_requirement()`，除现有条件外必须满足：
 
@@ -636,7 +636,7 @@ item.get("structure_status") in {"verified", "normalized"}
 
 `regenerate_review_csv.py` 增加 `--requirements` 和 `--scope-summary-output` 参数。使用 v2 清单时从 metadata 读取 577/493/78/6，不再断言独立 assessment 必须为577；与 v1 baseline 比较时只比较 v2 中 `structure_status=verified` 的共同 ID。
 
-- [ ] **Step 4：更新 run 统计与阶段进度**
+- [x] **Step 4：更新 run 统计与阶段进度**
 
 每个新 run 固定写入：
 
@@ -649,7 +649,7 @@ method_pending_count=6
 
 `requirement_matching`、`evidence_assessment`、`risk_classification` 的 `total_units` 使用493；界面未来展示百分比时不会把577误当作待分析叶子数。
 
-- [ ] **Step 5：运行 Adapter 与 workflow 测试**
+- [x] **Step 5：运行 Adapter 与 workflow 测试**
 
 ```powershell
 cd backend

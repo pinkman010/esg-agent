@@ -207,7 +207,10 @@ class Repository:
         status: RunStatus,
         error_message: str | None = None,
         *,
+        standard_unit_count: int | None = None,
         eligible_requirement_count: int | None = None,
+        context_only_count: int | None = None,
+        method_pending_count: int | None = None,
         succeeded_requirement_count: int | None = None,
         failed_requirement_count: int | None = None,
         failure_summary: dict | None = None,
@@ -221,8 +224,14 @@ class Repository:
             record.completed_at = func.now()
         record.status = status.value
         record.error_message = error_message
+        if standard_unit_count is not None:
+            record.standard_unit_count = standard_unit_count
         if eligible_requirement_count is not None:
             record.eligible_requirement_count = eligible_requirement_count
+        if context_only_count is not None:
+            record.context_only_count = context_only_count
+        if method_pending_count is not None:
+            record.method_pending_count = method_pending_count
         if succeeded_requirement_count is not None:
             record.succeeded_requirement_count = succeeded_requirement_count
         if failed_requirement_count is not None:

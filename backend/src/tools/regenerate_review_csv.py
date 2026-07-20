@@ -35,10 +35,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--report-id", required=True)
     parser.add_argument("--pdf", type=Path, required=True)
     parser.add_argument("--profile", type=Path, required=True)
+    parser.add_argument("--requirements", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--baseline", type=Path)
     parser.add_argument("--audit-output", type=Path)
     parser.add_argument("--diff-summary-output", type=Path)
+    parser.add_argument("--scope-summary-output", type=Path)
     parser.add_argument("--report-total-pages", type=int, default=78)
     parser.add_argument("--confirm-llm", action="store_true", default=False)
     parser.add_argument("--enable-ocr", action="store_true", default=False)
@@ -101,7 +103,10 @@ def build_workflow(args: argparse.Namespace, repository: Repository):
     return SingleReportWorkflow(
         repository,
         DocumentParser(),
-        GRIAdapter(data_root / "manifests" / "gri_requirement_checklist.json"),
+        GRIAdapter(
+            getattr(args, "requirements", None)
+            or data_root / "manifests" / "gri_requirement_checklist.json"
+        ),
         DisclosureAgent(),
         requirement_pack_path=data_root / "manifests" / "gri_requirement_pack.json",
         report_profile_path=args.profile,
@@ -135,6 +140,17 @@ def write_diff_summary(path: Path, baseline: Path, regenerated: Path) -> None:
     path.write_text(json.dumps(asdict(result), ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def write_scope_summary(path: Path, requirements_path: Path) -> None:
+    from src.standards.gri import GRIAdapter
+
+    summary = GRIAdapter(requirements_path).get_scope_summary()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(summary, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+
 def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
     assessments = run_single_report_regeneration(args)
@@ -145,6 +161,10 @@ def main(argv: list[str] | None = None) -> None:
         write_audit(args.audit_output, args.output, args.report_total_pages)
     if args.baseline and args.diff_summary_output:
         write_diff_summary(args.diff_summary_output, args.baseline, args.output)
+    if args.scope_summary_output:
+        if args.requirements is None:
+            raise ValueError("--scope-summary-output requires --requirements")
+        write_scope_summary(args.scope_summary_output, args.requirements)
 
 
 def _looks_like_compilation_requirement(requirement_id: str) -> bool:
