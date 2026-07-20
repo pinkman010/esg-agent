@@ -1072,14 +1072,16 @@ false_disclosed_count=0（guardrail后的最终AI建议）
 - Modify: `docs/plan/deepseek-ai-backend-freeze-plan.md`
 - Output local-only: `backend/data/runtime/evaluations/envision_2024/backend_freeze_acceptance_summary.json`
 
-- [ ] **Step 1：运行全部 focused tests**
+- [x] **Step 1：运行全部 focused tests**
 
 ```powershell
 cd backend
 uv run --no-sync pytest tests/standards tests/tools/test_llm_client.py tests/services/test_ai_assessment_service.py tests/services/test_ai_evaluation_service.py tests/workflows/test_single_report_workflow.py tests/api/test_assessments_api.py tests/api/test_runs_api.py tests/api/test_exports_api.py -q
 ```
 
-- [ ] **Step 2：重新生成 Envision v2 规则基线**
+2026-07-20执行结果：240项通过。为符合AI越权 guardrail，workflow fake 使用 `partially_disclosed` 建议，不再构造规则 `unknown` 被AI直接升级为最终 `disclosed` 的无效测试数据。
+
+- [x] **Step 2：重新生成 Envision v2 规则基线**
 
 运行：
 
@@ -1090,6 +1092,7 @@ uv run --no-sync python -m src.tools.regenerate_review_csv `
   --pdf "data/reports/Envision Energy 2024-zh.pdf" `
   --profile data/reports/profiles/envision_2024.json `
   --requirements data/manifests/gri_requirement_checklist_v2.json `
+  --manual-review-workbook data/review_inputs/envision_2024/manual/envision_2024_577_manual_review_second_review_Pro_20260719.xlsx `
   --output data/runtime/evaluations/envision_2024/current_493_review_regenerated.csv `
   --baseline data/review_inputs/envision_2024/baselines/current_577_review_regenerated.csv `
   --audit-output data/runtime/evaluations/envision_2024/current_493_review_regenerated_audit.json `
@@ -1112,7 +1115,9 @@ global_fallback_count=0
 
 268条 normalized 项允许因完整文本产生规则变化，必须输出逐项 diff，不允许无解释的 evidence 页码越界。
 
-- [ ] **Step 3：运行 Goldwind gate**
+2026-07-20执行结果：665条 evidence 行、493个唯一独立判断项；577/493/78/6结构计数通过，三类结构字段无空值，`global_fallback_count=0`。人工基线可比范围为224条 verdict加1条适用性例外；基线和当前均为 `false_disclosed_count=0`、`wrong_source_page_count=6`，因此新增 false disclosed 和 wrong source page 均为0；audit无 warning/error。
+
+- [x] **Step 3：运行 Goldwind gate**
 
 保持外部模型、OCR和VLM关闭。要求：
 
@@ -1124,7 +1129,9 @@ global_fallback_count=0
 
 历史100条 gold 的口径因 context-only 排除发生变化时，报告新旧ID集合和可比样本数量，不伪造原100条可比结论。
 
-- [ ] **Step 4：运行后端全量和前端兼容门禁**
+2026-07-20首次新鲜回归发现 `GRI 403-10-a-i` 直接KPI捷径越过职业健康叶子语义，产生1条 false disclosed。修复为先执行语义叶子校验，并增加供应商限定直接匹配后重跑：577个唯一 requirement、1382条 evidence 行、100条 gold 中 recall=96.08%、`false_disclosed_count=0`、`wrong_source_page_count=0`、`unknown_leakage_count=2`、`global_fallback_count=0`，audit无 warning/error。
+
+- [x] **Step 4：运行后端全量和前端兼容门禁**
 
 ```powershell
 cd backend
@@ -1138,7 +1145,9 @@ pnpm build
 
 期望：全部通过；测试数量不得低于 Task 1 基线。
 
-- [ ] **Step 5：更新文档事实**
+2026-07-20最终结果：后端626项通过。前端19个测试文件、51项测试通过，typecheck和production build成功。
+
+- [x] **Step 5：更新文档事实**
 
 文档必须明确：
 
@@ -1153,7 +1162,9 @@ pnpm build
 
 同时生成 `backend/data/runtime/evaluations/envision_2024/backend_freeze_acceptance_summary.json`，记录结构计数、AI评估指标、Envision/Goldwind gate、后端/前端测试数量、数据库head、Git HEAD和所有最终验收产物SHA256。把最终验收产物和数据库备份的目标路径、SHA256、大小及用途登记到 `backend/data/manifests/assets_manifest.json`。
 
-- [ ] **Step 6：提交后端冻结 checkpoint**
+2026-07-20执行结果：README、DESIGN、DEVELOPMENT、API契约和数据模型文档已同步到 `0011_ai_suggestions`；冻结摘要已生成，11个评估/回归/备份产物及摘要自身均登记到 assets manifest。两份 PostgreSQL 备份 SHA256 分别为 `b21d9982b523802278935c3bb6fd2535b5682b5f1bf66a05254ca979a94c8f65` 和 `f5789b350e8cff0a848c99c31ab41d5a5d6a5de4ef7fe5445659cd5f784947ee`。文档明确AI辅助边界、无GRI专家认证、OCR/VLM关闭和前端AI交互待下一计划。
+
+- [x] **Step 6：提交后端冻结 checkpoint**
 
 ```powershell
 git status --short
@@ -1165,6 +1176,8 @@ git status --short --branch
 ```
 
 期望：工作区干净或只剩明确不提交的 `tmp/` 产物；仍在 `main`；不 push。
+
+2026-07-20执行结果：按批次提交。回归规则、再生成与冻结摘要工具及测试提交为 `2d265a9`；文档、计划执行记录和资产清单作为最终冻结 checkpoint 提交。保持 `main`，未执行 push，运行时评估文件和数据库备份继续按 `.gitignore` 本地保存并通过 manifest 哈希追溯。
 
 ## 5. 完成判定
 

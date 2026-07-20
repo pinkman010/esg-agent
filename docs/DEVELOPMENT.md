@@ -70,6 +70,18 @@ OCR 相关环境变量：
 - `TESSERACT_CMD`：Tesseract 命令或路径。
 - `OCRMYPDF_CMD=ocrmypdf`：OCRmyPDF 命令。
 
+DeepSeek 相关环境变量：
+
+- `OPENAI_COMPATIBLE_API_BASE=https://api.deepseek.com`；
+- `OPENAI_COMPATIBLE_API_KEY`：只保存在本机 `backend/.env`，禁止提交；
+- `LLM_MODEL=deepseek-v4-flash`；
+- `LLM_THINKING_TYPE=enabled`、`LLM_REASONING_EFFORT=high`；
+- `LLM_RESPONSE_FORMAT=json_object`；
+- `LLM_PROMPT_VERSION=deepseek-gri-assist-v1.2`；
+- `LLM_MAX_CONCURRENCY=8`、`LLM_MAX_CALLS_PER_RUN=200`。
+
+外部模型默认关闭。只有分析请求显式传入 `confirm_llm=true` 才允许调用；失败 suggestion 追加保留并降级，不能覆盖规则 assessment、人工 snapshot、适用性或正式输出门禁。
+
 测试默认使用独立 PostgreSQL 数据库，避免清空开发库：
 
 - `TEST_DATABASE_URL` 未设置时默认指向测试库名 `esg_agent_test`。
@@ -178,7 +190,7 @@ uv run --no-sync uvicorn src.main:app --reload --port 8000
 
 ## 7. 企业产品闭环验收
 
-当前代码 Alembic head：`0010_risk_v2_dimensions`。`0003` 至 `0008` 覆盖报告 metadata、分析阶段、风险快照、人工复核快照、整改任务和版本化输出；`0009` 为同一报告的 `pending/running` run 增加部分唯一索引；`0010` 增加 risk-v2.1 的证据状态、适用性状态和人工适用性判断字段。启动后端前必须执行 `uv run --no-sync alembic upgrade head`。
+当前代码 Alembic head：`0011_ai_suggestions`。`0003` 至 `0008` 覆盖报告 metadata、分析阶段、风险快照、人工复核快照、整改任务和版本化输出；`0009` 增加 active run 唯一索引；`0010` 增加 risk-v2.1 维度；`0011` 增加标准结构计数、task 上下文和追加式 AI suggestion。启动后端前必须执行 `uv run --no-sync alembic upgrade head`。
 
 核心产品 API：
 
@@ -210,9 +222,9 @@ pnpm test
 pnpm build
 ```
 
-API 端到端测试 `backend/tests/api/test_product_closure_e2e.py` 覆盖上传、metadata 确认、577 计数、七阶段进度、复核队列、人工复核、整改、草稿门禁和正式输出。人工产品验收重点检查：报告列表、分析进度、dashboard、三栏复核、完整核查表、整改任务、版本化输出，以及“高优先级项目已复核”表述未暗示 577 条全部人工确认。
+API 端到端测试覆盖上传、metadata 确认、标准范围计数、规则阶段与后端 AI 辅助阶段、复核队列、人工复核、整改、草稿门禁和正式输出。人工产品验收重点检查：报告列表、分析进度、dashboard、三栏复核、完整核查表、整改任务、版本化输出，以及“高优先级项目已复核”表述未暗示 577 个标准核查单元均已人工确认。
 
-首次上传演示还必须检查：企业名称、年度和语言由文件名及 PDF 前两页本地文本自动预填；普通页面不显示内部 `report_id`；分析进度按 `5/10/5/10/60/5/5` 阶段权重和真实 units 计算且不显示 `X / 577 条已生成结果`；超过 120 秒无 stage event 时显示中断提示；完成态提供“查看分析结果”和“进入高优先级复核”。重复上传需同时验证“查看已有结果”和“重新上传并分析→新 report metadata 确认”两条路径，并确认已有报告保持不变。
+首次上传演示还必须检查：企业名称、年度和语言由文件名及 PDF 前两页本地文本自动预填；普通页面不显示内部 `report_id`；当前前端按七个规则业务阶段权重和真实 units 计算进度，不显示固定条数；后端另记录 `ai_assistance` 阶段，AI 前端展示进入下一计划；超过 120 秒无 stage event 时显示中断提示。重复上传需同时验证“查看已有结果”和“重新上传并分析→新 report metadata 确认”两条路径。
 
 旧 `review_decisions` 已完成两个连续阶段的数据映射兼容测试，但旧 API、旧前端工作台和旧导出仍有调用者，因此暂不删除。完成调用迁移后，应以独立 migration 验证 upgrade/downgrade，再申请清理。
 
@@ -226,9 +238,11 @@ API 端到端测试 `backend/tests/api/test_product_closure_e2e.py` 覆盖上传
 - Goldwind 100 条人工 gold gate 的 `unknown_leakage_count=2`，但 `false_disclosed_count=0`、`wrong_source_page_count=0`；该风险不阻塞 MVP 人工验收。
 - `esg_agent` 开发/长期验收库包含多次 Envision regeneration 记录，禁止为演示清理；重复上传可直接创建新报告，因此普通演示和验收都不依赖空库。需要隔离展示数据时可连接 `esg_agent_demo`，reset 只作为显式维护操作。
 - Codex 内置浏览器控制在本机发生两次桌面应用闪退。自动页面截图改用独立无头 Edge；人工验收使用普通浏览器，不再启用 Codex 内置浏览器。
-- 外部模型和 OCR/VLM 默认关闭，只有用户明确批准后才能启用。
+- 外部模型和 OCR/VLM 默认关闭。DeepSeek 只在 `confirm_llm=true` 且用户明确批准后启用；OCR/VLM 本轮未启用。
 
-当前自动门禁（2026-07-18）：后端 555 项测试通过；前端 19 个测试文件、51 项测试、typecheck 和 production build 通过；Envision regeneration gate 为 803 行证据展开记录、577 个唯一 eligible requirement、audit `ok=true`、0 错误、0 警告、verdict delta=0；risk-v2.1 为高 12、中 60、低 505，适用性待判定 343；main 与 demo 数据库 head 均为 `0010_risk_v2_dimensions`。
+当前自动门禁（2026-07-20）：后端 626 项测试通过；前端 19 个测试文件、51 项测试、typecheck 和 production build 通过；Envision v2 为 577/493/78/6、493 个唯一独立判断项、global fallback 0、224 个可比人工 verdict 加 1 个适用性例外无新增 false disclosed 或 wrong source page；Goldwind 100 条人工 gold 为 recall 96.08%、false disclosed 0、wrong source page 0、unknown leakage 2。main 与 demo 数据库 head 均为 `0011_ai_suggestions`。
+
+DeepSeek 225 条真实评估固定使用 Envision 报告 `report-14864b1a3ef64512b0e5d3676a120bc1` 和 run `run-526bd97aef5d4b9baa14618b719081c9`。最终指标：一致 162/224（72.32%），适用性例外 1，累计定向补跑 18 次；guardrail 后 false disclosed、证据 ID 越界、可比错页、schema 失败和模型失败均为 0。Sol/Pro 尚未裁决的 16 条继续单列，人工—AI证据页差异 4 条继续保留。该结果标记为 AI 辅助工程基线，不构成 GRI 专家认证或最终合规结论。
 
 普通 Chrome 已在 `APP_ENV=demo`、`esg_agent_demo` 和 demo runtime 下完成重复上传人工验收。当前产品流程保留历史，通过“重新上传并分析”创建新的 `report_id`，不要求 reset 空库。同一哈希存在多份历史时，重复响应按创建时间返回最新报告。验收报告已生成一条 `GRI 2-5-a` 整改任务并更新为“进行中”，另有一个草稿输出版本；这些数据作为验收证据保留。
 
@@ -289,37 +303,41 @@ uv run --no-sync python -m src.tools.first_pass_quality ../tmp/review/current_55
 
 该工具按 `requirement_id` 聚合首行，并支持人工复核字段：`manual_label`、`correct_pdf_pages`、`suggested_verdict`、`issue_type`。输出指标包括 first-pass recall、false disclosed、wrong source page、unknown leakage 和 after-rules delta。
 
-## 8. Envision 577 Review CSV Regeneration Gate
+## 8. Envision v2 Review CSV Regeneration Gate
 
-用途：从 Envision 2024 源报告、report profile 和当前规则重新生成 577 条 eligible GRI assessment review CSV，并与已批准 baseline 比较。
+用途：从 Envision 2024 源报告、report profile 和 v2 标准结构重新生成 493 个独立 assessment 的证据展开 CSV，并验证 577/493/78/6 范围及已批准人工基线。
 
 命令：
 
 ```powershell
 cd backend
 uv run --no-sync python -m src.tools.regenerate_review_csv `
-  --report-id envision_2024 `
+  --report-id envision_2024_v2 `
   --pdf "data/reports/Envision Energy 2024-zh.pdf" `
   --profile data/reports/profiles/envision_2024.json `
-  --output ../tmp/review/current_577_review_regenerated.csv `
-  --baseline ../tmp/review/current_577_review_after_profile_routing.csv `
-  --audit-output ../tmp/review/current_577_review_regenerated_audit.json `
-  --diff-summary-output ../tmp/review/current_577_review_regeneration_diff_summary.json `
+  --requirements data/manifests/gri_requirement_checklist_v2.json `
+  --manual-review-workbook data/review_inputs/envision_2024/manual/envision_2024_577_manual_review_second_review_Pro_20260719.xlsx `
+  --output data/runtime/evaluations/envision_2024/current_493_review_regenerated.csv `
+  --baseline data/review_inputs/envision_2024/baselines/current_577_review_regenerated.csv `
+  --audit-output data/runtime/evaluations/envision_2024/current_493_review_regenerated_audit.json `
+  --diff-summary-output data/runtime/evaluations/envision_2024/current_493_review_regeneration_diff_summary.json `
+  --scope-summary-output data/runtime/evaluations/envision_2024/current_493_review_scope_summary.json `
   --report-total-pages 78
 ```
 
 通过标准：
 
-- 唯一 eligible requirement 数为 577。
-- compilation requirement 不作为独立 assessment 输出。
+- 标准单元 577、独立 assessment 493、上下文项 78、方法待确认项 6。
+- 唯一 assessment requirement 为 493；多证据可展开为多行。
+- `structure_status`、`source_requirement_text`、`effective_requirement_text` 不得为空。
 - `review_csv_audit` 通过。
 - `global_fallback=0`。
 - `omission_note` 不升格。
 - `disclosed` 全部为 `not_required`。
 - `partially_disclosed` 和 `unknown` 全部为 `needs_manual_review`。
-- 和 baseline 的 verdict、review_status、source page、evidence_type、quality_flags、OCR/VLM 字段无非预期变化。
+- 224 个可比较人工 verdict 加 1 个适用性例外不得新增 false disclosed 或 wrong source page。
 
-产物写入 `tmp/review/`，不提交。
+产物写入 `backend/data/runtime/evaluations/envision_2024/`，本地保留并登记 SHA256，不提交运行时文件。
 
 ## 9. Review CSV 与诊断字段分层
 
@@ -358,6 +376,14 @@ pnpm generate:api
 生成前需要后端在 `http://localhost:8000` 提供 `/openapi.json`。
 
 ## 11. 开发日志
+
+### 2026-07-20
+
+- 完成 `0011_ai_suggestions`、v2 标准结构编译和 DeepSeek 辅助后端冻结；577 个标准单元编译为 493 个独立判断项、78 个上下文项和 6 个方法待确认项。
+- 225 条真实 DeepSeek 基线评估完成并保留追加式重试审计；一致率 72.32%，安全硬门禁全部为 0，16 条方法差异和 4 条人工—AI证据页差异继续保留。
+- Envision v2 与 Goldwind 100 条人工 gold gate 通过；修复 OHS 相邻 KPI 行绕过 leaf 口径门禁的问题。
+- main/demo 均升级到 `0011_ai_suggestions` 并生成只读最终备份；后端 626 项、前端 51 项、typecheck 和 production build 通过。
+- 前端 AI 三层展示和采纳/修改/拒绝操作进入下一份计划，本轮不启用 OCR/VLM。
 
 ### 2026-07-11
 

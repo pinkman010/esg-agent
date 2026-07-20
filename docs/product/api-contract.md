@@ -53,7 +53,7 @@
   "stage_code": "evidence_assessment",
   "status": "running",
   "completed_units": 240,
-  "total_units": 577,
+  "total_units": 493,
   "error_summary": null,
   "started_at": "2026-07-11T00:00:00Z",
   "completed_at": null
@@ -85,9 +85,11 @@
 
 ### 2.4 AssessmentDetail
 
-在 `AssessmentListItem` 基础上增加：requirement 原文、原始 `rationale` / `missing_items`、中文展示字段 `rationale_display` / `missing_items_display`、evidence items 和最新 snapshot id。`risk_level` 为旧调用者保留，risk-v2.1 中与 `review_priority` 值相同。
+在 `AssessmentListItem` 基础上增加：`source_requirement_text`、`effective_requirement_text`、`context_requirement_ids`、`structure_status`、原始 `rationale` / `missing_items`、中文展示字段、evidence items、最新 snapshot id 和 `latest_ai_suggestion`。`risk_level` 为旧调用者保留，risk-v2.1 中与 `review_priority` 值相同。
 
 EvidenceItem 对普通界面只返回：`evidence_id`、`source_pdf_page`、`source_report_page`、`page_label`、`evidence_preview`、`source_method`、`quality_flags`、`bbox`。内部 route metadata 不进入该 DTO。
+
+`latest_ai_suggestion` 为追加式辅助结果，字段包括 `status`、provider/model、Prompt 版本、输入哈希、建议 verdict、中文依据、缺失项、证据 ID/页码、置信度、guardrail、usage、重试与错误。该对象没有可写的人工复核状态或适用性字段；`failed/skipped` 结果同样保留，前端不得把 AI 建议当作有效人工结论。
 
 ### 2.5 ReviewSnapshot
 
@@ -168,7 +170,7 @@ multipart 上传 PDF。查询参数 `duplicate_policy` 取值为 `reject | creat
 
 ### `POST /api/reports/{report_id}/analyze`
 
-请求保留 `confirm_llm`、`enable_ocr`、`ocr_pages`。报告必须处于 `ready_for_analysis`；否则返回 `409 report_not_ready`。同一报告已有 `pending/running` run 时返回 `409 analysis_already_running` 和已有 `run_id`，并发竞态由 `0009` 数据库部分唯一索引兜底。成功响应为新建的 `pending` run；后台任务只接收 ID 并使用独立数据库 session。
+请求保留 `confirm_llm`、`enable_ocr`、`ocr_pages`。`confirm_llm` 默认 false；只有用户明确授权后才能传 true。报告必须处于 `ready_for_analysis`；否则返回 `409 report_not_ready`。同一报告已有 `pending/running` run 时返回 `409 analysis_already_running` 和已有 `run_id`，并发竞态由 `0009` 数据库部分唯一索引兜底。成功响应为新建的 `pending` run；后台任务只接收 ID 并使用独立数据库 session。
 
 ### `POST /api/reports/{report_id}/reopen`（规划中，MVP 当前未实现）
 
@@ -207,11 +209,11 @@ multipart 上传 PDF。查询参数 `duplicate_policy` 取值为 `reject | creat
 
 ### `GET /api/runs/{run_id}`
 
-返回 run 状态、引擎版本、风险规则版本、成功/失败 requirement 数和错误摘要。
+返回 run 状态、引擎版本、风险规则版本、577/493/78/6 范围计数、成功/失败 requirement 数、错误摘要和 `ai_summary`。`ai_summary` 包含 eligible、succeeded、failed、skipped；AI 失败不改变确定性 run 的 completed/partially_completed 判定。
 
 ### `GET /api/runs/{run_id}/stages`
 
-返回已产生阶段的最新 `AnalysisStage` 事件，并按七个阶段的固定顺序排列；尚未产生的阶段不由后端伪造。前端按阶段权重 `5/10/5/10/60/5/5` 及 `completed_units/total_units` 计算百分比。服务启动时遗留的 `pending/running` run 会转为 `failed`，固定错误为“分析服务重启，任务已中断”。
+返回已产生阶段的最新 `AnalysisStage` 事件，后端顺序为文件检查、PDF 解析、报告结构、requirement 匹配、证据判断、风险分级、AI 辅助、结果汇总。`confirm_llm=false` 时 AI 阶段为 skipped；尚未产生的阶段不由后端伪造。当前前端继续按七个规则业务阶段计算百分比，AI 阶段展示进入下一计划。服务启动时遗留的 `pending/running` run 会转为 `failed`。
 
 ### `POST /api/runs/{run_id}/retry-failed`
 
@@ -231,7 +233,7 @@ multipart 上传 PDF。查询参数 `duplicate_policy` 取值为 `reject | creat
 
 ### `GET /api/reports/{report_id}/assessments/{assessment_id}`
 
-返回 `AssessmentDetail`。assessment 必须属于 report，否则返回 404。
+返回 `AssessmentDetail`。assessment 必须属于 report，否则返回 404。v2 新 run 只为 493 个独立判断项创建 assessment；78 个上下文项和 6 个方法待确认项不生成伪 verdict。
 
 ## 6. 人工复核接口
 
@@ -336,7 +338,7 @@ multipart 上传 PDF。查询参数 `duplicate_policy` 取值为 `reject | creat
 
 高优先级 assessment 未全部完成复核时返回同样结构，`code=high_risk_review_incomplete`。旧错误码为兼容调用者保留，其业务含义为高复核优先级。
 
-成功后生成不可变版本号和文件清单。`review_scope` 同时记录高/中优先级的总数、已复核/未复核数、适用性待判定数、分析不完整数、eligible requirement 总数和实际人工复核总数，并明确说明高优先级完成不代表全部 requirement 均已人工确认。
+成功后生成不可变版本号和文件清单。`review_scope` 同时记录高/中优先级的总数、已复核/未复核数、适用性待判定数、分析不完整数、独立 assessment 总数和实际人工复核总数，并明确说明高优先级完成不代表 577 个标准核查单元均已人工确认。JSON/CSV/XLSX 导出包含结构字段和最新 AI 建议字段，并注明未经人工确认的 AI 建议不构成最终披露结论。
 
 ### `GET /api/exports/{export_id}`（规划中，MVP 当前未实现）
 
