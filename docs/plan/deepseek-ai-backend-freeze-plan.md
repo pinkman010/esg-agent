@@ -744,7 +744,7 @@ uv run --no-sync pytest tests/tools/test_llm_client.py tests/test_settings.py -q
 - Create: `backend/src/services/ai_assessment_service.py`
 - Create: `backend/tests/services/test_ai_assessment_service.py`
 
-- [ ] **Step 1：写 AI 选择和 guardrail 失败测试**
+- [x] **Step 1：写 AI 选择和 guardrail 失败测试**
 
 必须覆盖：
 
@@ -775,7 +775,7 @@ assert suggestion.status == "failed"
 assert "evidence_reference_out_of_scope" in suggestion.guardrail_codes
 ```
 
-- [ ] **Step 2：实现固定 Prompt contract**
+- [x] **Step 2：实现固定 Prompt contract**
 
 system message 必须明确：
 
@@ -819,7 +819,7 @@ user message 固定包含：
 
 单条 evidence `source_text` 最多1200字符，最多5条 evidence；总 Prompt 在发送前计算哈希并记录，不保存 API Key。
 
-- [ ] **Step 3：实现响应校验和安全降级**
+- [x] **Step 3：实现响应校验和安全降级**
 
 响应使用 Pydantic 严格枚举和范围校验。规则固定为：
 
@@ -831,11 +831,11 @@ user message 固定包含：
 - confidence 超出0—1直接失败；
 -失败 suggestion 保存错误和 raw response，不改变规则 assessment。
 
-- [ ] **Step 4：实现 bounded concurrency 和调用预算**
+- [x] **Step 4：实现 bounded concurrency 和调用预算**
 
 使用 `ThreadPoolExecutor(max_workers=settings.llm_max_concurrency)` 并发调用，数据库写入仍由 workflow 主线程顺序完成。任务按 `review_priority` 高到中、`requirement_id` 升序稳定排序；达到 `LLM_MAX_CALLS_PER_RUN` 后其余项写 `skipped + call_budget_exhausted`。
 
-- [ ] **Step 5：运行 AI service 测试**
+- [x] **Step 5：运行 AI service 测试**
 
 ```powershell
 cd backend

@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -36,3 +36,14 @@ class AIAssessmentSuggestion(BaseModel):
     @property
     def review_status(self) -> None:
         return None
+
+
+class AIAssessmentResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    suggested_verdict: Literal["disclosed", "partially_disclosed", "unknown"]
+    evidence_ids: list[str]
+    evidence_pdf_pages: list[int]
+    rationale_zh: str = Field(min_length=1)
+    missing_items_zh: list[str]
+    confidence: float = Field(ge=0.0, le=1.0, strict=True)
