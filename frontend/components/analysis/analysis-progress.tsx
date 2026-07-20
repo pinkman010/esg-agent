@@ -128,7 +128,7 @@ export function AnalysisProgress({ reportId, runId }: { reportId: string; runId:
             href={`/reports/${reportId}/review`}
             className="inline-flex h-10 items-center rounded-md border border-border bg-white px-4 text-sm font-medium"
           >
-            进入高风险复核
+            进入高优先级复核
           </Link>
         </div>
       )}

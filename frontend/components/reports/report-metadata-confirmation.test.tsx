@@ -78,7 +78,7 @@ describe("ReportMetadataConfirmation", () => {
         "href",
         "/reports/report-1/dashboard",
       );
-      expect(screen.getByRole("link", { name: "进入高风险复核" })).toHaveAttribute(
+      expect(screen.getByRole("link", { name: "进入高优先级复核" })).toHaveAttribute(
         "href",
         "/reports/report-1/review",
       );

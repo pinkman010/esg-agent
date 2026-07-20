@@ -15,7 +15,7 @@ const statusLabels: Record<string, string> = {
   analysis_completed: "分析已完成",
   partially_completed: "部分完成",
   analysis_failed: "分析失败",
-  high_risk_review_completed: "高风险复核已完成",
+  high_risk_review_completed: "高优先级复核已完成",
   formally_exported: "已生成正式输出",
   reopened: "已重新开启",
   archived: "已归档",

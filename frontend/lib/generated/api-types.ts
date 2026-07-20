@@ -174,6 +174,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/reports/{report_id}/applicability-queue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Applicability Queue */
+        get: operations["applicability_queue_api_reports__report_id__applicability_queue_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/reports/{report_id}/assessments/{assessment_id}": {
         parameters: {
             query?: never;
@@ -413,6 +430,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/reports/{report_id}/applicability-decisions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Save Applicability Batch Review */
+        post: operations["save_applicability_batch_review_api_reports__report_id__applicability_decisions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/exports/runs/{run_id}/assessments.json": {
         parameters: {
             query?: never;
@@ -526,6 +560,23 @@ export interface paths {
         put?: never;
         /** Generate Formal */
         post: operations["generate_formal_api_reports__report_id__exports_formal_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/demo/reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reset Demo Environment */
+        post: operations["reset_demo_environment_api_demo_reset_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -659,6 +710,30 @@ export interface components {
             /** Error Message */
             error_message?: string | null;
         };
+        /** ApplicabilityBatchReviewRequest */
+        ApplicabilityBatchReviewRequest: {
+            /** Assessment Ids */
+            assessment_ids: string[];
+            reviewed_applicability_status: components["schemas"]["ApplicabilityStatus"];
+            /** Reviewer Name */
+            reviewer_name: string;
+            /** Reviewer Note */
+            reviewer_note: string;
+        };
+        /** ApplicabilityBatchReviewResponse */
+        ApplicabilityBatchReviewResponse: {
+            /** Batch Id */
+            batch_id: string;
+            /** Updated Count */
+            updated_count: number;
+            /** Assessment Ids */
+            assessment_ids: string[];
+        };
+        /**
+         * ApplicabilityStatus
+         * @enum {string}
+         */
+        ApplicabilityStatus: "applicable" | "not_applicable_claimed" | "not_applicable_confirmed" | "undetermined";
         /** AssessmentDetailResponse */
         AssessmentDetailResponse: {
             /** Assessment Id */
@@ -677,12 +752,22 @@ export interface components {
             review_status: string;
             /** Risk Level */
             risk_level: string;
+            /** Review Priority */
+            review_priority: string;
+            /** Evidence Status */
+            evidence_status?: string | null;
+            /** Applicability Status */
+            applicability_status?: string | null;
             /** Risk Reason Codes */
             risk_reason_codes: string[];
             /** Rationale */
             rationale: string;
+            /** Rationale Display */
+            rationale_display: string;
             /** Missing Items */
             missing_items: string[];
+            /** Missing Items Display */
+            missing_items_display: string[];
             /** Evidence Items */
             evidence_items: components["schemas"]["BusinessEvidenceItem"][];
             /** Latest Snapshot Id */
@@ -706,6 +791,12 @@ export interface components {
             effective_verdict: string;
             /** Risk Level */
             risk_level: string;
+            /** Review Priority */
+            review_priority: string;
+            /** Evidence Status */
+            evidence_status?: string | null;
+            /** Applicability Status */
+            applicability_status?: string | null;
             /** Risk Reason Codes */
             risk_reason_codes: string[];
             /** Review Status */
@@ -822,6 +913,18 @@ export interface components {
             recommendation_text: string;
             /** Created By */
             created_by: string;
+        };
+        /** DemoResetRequest */
+        DemoResetRequest: {
+            /** Confirmation */
+            confirmation: string;
+        };
+        /** DemoResetResponse */
+        DemoResetResponse: {
+            /** Cleared Report Count */
+            cleared_report_count: number;
+            /** Cleared Runtime Directories */
+            cleared_runtime_directories: ("uploads" | "derived")[];
         };
         /** DisclosureAssessment */
         DisclosureAssessment: {
@@ -1038,10 +1141,26 @@ export interface components {
             risk_counts: {
                 [key: string]: number;
             };
+            /** Review Priority Counts */
+            review_priority_counts: {
+                [key: string]: number;
+            };
             /** High Risk Total */
             high_risk_total: number;
             /** High Risk Reviewed */
             high_risk_reviewed: number;
+            /** High Priority Total */
+            high_priority_total: number;
+            /** High Priority Reviewed */
+            high_priority_reviewed: number;
+            /** High Priority Unresolved */
+            high_priority_unresolved: number;
+            /** Applicability Counts */
+            applicability_counts: {
+                [key: string]: number;
+            };
+            /** Applicability Undetermined Total */
+            applicability_undetermined_total: number;
             /** Failed Requirement Count */
             failed_requirement_count: number;
         };
@@ -1164,6 +1283,7 @@ export interface components {
              */
             reviewer_note: string;
             reviewed_verdict?: components["schemas"]["AssessmentVerdict"] | null;
+            reviewed_applicability_status?: components["schemas"]["ApplicabilityStatus"] | null;
             /** Evidence Pages */
             evidence_pages?: number[] | null;
             /** Evidence Preview */
@@ -1195,6 +1315,7 @@ export interface components {
              */
             reviewer_note: string;
             reviewed_verdict?: components["schemas"]["AssessmentVerdict"] | null;
+            reviewed_applicability_status?: components["schemas"]["ApplicabilityStatus"] | null;
             /** Evidence Pages */
             evidence_pages?: number[] | null;
             /** Evidence Preview */
@@ -1370,7 +1491,9 @@ export interface operations {
     };
     upload_report_api_reports_upload_post: {
         parameters: {
-            query?: never;
+            query?: {
+                duplicate_policy?: "reject" | "create_new";
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -1508,6 +1631,8 @@ export interface operations {
                 page?: number;
                 page_size?: number;
                 risk_level?: components["schemas"]["RiskLevel"] | null;
+                review_priority?: components["schemas"]["RiskLevel"] | null;
+                applicability_status?: components["schemas"]["ApplicabilityStatus"] | null;
             };
             header?: never;
             path: {
@@ -1538,6 +1663,40 @@ export interface operations {
         };
     };
     review_queue_api_reports__report_id__review_queue_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path: {
+                report_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    applicability_queue_api_reports__report_id__applicability_queue_get: {
         parameters: {
             query?: {
                 page?: number;
@@ -2035,6 +2194,41 @@ export interface operations {
             };
         };
     };
+    save_applicability_batch_review_api_reports__report_id__applicability_decisions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                report_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApplicabilityBatchReviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplicabilityBatchReviewResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     export_assessments_json_api_exports_runs__run_id__assessments_json_get: {
         parameters: {
             query?: never;
@@ -2251,6 +2445,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ExportVersion"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reset_demo_environment_api_demo_reset_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DemoResetRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DemoResetResponse"];
                 };
             };
             /** @description Validation Error */

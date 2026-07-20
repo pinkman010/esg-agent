@@ -106,14 +106,14 @@ describe("AnalysisProgress", () => {
     expect(await screen.findByText("分析进度长时间没有更新，后台任务可能已中断。请返回报告列表查看状态。")).toBeInTheDocument();
   });
 
-  it("offers dashboard and high-risk review after completion", async () => {
+  it("offers dashboard and high-priority review after completion", async () => {
     stubProgressApi("completed");
 
     renderWithQuery(<AnalysisProgress reportId={report.report_id} runId="run-1" />);
 
     expect(await screen.findByText("分析完成")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "查看分析结果" })).toHaveAttribute("href", `/reports/${report.report_id}/dashboard`);
-    expect(screen.getByRole("link", { name: "进入高风险复核" })).toHaveAttribute("href", `/reports/${report.report_id}/review`);
+    expect(screen.getByRole("link", { name: "进入高优先级复核" })).toHaveAttribute("href", `/reports/${report.report_id}/review`);
   });
 
   it("keeps results available while allowing failed requirements to retry", async () => {

@@ -6,7 +6,7 @@ export const analysisStages = [
   ["report_structure", "报告结构识别"],
   ["requirement_matching", "GRI requirement 匹配"],
   ["evidence_assessment", "证据与结论生成"],
-  ["risk_classification", "风险分级"],
+  ["risk_classification", "复核优先级计算"],
   ["result_summary", "结果汇总"],
 ] as const;
 

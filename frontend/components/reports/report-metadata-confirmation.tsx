@@ -62,7 +62,7 @@ export function ReportMetadataConfirmation({ reportId }: { reportId: string }) {
         <div className="mt-5 flex flex-wrap items-center gap-3 rounded-md border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
           <span className="font-medium">该报告已有分析结果</span>
           <Link className="rounded-md bg-accent px-3 py-1.5 font-medium text-accent-foreground" href={`/reports/${reportId}/dashboard`}>查看分析结果</Link>
-          <Link className="rounded-md border border-emerald-300 bg-white px-3 py-1.5 font-medium" href={`/reports/${reportId}/review`}>进入高风险复核</Link>
+          <Link className="rounded-md border border-emerald-300 bg-white px-3 py-1.5 font-medium" href={`/reports/${reportId}/review`}>进入高优先级复核</Link>
         </div>
       )}
       {isAnalyzing && (

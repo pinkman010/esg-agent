@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { calculateAnalysisProgress, isAnalysisProgressStalled } from "./progress-model";
+import { analysisStages, calculateAnalysisProgress, isAnalysisProgressStalled } from "./progress-model";
 
 const completed = (stage_code: string) => ({
   stage_code,
@@ -12,6 +12,10 @@ const completed = (stage_code: string) => ({
 });
 
 describe("calculateAnalysisProgress", () => {
+  it("uses review-priority wording for the classification stage", () => {
+    expect(analysisStages.find(([code]) => code === "risk_classification")?.[1]).toBe("复核优先级计算");
+  });
+
   it("returns zero without stage events", () => {
     expect(calculateAnalysisProgress("running", [])).toEqual({ percent: 0, currentStageCode: null });
   });

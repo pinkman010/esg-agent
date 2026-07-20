@@ -5,6 +5,8 @@ import type {
   AssessmentDetailResponse,
   ReportDashboardResponse,
   ImprovementAction,
+  CreateActionRequest,
+  UpdateActionRequest,
   ExportVersion,
   AnalyzeResponse,
   AuditRun,
@@ -16,6 +18,8 @@ import type {
   ReportResponse,
   ReviewSnapshot,
   ReviewSnapshotRequest,
+  ApplicabilityBatchReviewRequest,
+  ApplicabilityBatchReviewResponse,
   ReportUploadResponse,
   ReviewDecision,
   ReviewDecisionRequest,
@@ -62,10 +66,14 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   return parsed as T;
 }
 
-export function uploadReport(file: File): Promise<ReportUploadResponse> {
+export function uploadReport(
+  file: File,
+  duplicatePolicy: "reject" | "create_new" = "reject",
+): Promise<ReportUploadResponse> {
   const formData = new FormData();
   formData.append("file", file);
-  return request<ReportUploadResponse>("/api/reports/upload", { method: "POST", body: formData });
+  const suffix = duplicatePolicy === "create_new" ? "?duplicate_policy=create_new" : "";
+  return request<ReportUploadResponse>(`/api/reports/upload${suffix}`, { method: "POST", body: formData });
 }
 export function resetDemoEnvironment(): Promise<DemoResetResponse> {
   return request<DemoResetResponse>("/api/demo/reset", {
@@ -91,11 +99,20 @@ export function getRunStages(runId: string): Promise<AnalysisStageResponse[]> { 
 export function retryFailedRun(runId: string, reason: string): Promise<AnalysisRun> {
   return request<AnalysisRun>(`/api/runs/${runId}/retry-failed`, { method: "POST", body: { reason } });
 }
-export function getReviewQueue(reportId: string): Promise<AssessmentListResponse> {
-  return request<AssessmentListResponse>(`/api/reports/${reportId}/review-queue`);
+export function getReviewQueue(reportId: string, page = 1, pageSize = 50): Promise<AssessmentListResponse> {
+  return request<AssessmentListResponse>(`/api/reports/${reportId}/review-queue?page=${page}&page_size=${pageSize}`);
 }
-export function listReportAssessments(reportId: string, page = 1): Promise<AssessmentListResponse> {
-  return request<AssessmentListResponse>(`/api/reports/${reportId}/assessments?page=${page}&page_size=50`);
+export function getApplicabilityQueue(reportId: string, page = 1, pageSize = 50): Promise<AssessmentListResponse> {
+  return request<AssessmentListResponse>(`/api/reports/${reportId}/applicability-queue?page=${page}&page_size=${pageSize}`);
+}
+export function saveApplicabilityBatch(reportId: string, payload: ApplicabilityBatchReviewRequest): Promise<ApplicabilityBatchReviewResponse> {
+  return request<ApplicabilityBatchReviewResponse>(`/api/reports/${reportId}/applicability-decisions`, {
+    method: "POST",
+    body: payload,
+  });
+}
+export function listReportAssessments(reportId: string, page = 1, pageSize = 50): Promise<AssessmentListResponse> {
+  return request<AssessmentListResponse>(`/api/reports/${reportId}/assessments?page=${page}&page_size=${pageSize}`);
 }
 export function saveReviewSnapshot(assessmentId: string, payload: ReviewSnapshotRequest): Promise<ReviewSnapshot> {
   return request<ReviewSnapshot>(`/api/assessments/${assessmentId}/review-decisions`, { method: "POST", body: payload });
@@ -112,11 +129,17 @@ export function getReportDashboard(reportId: string): Promise<ReportDashboardRes
 export function listActions(reportId: string): Promise<ImprovementAction[]> {
   return request<ImprovementAction[]>(`/api/reports/${reportId}/actions`);
 }
+export function createAction(reportId: string, payload: CreateActionRequest): Promise<ImprovementAction> {
+  return request<ImprovementAction>(`/api/reports/${reportId}/actions`, { method: "POST", body: payload });
+}
+export function updateAction(actionId: string, payload: UpdateActionRequest): Promise<ImprovementAction> {
+  return request<ImprovementAction>(`/api/actions/${actionId}`, { method: "PATCH", body: payload });
+}
 export function listExportVersions(reportId: string): Promise<ExportVersion[]> {
   return request<ExportVersion[]>(`/api/reports/${reportId}/exports`);
 }
 export function generateExport(reportId: string, isDraft: boolean, createdBy: string): Promise<ExportVersion> {
-  return request<ExportVersion>(`/api/reports/${reportId}/exports/${isDraft ? "draft" : "formal"}`, { method: "POST", body: { formats: ["assessment_xlsx", "management_pdf", "actions_xlsx", "print_html"], created_by: createdBy } });
+  return request<ExportVersion>(`/api/reports/${reportId}/exports/${isDraft ? "draft" : "formal"}`, { method: "POST", body: { formats: ["assessment_xlsx", "management_pdf", "print_html"], created_by: createdBy } });
 }
 export function listRunAssessments(runId: string): Promise<DisclosureAssessment[]> { return request<DisclosureAssessment[]>(`/api/runs/${runId}/assessments`); }
 export function listRunRecommendations(runId: string): Promise<Recommendation[]> { return request<Recommendation[]>(`/api/runs/${runId}/recommendations`); }

@@ -46,4 +46,30 @@ describe("ReportList", () => {
     expect(screen.getByText("2024 年")).toBeInTheDocument();
     expect(screen.getByText("待启动分析")).toBeInTheDocument();
   });
+
+  it("uses review-priority wording for the completed review status", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse({
+      items: [{
+        report_id: "report-2",
+        original_filename: "测试公司 ESG 报告.pdf",
+        file_hash: "hash-2",
+        page_count: 78,
+        company_name: "测试公司",
+        report_year: 2024,
+        language: "zh-CN",
+        status: "high_risk_review_completed",
+        metadata_detected: {},
+        metadata_confirmed_at: "2026-07-11T00:00:00Z",
+        created_at: "2026-07-11T00:00:00Z",
+        updated_at: "2026-07-11T00:00:00Z",
+      }],
+      page: 1,
+      page_size: 50,
+      total: 1,
+    })));
+
+    renderWithQuery(<ReportList />);
+
+    expect(await screen.findByText("高优先级复核已完成")).toBeInTheDocument();
+  });
 });

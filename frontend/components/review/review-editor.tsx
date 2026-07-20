@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Check, Save } from "lucide-react";
 import { useState } from "react";
 
@@ -9,20 +9,30 @@ import { saveReviewSnapshot } from "@/lib/api";
 export function ReviewEditor({ assessmentId, reviewerName }: { assessmentId: string; reviewerName: string }) {
   const [note, setNote] = useState("");
   const [saved, setSaved] = useState(false);
+  const queryClient = useQueryClient();
   const mutation = useMutation({
-    mutationFn: ({ operation, reason }: { operation: "approve" | "modify"; reason: string }) => saveReviewSnapshot(assessmentId, {
+    mutationFn: ({ operation, reason, applicability }: { operation: "approve" | "modify"; reason: string; applicability?: "applicable" | "not_applicable_confirmed" }) => saveReviewSnapshot(assessmentId, {
       operation_type: operation,
       reviewer_name: reviewerName,
       reason_code: reason,
       reviewer_note: note,
       reviewed_verdict: null,
+      reviewed_applicability_status: applicability ?? null,
       evidence_pages: null,
       evidence_preview: null,
       rationale: null,
       missing_items: null,
       expected_previous_snapshot_id: null,
     }),
-    onSuccess: () => setSaved(true),
+    onMutate: () => setSaved(false),
+    onSuccess: async () => {
+      setSaved(true);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["review-queue"] }),
+        queryClient.invalidateQueries({ queryKey: ["applicability-queue"] }),
+        queryClient.invalidateQueries({ queryKey: ["assessment-detail"] }),
+      ]);
+    },
   });
 
   return (
@@ -53,7 +63,24 @@ export function ReviewEditor({ assessmentId, reviewerName }: { assessmentId: str
           <Save aria-hidden="true" className="h-4 w-4" />
           保存修改
         </button>
+        <button
+          type="button"
+          className="inline-flex h-9 items-center gap-2 rounded-md border border-border bg-white px-3 text-sm font-medium disabled:opacity-50"
+          disabled={!note.trim() || mutation.isPending}
+          onClick={() => mutation.mutate({ operation: "modify", reason: "applicability_reviewed", applicability: "applicable" })}
+        >
+          确认适用
+        </button>
+        <button
+          type="button"
+          className="inline-flex h-9 items-center gap-2 rounded-md border border-border bg-white px-3 text-sm font-medium disabled:opacity-50"
+          disabled={!note.trim() || mutation.isPending}
+          onClick={() => mutation.mutate({ operation: "modify", reason: "applicability_reviewed", applicability: "not_applicable_confirmed" })}
+        >
+          确认不适用
+        </button>
         {saved && <span className="self-center text-sm text-emerald-700">复核记录已保存</span>}
+        {mutation.isError && <span className="self-center text-sm text-red-600">复核保存失败，请重试。</span>}
       </div>
     </div>
   );

@@ -4,7 +4,7 @@ import Link from "next/link";
 const workflow = [
   { label: "上传报告", detail: "确认企业、年度和语言", icon: FileText },
   { label: "自动分析", detail: "核查 577 条 GRI 要求", icon: Database },
-  { label: "人工复核", detail: "优先处理高风险项目", icon: ShieldCheck },
+  { label: "人工复核", detail: "优先处理高优先级项目", icon: ShieldCheck },
 ];
 
 export default function HomePage() {
