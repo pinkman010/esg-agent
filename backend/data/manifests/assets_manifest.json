@@ -438,6 +438,28 @@
             "material_status": "derived_validation_data",
             "copied_at": "2026-07-20",
             "source_protection": "screenshot only; generated export is versioned and source inputs were not modified"
+        },
+        {
+            "source_path": "product method adjudication derived from the preserved second-review workbook and GRI source structure",
+            "target_path": "backend/data/review_inputs/envision_2024/adjudication/envision_2024_compound_structure_adjudication_v1.csv",
+            "sha256": "89517133db5d8d059687b7c063f7f1cb214ef2c1fce93bb99bc91b798155305a",
+            "size_bytes": 2646,
+            "asset_type": "product_method_structure_adjudication",
+            "migration_reason": "Records six append-only compound-structure decisions needed to close the Envision 577-item product scope.",
+            "material_status": "review_input",
+            "copied_at": "2026-07-25",
+            "source_protection": "the original PDF, Sol review, Pro review workbook, recommendations, and historical baselines were not modified"
+        },
+        {
+            "source_path": "product method adjudication derived from the preserved Sol and Pro review layers",
+            "target_path": "backend/data/review_inputs/envision_2024/adjudication/envision_2024_result_adjudication_v1.csv",
+            "sha256": "f9093feb3ba419a41fe5ee4df4636f033593a6bee11b78dbd5416497374c5d58",
+            "size_bytes": 4824,
+            "asset_type": "product_method_result_adjudication",
+            "migration_reason": "Records sixteen append-only final product decisions without overwriting either reviewer layer.",
+            "material_status": "review_input",
+            "copied_at": "2026-07-25",
+            "source_protection": "the original PDF, Sol review, Pro review workbook, recommendations, and historical baselines were not modified"
         }
     ],
     "notes": [
