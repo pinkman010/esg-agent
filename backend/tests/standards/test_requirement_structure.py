@@ -63,6 +63,91 @@ def test_merge_split_error_remains_method_pending():
     assert decision.evaluation_role is EvaluationRole.METHOD_PENDING
 
 
+def test_compound_adjudication_becomes_independent_with_components():
+    decision = RequirementStructureDecision(
+        requirement_id="GRI 302-1-c",
+        issue_code="compound_requirement_adjudicated",
+        source_note="product method adjudication",
+        component_requirement_ids=[
+            "GRI 302-1-c-i",
+            "GRI 302-1-c-ii",
+            "GRI 302-1-c-iii",
+            "GRI 302-1-c-iv",
+        ],
+        adjudication_version="envision-method-v1.1",
+    )
+
+    assert decision.evaluation_role is EvaluationRole.INDEPENDENT
+    compiled = compile_requirement_structure(
+        items=[
+            {
+                "requirement_id": "GRI 302-1-c",
+                "requirement_text": "four merged energy consumption leaves",
+            }
+        ],
+        decisions=[decision],
+    )
+    assert compiled[0]["component_requirement_ids"] == [
+        "GRI 302-1-c-i",
+        "GRI 302-1-c-ii",
+        "GRI 302-1-c-iii",
+        "GRI 302-1-c-iv",
+    ]
+    assert compiled[0]["structure_status"] == StructureStatus.NORMALIZED
+
+
+@pytest.mark.parametrize(
+    ("overrides", "error"),
+    [
+        (
+            {
+                "component_requirement_ids": ["GRI 302-1-c-i"],
+                "adjudication_version": "envision-method-v1.1",
+            },
+            "at least two component_requirement_ids",
+        ),
+        (
+            {
+                "component_requirement_ids": [
+                    "GRI 302-1-c-i",
+                    "GRI 302-1-c-i",
+                ],
+                "adjudication_version": "envision-method-v1.1",
+            },
+            "duplicate component_requirement_ids",
+        ),
+        (
+            {
+                "component_requirement_ids": [
+                    "GRI 302-1-c-i",
+                    "GRI 302-1-c-ii",
+                ],
+                "adjudication_version": None,
+            },
+            "requires adjudication_version",
+        ),
+    ],
+)
+def test_compound_adjudication_rejects_incomplete_metadata(overrides, error):
+    with pytest.raises(ValueError, match=error):
+        RequirementStructureDecision(
+            requirement_id="GRI 302-1-c",
+            issue_code="compound_requirement_adjudicated",
+            source_note="product method adjudication",
+            **overrides,
+        )
+
+
+def test_ordinary_structure_decision_rejects_component_ids():
+    with pytest.raises(ValueError, match="only supported for compound adjudication"):
+        RequirementStructureDecision(
+            requirement_id="GRI 2-2-c",
+            issue_code="parent_container_as_leaf",
+            source_note="父级/容器条款",
+            component_requirement_ids=["GRI 2-2-c-i", "GRI 2-2-c-ii"],
+        )
+
+
 def test_canonical_requirement_id_maps_internal_checklist_id():
     assert canonical_requirement_id("current_gap:GRI2:2-2:c:i", "2-2") == "GRI 2-2-c-i"
 

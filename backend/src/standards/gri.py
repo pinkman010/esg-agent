@@ -290,6 +290,23 @@ class GRIAdapter:
         except (OSError, json.JSONDecodeError, TypeError, ValidationError) as exc:
             raise ValueError("invalid GRI requirement data") from exc
 
+    def load_scope_items(self) -> list[dict[str, Any]]:
+        """Return all current-scope units without creating context assessments."""
+        try:
+            raw_data = json.loads(self.requirements_path.read_text(encoding="utf-8"))
+            if not isinstance(raw_data, dict) or not isinstance(
+                raw_data.get("requirements"), list
+            ):
+                raise TypeError("unsupported GRI requirement data shape")
+            self._scope_summary = self._validate_scope_summary(raw_data)
+            return [
+                dict(item)
+                for item in raw_data["requirements"]
+                if self._is_current_scope_item(item)
+            ]
+        except (OSError, json.JSONDecodeError, TypeError) as exc:
+            raise ValueError("invalid GRI requirement data") from exc
+
     def build_tasks(self, run_id: str, report_id: str) -> list[DisclosureTask]:
         tasks: list[DisclosureTask] = []
         for requirement in self.load_requirements():
@@ -350,19 +367,21 @@ class GRIAdapter:
         return requirements
 
     def _is_current_gap_requirement(self, item: dict[str, Any]) -> bool:
-        is_current = (
-            item.get("assessment_mode") == "current_gap"
-            and item.get("requirement_type") == "requirement"
-            and item.get("is_mandatory") is True
-            and item.get("scoring_role") == "hard_score"
-        )
-        if not is_current:
+        if not self._is_current_scope_item(item):
             return False
         if "evaluation_role" not in item and "structure_status" not in item:
             return True
         return (
             item.get("evaluation_role") == "independent"
             and item.get("structure_status") in {"verified", "normalized"}
+        )
+
+    def _is_current_scope_item(self, item: dict[str, Any]) -> bool:
+        return (
+            item.get("assessment_mode") == "current_gap"
+            and item.get("requirement_type") == "requirement"
+            and item.get("is_mandatory") is True
+            and item.get("scoring_role") == "hard_score"
         )
 
     def get_scope_summary(self) -> dict[str, int]:
@@ -372,17 +391,11 @@ class GRIAdapter:
 
     def _validate_scope_summary(self, raw_data: dict[str, Any]) -> dict[str, int]:
         raw_items = raw_data["requirements"]
-        current_items = [
-            item
-            for item in raw_items
-            if item.get("assessment_mode") == "current_gap"
-            and item.get("requirement_type") == "requirement"
-            and item.get("is_mandatory") is True
-            and item.get("scoring_role") == "hard_score"
-        ]
+        current_items = [item for item in raw_items if self._is_current_scope_item(item)]
         metadata = dict(raw_data.get("metadata") or {})
         is_v2 = metadata.get("manifest_version") == "gri-requirement-checklist-v2"
-        if not is_v2:
+        is_v3 = metadata.get("manifest_version") == "gri-requirement-checklist-v3"
+        if not is_v2 and not is_v3:
             return {
                 "standard_unit_count": len(current_items),
                 "independent_assessment_count": len(current_items),
@@ -403,6 +416,20 @@ class GRIAdapter:
                 item.get("evaluation_role") == "method_pending" for item in current_items
             ),
         }
+        if is_v3:
+            actual["compound_adjudicated_count"] = sum(
+                bool(item.get("component_requirement_ids")) for item in current_items
+            )
+            role_total = (
+                actual["independent_assessment_count"]
+                + actual["context_only_count"]
+                + actual["method_pending_count"]
+            )
+            if role_total != actual["standard_unit_count"] or any(
+                metadata.get(key) != value for key, value in actual.items()
+            ):
+                raise ValueError("invalid GRI v3 structure counts")
+            return actual
         if any(metadata.get(key) != value for key, value in actual.items()):
             raise ValueError("invalid GRI v2 structure counts")
         return actual

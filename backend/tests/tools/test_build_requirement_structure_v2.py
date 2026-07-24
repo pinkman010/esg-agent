@@ -1,10 +1,13 @@
 import json
 from hashlib import sha256
+from pathlib import Path
 
 import pytest
 from openpyxl import Workbook
 
+from src.tools import build_requirement_structure_v2 as structure_builder
 from src.tools.build_requirement_structure_v2 import (
+    build_parser,
     build_requirement_structure_assets,
     read_structure_decisions,
 )
@@ -182,6 +185,63 @@ def _write_structure_review_workbook(path):
     )
 
 
+def _write_structure_adjudication(path):
+    path.write_text(
+        "\n".join(
+            [
+                (
+                    "requirement_id,final_evaluation_role,"
+                    "component_requirement_ids,completeness_policy,"
+                    "adjudication_rationale,adjudicator_role,"
+                    "adjudication_version"
+                ),
+                (
+                    '"GRI 302-1-c","independent",'
+                    '"[""GRI 302-1-c-i"",""GRI 302-1-c-ii"",'
+                    '""GRI 302-1-c-iii"",""GRI 302-1-c-iv""]",'
+                    '"all components supported => disclosed; '
+                    "some components supported => partially_disclosed; "
+                    'no valid component evidence => unknown",'
+                    '"product decision","product_method_owner",'
+                    '"envision-method-v1.1"'
+                ),
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+
+def test_build_parser_defaults_cli_generation_to_v3():
+    args = build_parser().parse_args(
+        [
+            "--review-workbook",
+            "review.xlsx",
+            "--source-checklist",
+            "checklist.json",
+            "--structure-adjudication-csv",
+            "adjudication.csv",
+            "--output-structure",
+            "structure.json",
+            "--output-checklist",
+            "compiled.json",
+        ]
+    )
+
+    assert args.manifest_version == "gri-requirement-checklist-v3"
+    assert structure_builder._expected_counts_for_manifest(
+        args.manifest_version
+    ) == {
+        "standard_unit_count": 577,
+        "verified_count": 225,
+        "context_only_count": 78,
+        "normalized_count": 274,
+        "method_pending_count": 0,
+        "independent_assessment_count": 499,
+        "compound_adjudicated_count": 6,
+    }
+
+
 def test_build_requirement_structure_assets_writes_versioned_documents(tmp_path):
     workbook_path = tmp_path / "review.xlsx"
     checklist_path = tmp_path / "checklist.json"
@@ -219,6 +279,98 @@ def test_build_requirement_structure_assets_writes_versioned_documents(tmp_path)
     assert child["effective_requirement_text"].endswith(
         "adjustments for minority interests;"
     )
+
+
+def test_build_requirement_structure_assets_applies_compound_adjudication(tmp_path):
+    workbook_path = tmp_path / "review.xlsx"
+    checklist_path = tmp_path / "checklist.json"
+    adjudication_path = tmp_path / "structure-adjudication.csv"
+    structure_path = tmp_path / "structure-v3.json"
+    compiled_path = tmp_path / "checklist-v3.json"
+    _write_structure_review_workbook(workbook_path)
+    _write_source_checklist(checklist_path)
+    _write_structure_adjudication(adjudication_path)
+
+    metadata = build_requirement_structure_assets(
+        review_workbook=workbook_path,
+        source_checklist=checklist_path,
+        output_structure=structure_path,
+        output_checklist=compiled_path,
+        structure_adjudication_csv=adjudication_path,
+        manifest_version="gri-requirement-checklist-v3",
+        expected_review_sha256=sha256(workbook_path.read_bytes()).hexdigest(),
+        expected_counts={
+            "standard_unit_count": 4,
+            "verified_count": 1,
+            "context_only_count": 1,
+            "normalized_count": 2,
+            "method_pending_count": 0,
+            "independent_assessment_count": 3,
+            "compound_adjudicated_count": 1,
+        },
+    )
+
+    assert metadata["manifest_version"] == "gri-requirement-structure-v3"
+    assert metadata["source_adjudication_sha256"] == sha256(
+        adjudication_path.read_bytes()
+    ).hexdigest()
+    assert metadata["compound_adjudicated_count"] == 1
+    compiled = json.loads(compiled_path.read_text(encoding="utf-8"))
+    compound = next(
+        item
+        for item in compiled["requirements"]
+        if item["requirement_id"] == "current_gap:GRI302:302-1:c"
+    )
+    assert compound["evaluation_role"] == "independent"
+    assert compound["component_requirement_ids"] == [
+        "GRI 302-1-c-i",
+        "GRI 302-1-c-ii",
+        "GRI 302-1-c-iii",
+        "GRI 302-1-c-iv",
+    ]
+
+
+def test_real_v3_structure_has_frozen_577_scope(tmp_path):
+    backend_root = Path(__file__).resolve().parents[2]
+    workbook_path = (
+        backend_root
+        / "data/review_inputs/envision_2024/manual/"
+        "envision_2024_577_manual_review_second_review_Pro_20260719.xlsx"
+    )
+    checklist_path = backend_root / "data/manifests/gri_requirement_checklist.json"
+    adjudication_path = (
+        backend_root
+        / "data/review_inputs/envision_2024/adjudication/"
+        "envision_2024_compound_structure_adjudication_v1.csv"
+    )
+    workbook_hash = sha256(workbook_path.read_bytes()).hexdigest()
+    checklist_hash = sha256(checklist_path.read_bytes()).hexdigest()
+
+    metadata = build_requirement_structure_assets(
+        review_workbook=workbook_path,
+        source_checklist=checklist_path,
+        output_structure=tmp_path / "structure-v3.json",
+        output_checklist=tmp_path / "checklist-v3.json",
+        structure_adjudication_csv=adjudication_path,
+        manifest_version="gri-requirement-checklist-v3",
+        expected_counts={
+            "standard_unit_count": 577,
+            "verified_count": 225,
+            "context_only_count": 78,
+            "normalized_count": 274,
+            "method_pending_count": 0,
+            "independent_assessment_count": 499,
+            "compound_adjudicated_count": 6,
+        },
+    )
+
+    assert metadata["standard_unit_count"] == 577
+    assert metadata["independent_assessment_count"] == 499
+    assert metadata["context_only_count"] == 78
+    assert metadata["method_pending_count"] == 0
+    assert metadata["compound_adjudicated_count"] == 6
+    assert sha256(workbook_path.read_bytes()).hexdigest() == workbook_hash
+    assert sha256(checklist_path.read_bytes()).hexdigest() == checklist_hash
 
 
 def test_build_requirement_structure_assets_does_not_overwrite_on_count_mismatch(

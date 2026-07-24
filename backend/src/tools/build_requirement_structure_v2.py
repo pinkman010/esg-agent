@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import re
 from hashlib import sha256
@@ -21,6 +22,7 @@ _SUPPORTED_ISSUE_CODES = {
     "parent_container_as_leaf",
     "missing_parent_context",
     "merge_split_error",
+    "compound_requirement_adjudicated",
 }
 _PARENT_ID_PATTERN = re.compile(
     r"依赖上级\s*(GRI\s+\d+(?:-[A-Za-z0-9]+)+)\s*的",
@@ -36,6 +38,15 @@ EXPECTED_STRUCTURE_COUNTS = {
     "normalized_count": 268,
     "method_pending_count": 6,
     "independent_assessment_count": 493,
+}
+EXPECTED_STRUCTURE_COUNTS_V3 = {
+    "standard_unit_count": 577,
+    "verified_count": 225,
+    "context_only_count": 78,
+    "normalized_count": 274,
+    "method_pending_count": 0,
+    "independent_assessment_count": 499,
+    "compound_adjudicated_count": 6,
 }
 
 
@@ -102,6 +113,8 @@ def build_requirement_structure_assets(
     source_checklist: str | Path,
     output_structure: str | Path,
     output_checklist: str | Path,
+    structure_adjudication_csv: str | Path | None = None,
+    manifest_version: str = "gri-requirement-checklist-v2",
     expected_review_sha256: str | None = EXPECTED_REVIEW_SHA256,
     expected_counts: dict[str, int] | None = EXPECTED_STRUCTURE_COUNTS,
 ) -> dict[str, Any]:
@@ -125,8 +138,19 @@ def build_requirement_structure_assets(
     source_items = [
         item for item in all_source_items if _is_current_scope_requirement(item)
     ]
-    decisions = read_structure_decisions(review_path)
-    _verify_parent_mappings(source_items=source_items, decisions=decisions)
+    source_decisions = read_structure_decisions(review_path)
+    _verify_parent_mappings(source_items=source_items, decisions=source_decisions)
+    decisions = source_decisions
+    adjudication_hash: str | None = None
+    adjudication_rows: list[dict[str, str]] = []
+    if structure_adjudication_csv is not None:
+        adjudication_path = Path(structure_adjudication_csv)
+        adjudication_hash = sha256(adjudication_path.read_bytes()).hexdigest()
+        adjudication_rows = _read_structure_adjudications(adjudication_path)
+        decisions = _apply_structure_adjudications(
+            source_decisions=source_decisions,
+            adjudication_rows=adjudication_rows,
+        )
     compiled_items = compile_requirement_structure(
         items=source_items,
         decisions=decisions,
@@ -143,23 +167,32 @@ def build_requirement_structure_assets(
                 f"structure count mismatch: {json.dumps(mismatches, sort_keys=True)}"
             )
 
+    structure_manifest_version = _structure_manifest_version(manifest_version)
     structure_metadata = {
-        "manifest_version": "gri-requirement-structure-v2",
+        "manifest_version": structure_manifest_version,
         "source_review_sha256": review_hash,
         "source_checklist_sha256": source_hash,
         "source_requirement_count": len(all_source_items),
         "excluded_source_requirement_count": len(all_source_items) - len(source_items),
         **counts,
     }
+    if adjudication_hash:
+        structure_metadata["source_adjudication_sha256"] = adjudication_hash
     structure_document = {
         "metadata": structure_metadata,
         "decisions": [decision.model_dump(mode="json") for decision in decisions],
+        "provenance": {
+            "source_review_decisions": [
+                decision.model_dump(mode="json") for decision in source_decisions
+            ],
+            "structure_adjudications": adjudication_rows,
+        },
     }
     compiled_document = {
         **source_document,
         "metadata": {
             **dict(source_document.get("metadata") or {}),
-            "manifest_version": "gri-requirement-checklist-v2",
+            "manifest_version": manifest_version,
             "source_review_sha256": review_hash,
             "source_checklist_sha256": source_hash,
             "structure_manifest_version": structure_metadata["manifest_version"],
@@ -167,6 +200,8 @@ def build_requirement_structure_assets(
         },
         "requirements": compiled_items,
     }
+    if adjudication_hash:
+        compiled_document["metadata"]["source_adjudication_sha256"] = adjudication_hash
     _write_json_pair_atomically(
         output_structure=Path(output_structure),
         structure_document=structure_document,
@@ -251,10 +286,130 @@ def _structure_counts(
         "standard_unit_count": len(compiled_items),
         "verified_count": len(compiled_items) - len(decisions),
         "context_only_count": issue_counts["parent_container_as_leaf"],
-        "normalized_count": issue_counts["missing_parent_context"],
+        "normalized_count": (
+            issue_counts["missing_parent_context"]
+            + issue_counts["compound_requirement_adjudicated"]
+        ),
         "method_pending_count": issue_counts["merge_split_error"],
+        "compound_adjudicated_count": issue_counts[
+            "compound_requirement_adjudicated"
+        ],
         "independent_assessment_count": independent_count,
     }
+
+
+def _read_structure_adjudications(path: Path) -> list[dict[str, str]]:
+    with path.open("r", encoding="utf-8-sig", newline="") as handle:
+        reader = csv.DictReader(handle)
+        required_headers = {
+            "requirement_id",
+            "final_evaluation_role",
+            "component_requirement_ids",
+            "completeness_policy",
+            "adjudication_rationale",
+            "adjudicator_role",
+            "adjudication_version",
+        }
+        missing_headers = sorted(required_headers.difference(reader.fieldnames or []))
+        if missing_headers:
+            raise ValueError(
+                "structure adjudication CSV missing columns: "
+                + ", ".join(missing_headers)
+            )
+        rows = [
+            {key: _cell_text(value) for key, value in row.items()}
+            for row in reader
+            if _cell_text(row.get("requirement_id"))
+        ]
+    return rows
+
+
+def _apply_structure_adjudications(
+    *,
+    source_decisions: list[RequirementStructureDecision],
+    adjudication_rows: list[dict[str, str]],
+) -> list[RequirementStructureDecision]:
+    pending_by_id = {
+        decision.requirement_id: decision
+        for decision in source_decisions
+        if decision.issue_code == "merge_split_error"
+    }
+    row_by_id: dict[str, dict[str, str]] = {}
+    for row in adjudication_rows:
+        requirement_id = row["requirement_id"]
+        if requirement_id in row_by_id:
+            raise ValueError(f"duplicate structure adjudication: {requirement_id}")
+        if requirement_id not in pending_by_id:
+            raise ValueError(
+                "structure adjudication is not a merge_split_error: "
+                f"{requirement_id}"
+            )
+        if row["final_evaluation_role"] != EvaluationRole.INDEPENDENT.value:
+            raise ValueError(
+                "compound structure adjudication must be independent: "
+                f"{requirement_id}"
+            )
+        row_by_id[requirement_id] = row
+    missing_ids = sorted(set(pending_by_id).difference(row_by_id))
+    if missing_ids:
+        raise ValueError(
+            "structure adjudication is missing merge_split_error IDs: "
+            + ", ".join(missing_ids)
+        )
+
+    resolved: list[RequirementStructureDecision] = []
+    for decision in source_decisions:
+        row = row_by_id.get(decision.requirement_id)
+        if row is None:
+            resolved.append(decision)
+            continue
+        try:
+            component_ids = json.loads(row["component_requirement_ids"])
+        except json.JSONDecodeError as exc:
+            raise ValueError(
+                "invalid component_requirement_ids JSON: "
+                f"{decision.requirement_id}"
+            ) from exc
+        if not isinstance(component_ids, list) or not all(
+            isinstance(item, str) and item.strip() for item in component_ids
+        ):
+            raise ValueError(
+                "component_requirement_ids must be a JSON string array: "
+                f"{decision.requirement_id}"
+            )
+        resolved.append(
+            RequirementStructureDecision(
+                requirement_id=decision.requirement_id,
+                issue_code="compound_requirement_adjudicated",
+                parent_requirement_id=decision.parent_requirement_id,
+                source_note=row["adjudication_rationale"],
+                evaluation_role=EvaluationRole.INDEPENDENT,
+                component_requirement_ids=[item.strip() for item in component_ids],
+                adjudication_version=row["adjudication_version"],
+            )
+        )
+    return resolved
+
+
+def _structure_manifest_version(checklist_manifest_version: str) -> str:
+    prefix = "gri-requirement-checklist-"
+    if not checklist_manifest_version.startswith(prefix):
+        raise ValueError(
+            f"unsupported checklist manifest version: {checklist_manifest_version}"
+        )
+    return checklist_manifest_version.replace(
+        "gri-requirement-checklist-",
+        "gri-requirement-structure-",
+        1,
+    )
+
+
+def _expected_counts_for_manifest(manifest_version: str) -> dict[str, int]:
+    if manifest_version == "gri-requirement-checklist-v2":
+        return dict(EXPECTED_STRUCTURE_COUNTS)
+    if manifest_version == "gri-requirement-checklist-v3":
+        return dict(EXPECTED_STRUCTURE_COUNTS_V3)
+    raise ValueError(f"unsupported checklist manifest version: {manifest_version}")
 
 
 def _write_json_pair_atomically(
@@ -282,12 +437,17 @@ def _write_json_pair_atomically(
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Compile the reviewed GRI requirement structure v2 assets."
+        description="Compile versioned reviewed GRI requirement structure assets."
     )
     parser.add_argument("--review-workbook", required=True, type=Path)
     parser.add_argument("--source-checklist", required=True, type=Path)
     parser.add_argument("--output-structure", required=True, type=Path)
     parser.add_argument("--output-checklist", required=True, type=Path)
+    parser.add_argument("--structure-adjudication-csv", type=Path)
+    parser.add_argument(
+        "--manifest-version",
+        default="gri-requirement-checklist-v3",
+    )
     return parser
 
 
@@ -298,6 +458,9 @@ def main() -> int:
         source_checklist=args.source_checklist,
         output_structure=args.output_structure,
         output_checklist=args.output_checklist,
+        structure_adjudication_csv=args.structure_adjudication_csv,
+        manifest_version=args.manifest_version,
+        expected_counts=_expected_counts_for_manifest(args.manifest_version),
     )
     print(json.dumps(metadata, ensure_ascii=False, sort_keys=True))
     return 0

@@ -3,7 +3,7 @@ from __future__ import annotations
 from enum import StrEnum
 from typing import Any
 
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, Field, model_validator
 
 
 class EvaluationRole(StrEnum):
@@ -22,6 +22,7 @@ _ROLE_BY_ISSUE = {
     "parent_container_as_leaf": EvaluationRole.CONTEXT_ONLY,
     "missing_parent_context": EvaluationRole.INDEPENDENT,
     "merge_split_error": EvaluationRole.METHOD_PENDING,
+    "compound_requirement_adjudicated": EvaluationRole.INDEPENDENT,
 }
 
 
@@ -31,6 +32,8 @@ class RequirementStructureDecision(BaseModel):
     parent_requirement_id: str | None = None
     source_note: str
     evaluation_role: EvaluationRole | None = None
+    component_requirement_ids: list[str] = Field(default_factory=list)
+    adjudication_version: str | None = None
 
     @model_validator(mode="after")
     def validate_issue_role(self) -> RequirementStructureDecision:
@@ -42,6 +45,22 @@ class RequirementStructureDecision(BaseModel):
             raise ValueError("evaluation_role conflicts with issue_code")
         if self.issue_code == "missing_parent_context" and not self.parent_requirement_id:
             raise ValueError("missing_parent_context requires parent_requirement_id")
+        if self.issue_code == "compound_requirement_adjudicated":
+            if len(self.component_requirement_ids) < 2:
+                raise ValueError(
+                    "compound adjudication requires at least two "
+                    "component_requirement_ids"
+                )
+            if len(set(self.component_requirement_ids)) != len(
+                self.component_requirement_ids
+            ):
+                raise ValueError("duplicate component_requirement_ids")
+            if not self.adjudication_version:
+                raise ValueError("compound adjudication requires adjudication_version")
+        elif self.component_requirement_ids:
+            raise ValueError(
+                "component_requirement_ids are only supported for compound adjudication"
+            )
         self.evaluation_role = expected_role
         return self
 
@@ -140,6 +159,9 @@ def compile_requirement_structure(
                 "evaluation_role": evaluation_role.value,
                 "structure_status": structure_status.value,
                 "context_requirement_ids": context_ids,
+                "component_requirement_ids": (
+                    decision.component_requirement_ids if decision else []
+                ),
                 "structure_issue_codes": [decision.issue_code] if decision else [],
             }
         )

@@ -460,6 +460,28 @@
             "material_status": "review_input",
             "copied_at": "2026-07-25",
             "source_protection": "the original PDF, Sol review, Pro review workbook, recommendations, and historical baselines were not modified"
+        },
+        {
+            "source_path": "generated from the preserved second-review workbook, source checklist, and append-only structure adjudication",
+            "target_path": "backend/data/manifests/gri_requirement_structure_v3.json",
+            "sha256": "5406eea5175e12abdc9b097f7803e1c59e5b8ccc183643047342c9ebb5b1e53c",
+            "size_bytes": 1116241,
+            "asset_type": "gri_requirement_structure_manifest",
+            "migration_reason": "Freezes the Envision product-method structure at 577 source units, 499 independent assessments, 78 context units, and zero method-pending units.",
+            "material_status": "derived_metadata",
+            "copied_at": "2026-07-25",
+            "source_protection": "the source checklist, original PDF, review workbook, adjudication CSV, and v2 manifests were not modified"
+        },
+        {
+            "source_path": "generated from the preserved source checklist and versioned v3 structure decisions",
+            "target_path": "backend/data/manifests/gri_requirement_checklist_v3.json",
+            "sha256": "c097cd627d87b369f5defe8bffd2a7120c4f61d1b2b36460901d9dbdb708d45c",
+            "size_bytes": 872948,
+            "asset_type": "gri_requirement_checklist",
+            "migration_reason": "Provides the frozen runtime checklist for 499 independent assessments while retaining all 577 product-scope units.",
+            "material_status": "derived_metadata",
+            "copied_at": "2026-07-25",
+            "source_protection": "the source checklist, original PDF, review workbook, adjudication CSV, and v2 manifests were not modified"
         }
     ],
     "notes": [

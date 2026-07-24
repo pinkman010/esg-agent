@@ -684,3 +684,126 @@ def test_gri_adapter_rejects_v2_metadata_count_mismatch(tmp_path):
 
     with pytest.raises(ValueError, match="invalid GRI v2 structure counts"):
         GRIAdapter(path).load_requirements()
+
+
+def test_gri_adapter_loads_v3_independent_requirements_and_all_scope_items(tmp_path):
+    path = tmp_path / "gri-checklist-v3.json"
+    requirements = [
+        {
+            "requirement_id": "current_gap:GRI2:2-2:c",
+            "canonical_disclosure_id": "2-2",
+            "requirement_text": "parent scope:",
+            "source_requirement_text": "parent scope:",
+            "effective_requirement_text": "parent scope:",
+            "evaluation_role": "context_only",
+            "structure_status": "normalized",
+            "context_requirement_ids": [],
+            "component_requirement_ids": [],
+        },
+        {
+            "requirement_id": "current_gap:GRI2:2-2:c:i",
+            "canonical_disclosure_id": "2-2",
+            "requirement_text": "child leaf;",
+            "source_requirement_text": "child leaf;",
+            "effective_requirement_text": "parent scope: child leaf;",
+            "evaluation_role": "independent",
+            "structure_status": "normalized",
+            "context_requirement_ids": ["GRI 2-2-c"],
+            "component_requirement_ids": [],
+        },
+        {
+            "requirement_id": "current_gap:GRI302:302-1:c",
+            "canonical_disclosure_id": "302-1",
+            "requirement_text": "merged energy leaves",
+            "source_requirement_text": "merged energy leaves",
+            "effective_requirement_text": "merged energy leaves",
+            "evaluation_role": "independent",
+            "structure_status": "normalized",
+            "context_requirement_ids": [],
+            "component_requirement_ids": [
+                "GRI 302-1-c-i",
+                "GRI 302-1-c-ii",
+            ],
+        },
+        {
+            "requirement_id": "current_gap:GRI2:2-1:a",
+            "canonical_disclosure_id": "2-1",
+            "requirement_text": "report its legal name;",
+            "source_requirement_text": "report its legal name;",
+            "effective_requirement_text": "report its legal name;",
+            "evaluation_role": "independent",
+            "structure_status": "verified",
+            "context_requirement_ids": [],
+            "component_requirement_ids": [],
+        },
+    ]
+    for item in requirements:
+        item.update(
+            {
+                "requirement_type": "requirement",
+                "is_mandatory": True,
+                "scoring_role": "hard_score",
+                "standard_year": "2021",
+                "assessment_mode": "current_gap",
+            }
+        )
+    path.write_text(
+        json.dumps(
+            {
+                "metadata": {
+                    "manifest_version": "gri-requirement-checklist-v3",
+                    "standard_unit_count": 4,
+                    "independent_assessment_count": 3,
+                    "context_only_count": 1,
+                    "method_pending_count": 0,
+                    "compound_adjudicated_count": 1,
+                },
+                "requirements": requirements,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    adapter = GRIAdapter(path)
+
+    assert len(adapter.load_requirements()) == 3
+    assert len(adapter.load_scope_items()) == 4
+    compound = next(
+        item
+        for item in adapter.load_scope_items()
+        if item["requirement_id"] == "current_gap:GRI302:302-1:c"
+    )
+    assert compound["component_requirement_ids"] == [
+        "GRI 302-1-c-i",
+        "GRI 302-1-c-ii",
+    ]
+    assert adapter.get_scope_summary() == {
+        "standard_unit_count": 4,
+        "independent_assessment_count": 3,
+        "context_only_count": 1,
+        "method_pending_count": 0,
+        "compound_adjudicated_count": 1,
+    }
+
+
+def test_gri_adapter_rejects_v3_metadata_count_mismatch(tmp_path):
+    path = tmp_path / "invalid-v3.json"
+    path.write_text(
+        json.dumps(
+            {
+                "metadata": {
+                    "manifest_version": "gri-requirement-checklist-v3",
+                    "standard_unit_count": 577,
+                    "independent_assessment_count": 499,
+                    "context_only_count": 78,
+                    "method_pending_count": 0,
+                    "compound_adjudicated_count": 6,
+                },
+                "requirements": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="invalid GRI v3 structure counts"):
+        GRIAdapter(path).load_scope_items()

@@ -14,7 +14,7 @@ from src.tools.llm_client import LLMClient
 
 
 DATA_ROOT = Path(__file__).resolve().parents[2] / "data"
-GRI_REQUIREMENTS_PATH = DATA_ROOT / "manifests" / "gri_requirement_checklist_v2.json"
+GRI_REQUIREMENTS_PATH = DATA_ROOT / "manifests" / "gri_requirement_checklist_v3.json"
 GRI_REQUIREMENT_PACK_PATH = DATA_ROOT / "manifests" / "gri_requirement_pack.json"
 ENVISION_2024_PROFILE_PATH = DATA_ROOT / "reports" / "profiles" / "envision_2024.json"
 GRI_REQUIREMENTS_LIMIT = None
