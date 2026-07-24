@@ -1,7 +1,10 @@
+from hashlib import sha256
 from pathlib import Path
 
+import pytest
 from openpyxl import Workbook
 
+import src.services.ai_evaluation_service as evaluation_service
 from src.domain.ai_models import AIAssessmentSuggestion
 from src.domain.enums import AISuggestionStatus, AssessmentVerdict, RiskLevel
 from src.services.ai_evaluation_service import (
@@ -11,6 +14,7 @@ from src.services.ai_evaluation_service import (
     load_adjudication_pending_ids,
     load_manual_review_baseline,
 )
+from src.standards.gri import GRIAdapter
 from src.services.ai_assessment_service import AIAssessmentService
 from tests.services.test_ai_assessment_service import FakeLLMClient, _candidate
 
@@ -87,6 +91,71 @@ def test_adjudication_recommendations_loader_reads_unique_requirement_ids(tmp_pa
     )
 
     assert load_adjudication_pending_ids(path) == {"GRI 2-17-a", "GRI 403-9-e"}
+
+
+def test_final_adjudication_overlays_manual_baseline_without_mutating_workbook():
+    backend_root = Path(__file__).resolve().parents[2]
+    workbook_path = (
+        backend_root
+        / "data/review_inputs/envision_2024/manual/"
+        "envision_2024_577_manual_review_second_review_Pro_20260719.xlsx"
+    )
+    adjudication_path = (
+        backend_root
+        / "data/review_inputs/envision_2024/adjudication/"
+        "envision_2024_result_adjudication_v1.csv"
+    )
+    checklist_path = backend_root / "data/manifests/gri_requirement_checklist_v3.json"
+    original_hash = sha256(workbook_path.read_bytes()).hexdigest()
+    valid_requirement_ids = {
+        GRIAdapter(checklist_path)._requirement_id_from_checklist_item(item)
+        for item in GRIAdapter(checklist_path).load_scope_items()
+    }
+    baseline = load_manual_review_baseline(workbook_path, expected_count=225)
+
+    final = evaluation_service.load_final_adjudications(
+        adjudication_path,
+        valid_requirement_ids=valid_requirement_ids,
+    )
+    resolved = evaluation_service.apply_final_adjudications(baseline, final)
+
+    assert len(final) == 16
+    assert resolved.by_id["GRI 2-17-a"].suggested_verdict is AssessmentVerdict.UNKNOWN
+    assert resolved.by_id["GRI 2-22-a"].correct_pdf_pages == [4, 9]
+    assert resolved.by_id["GRI 305-2-c"].manual_applicability == "undetermined"
+    unchanged_ids = set(baseline.by_id).difference(final)
+    assert len(unchanged_ids) == 209
+    assert all(resolved.by_id[item] == baseline.by_id[item] for item in unchanged_ids)
+    assert sha256(workbook_path.read_bytes()).hexdigest() == original_hash
+
+
+def test_final_adjudication_loader_rejects_duplicate_and_unknown_ids(tmp_path):
+    path = tmp_path / "final.csv"
+    headers = (
+        "requirement_id,final_applicability,final_verdict,final_pdf_pages,"
+        "final_evidence_validity,final_rationale,final_missing_items,"
+        "decision_basis,adjudicator_role,adjudication_version\n"
+    )
+    row = (
+        '"GRI TEST","applicable","unknown","[]","none","reason","[]",'
+        '"product_method_adjudication","product_method_owner","v1"\n'
+    )
+    path.write_text(headers + row + row, encoding="utf-8")
+
+    with pytest.raises(ValueError, match="duplicate final adjudication"):
+        evaluation_service.load_final_adjudications(
+            path,
+            valid_requirement_ids={"GRI TEST"},
+            expected_count=None,
+        )
+
+    path.write_text(headers + row, encoding="utf-8")
+    with pytest.raises(ValueError, match="not present in GRI scope"):
+        evaluation_service.load_final_adjudications(
+            path,
+            valid_requirement_ids={"GRI OTHER"},
+            expected_count=None,
+        )
 
 
 def _manual(

@@ -42,6 +42,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--diff-summary-output", type=Path)
     parser.add_argument("--scope-summary-output", type=Path)
     parser.add_argument("--manual-review-workbook", type=Path)
+    parser.add_argument("--final-adjudications", type=Path)
     parser.add_argument("--report-total-pages", type=int, default=78)
     parser.add_argument("--confirm-llm", action="store_true", default=False)
     parser.add_argument("--enable-ocr", action="store_true", default=False)
@@ -139,18 +140,32 @@ def write_diff_summary(
     regenerated: Path,
     *,
     manual_review_workbook: Path | None = None,
+    final_adjudications: Path | None = None,
 ) -> None:
     from src.tools.first_pass_quality import compare_first_pass_to_after_rules
 
     result = compare_first_pass_to_after_rules(baseline, regenerated)
     payload = asdict(result)
     if manual_review_workbook is not None:
-        from src.services.ai_evaluation_service import load_manual_review_baseline
+        from src.services.ai_evaluation_service import (
+            apply_final_adjudications,
+            load_final_adjudications,
+            load_manual_review_baseline,
+        )
 
-        manual = load_manual_review_baseline(manual_review_workbook).records
+        manual_baseline = load_manual_review_baseline(manual_review_workbook)
+        if final_adjudications is not None:
+            resolved = load_final_adjudications(
+                final_adjudications,
+                valid_requirement_ids=set(manual_baseline.by_id),
+            )
+            manual_baseline = apply_final_adjudications(
+                manual_baseline,
+                resolved,
+            )
         payload.update(
             compare_manual_review_regression(
-                manual,
+                manual_baseline.records,
                 _read_review_csv(baseline),
                 _read_review_csv(regenerated),
             )
@@ -213,6 +228,7 @@ def main(argv: list[str] | None = None) -> None:
             args.baseline,
             args.output,
             manual_review_workbook=args.manual_review_workbook,
+            final_adjudications=args.final_adjudications,
         )
     if args.scope_summary_output:
         if args.requirements is None:

@@ -67,7 +67,9 @@ def test_parse_args_accepts_baseline_and_diff_outputs(tmp_path: Path):
     assert args.diff_summary_output.name == "diff.json"
 
 
-def test_parse_args_accepts_v2_requirements_and_scope_summary(tmp_path: Path):
+def test_parse_args_accepts_v3_requirements_scope_summary_and_final_adjudications(
+    tmp_path: Path,
+):
     args = parse_args(
         [
             "--report-id",
@@ -77,19 +79,22 @@ def test_parse_args_accepts_v2_requirements_and_scope_summary(tmp_path: Path):
             "--profile",
             "backend/data/reports/profiles/envision_2024.json",
             "--requirements",
-            "backend/data/manifests/gri_requirement_checklist_v2.json",
+            "backend/data/manifests/gri_requirement_checklist_v3.json",
             "--output",
             str(tmp_path / "out.csv"),
             "--scope-summary-output",
             str(tmp_path / "scope.json"),
             "--manual-review-workbook",
             str(tmp_path / "manual.xlsx"),
+            "--final-adjudications",
+            "backend/data/review_inputs/envision_2024/adjudication/envision_2024_result_adjudication_v1.csv",
         ]
     )
 
-    assert args.requirements.name == "gri_requirement_checklist_v2.json"
+    assert args.requirements.name == "gri_requirement_checklist_v3.json"
     assert args.scope_summary_output.name == "scope.json"
     assert args.manual_review_workbook.name == "manual.xlsx"
+    assert args.final_adjudications.name == "envision_2024_result_adjudication_v1.csv"
 
 
 def test_enrich_assessments_with_tasks_populates_v2_requirement_context():

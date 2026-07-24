@@ -24,6 +24,12 @@ def test_evaluation_cli_defaults_to_no_external_model_call(tmp_path):
     assert args.max_calls == 225
     assert isinstance(args.review_workbook, Path)
     assert args.retry_hard_gate_failures is False
+    assert args.requirements.name == "gri_requirement_checklist_v3.json"
+    assert (
+        args.final_adjudications.name
+        == "envision_2024_result_adjudication_v1.csv"
+    )
+    assert "recommendations" in args.adjudication_recommendations.name
 
 
 def test_evaluation_cli_requires_exactly_one_execution_mode(tmp_path):

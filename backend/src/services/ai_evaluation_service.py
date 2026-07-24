@@ -1,14 +1,14 @@
 import csv
 import json
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
 from openpyxl import load_workbook
 
 from src.domain.ai_models import AIAssessmentSuggestion
-from src.domain.enums import AISuggestionStatus, AssessmentVerdict
+from src.domain.enums import AISuggestionStatus, ApplicabilityStatus, AssessmentVerdict
 from src.services.ai_assessment_service import AIAssessmentCandidate
 
 
@@ -24,6 +24,21 @@ MANUAL_REVIEW_FIELDS = (
     "review_complete",
 )
 V1_APPLICABILITY_EXCEPTION_IDS = frozenset({"GRI 2-30-b"})
+FINAL_ADJUDICATION_FIELDS = (
+    "requirement_id",
+    "final_applicability",
+    "final_verdict",
+    "final_pdf_pages",
+    "final_evidence_validity",
+    "final_rationale",
+    "final_missing_items",
+    "decision_basis",
+    "adjudicator_role",
+    "adjudication_version",
+)
+FINAL_EVIDENCE_VALIDITIES = frozenset(
+    {"valid", "partially_valid", "invalid", "none"}
+)
 
 
 def load_adjudication_pending_ids(path: Path) -> set[str]:
@@ -60,6 +75,24 @@ class ManualReviewBaseline:
     report_id: str
     run_id: str
     records: list[ManualReviewRecord]
+
+    @property
+    def by_id(self) -> dict[str, ManualReviewRecord]:
+        return {record.requirement_id: record for record in self.records}
+
+
+@dataclass(frozen=True)
+class FinalAdjudicationRecord:
+    requirement_id: str
+    final_applicability: ApplicabilityStatus
+    final_verdict: AssessmentVerdict
+    final_pdf_pages: list[int]
+    final_evidence_validity: str
+    final_rationale: str
+    final_missing_items: list[str]
+    decision_basis: str
+    adjudicator_role: str
+    adjudication_version: str
 
 
 @dataclass(frozen=True)
@@ -137,6 +170,139 @@ def load_manual_review_baseline(
         )
     finally:
         workbook.close()
+
+
+def load_final_adjudications(
+    path: Path,
+    *,
+    valid_requirement_ids: set[str] | None = None,
+    expected_count: int | None = 16,
+) -> dict[str, FinalAdjudicationRecord]:
+    records: dict[str, FinalAdjudicationRecord] = {}
+    with path.open("r", encoding="utf-8-sig", newline="") as file:
+        reader = csv.DictReader(file)
+        missing_fields = sorted(
+            set(FINAL_ADJUDICATION_FIELDS).difference(reader.fieldnames or [])
+        )
+        if missing_fields:
+            raise ValueError(
+                f"final adjudication CSV missing columns: {missing_fields}"
+            )
+        for row in reader:
+            requirement_id = _text(row.get("requirement_id"))
+            if not requirement_id:
+                continue
+            if requirement_id in records:
+                raise ValueError(
+                    f"duplicate final adjudication: {requirement_id}"
+                )
+            if (
+                valid_requirement_ids is not None
+                and requirement_id not in valid_requirement_ids
+            ):
+                raise ValueError(
+                    "final adjudication is not present in GRI scope: "
+                    f"{requirement_id}"
+                )
+            try:
+                final_applicability = ApplicabilityStatus(
+                    _text(row.get("final_applicability"))
+                )
+                final_verdict = AssessmentVerdict(
+                    _text(row.get("final_verdict"))
+                )
+            except ValueError as exc:
+                raise ValueError(
+                    f"invalid final adjudication enum: {requirement_id}"
+                ) from exc
+            evidence_validity = _text(row.get("final_evidence_validity"))
+            if evidence_validity not in FINAL_EVIDENCE_VALIDITIES:
+                raise ValueError(
+                    f"invalid final evidence validity: {requirement_id}"
+                )
+            final_rationale = _text(row.get("final_rationale"))
+            decision_basis = _text(row.get("decision_basis"))
+            adjudicator_role = _text(row.get("adjudicator_role"))
+            adjudication_version = _text(row.get("adjudication_version"))
+            if not all(
+                (
+                    final_rationale,
+                    decision_basis,
+                    adjudicator_role,
+                    adjudication_version,
+                )
+            ):
+                raise ValueError(
+                    f"incomplete final adjudication metadata: {requirement_id}"
+                )
+            records[requirement_id] = FinalAdjudicationRecord(
+                requirement_id=requirement_id,
+                final_applicability=final_applicability,
+                final_verdict=final_verdict,
+                final_pdf_pages=_parse_json_pages(
+                    row.get("final_pdf_pages"),
+                    requirement_id=requirement_id,
+                ),
+                final_evidence_validity=evidence_validity,
+                final_rationale=final_rationale,
+                final_missing_items=_parse_json_strings(
+                    row.get("final_missing_items"),
+                    requirement_id=requirement_id,
+                ),
+                decision_basis=decision_basis,
+                adjudicator_role=adjudicator_role,
+                adjudication_version=adjudication_version,
+            )
+    if expected_count is not None and len(records) != expected_count:
+        raise ValueError(
+            "final adjudication count mismatch: "
+            f"expected {expected_count}, got {len(records)}"
+        )
+    return records
+
+
+def apply_final_adjudications(
+    baseline: ManualReviewBaseline,
+    adjudications: dict[str, FinalAdjudicationRecord],
+) -> ManualReviewBaseline:
+    baseline_by_id = baseline.by_id
+    missing_ids = sorted(set(adjudications).difference(baseline_by_id))
+    if missing_ids:
+        raise ValueError(
+            "final adjudication is not present in manual baseline: "
+            + ", ".join(missing_ids)
+        )
+    records = [
+        (
+            replace(
+                record,
+                manual_applicability=adjudications[
+                    record.requirement_id
+                ].final_applicability.value,
+                suggested_verdict=adjudications[
+                    record.requirement_id
+                ].final_verdict,
+                evidence_validity=adjudications[
+                    record.requirement_id
+                ].final_evidence_validity,
+                correct_pdf_pages=list(
+                    adjudications[record.requirement_id].final_pdf_pages
+                ),
+                rationale_correct="yes",
+                missing_items_correct="yes",
+                review_complete="complete",
+                is_applicability_exception=False,
+            )
+            if record.requirement_id in adjudications
+            else record
+        )
+        for record in baseline.records
+    ]
+    return ManualReviewBaseline(
+        report_id=baseline.report_id,
+        run_id=baseline.run_id,
+        records=records,
+    )
 
 
 def evaluate_ai_suggestions(
@@ -336,6 +502,44 @@ def _parse_pages(value: Any) -> list[int]:
     if isinstance(parsed, int):
         parsed = [parsed]
     return sorted({int(page) for page in parsed})
+
+
+def _parse_json_pages(value: Any, *, requirement_id: str) -> list[int]:
+    try:
+        parsed = json.loads(_text(value))
+    except json.JSONDecodeError as exc:
+        raise ValueError(
+            f"invalid final PDF pages JSON: {requirement_id}"
+        ) from exc
+    if not isinstance(parsed, list) or any(
+        not isinstance(page, int) or isinstance(page, bool) or page <= 0
+        for page in parsed
+    ):
+        raise ValueError(
+            f"final PDF pages must be a positive integer array: {requirement_id}"
+        )
+    if len(set(parsed)) != len(parsed):
+        raise ValueError(f"duplicate final PDF pages: {requirement_id}")
+    return sorted(parsed)
+
+
+def _parse_json_strings(value: Any, *, requirement_id: str) -> list[str]:
+    try:
+        parsed = json.loads(_text(value))
+    except json.JSONDecodeError as exc:
+        raise ValueError(
+            f"invalid final missing items JSON: {requirement_id}"
+        ) from exc
+    if not isinstance(parsed, list) or any(
+        not isinstance(item, str) or not item.strip() for item in parsed
+    ):
+        raise ValueError(
+            f"final missing items must be a string array: {requirement_id}"
+        )
+    normalized = [item.strip() for item in parsed]
+    if len(set(normalized)) != len(normalized):
+        raise ValueError(f"duplicate final missing items: {requirement_id}")
+    return normalized
 
 
 def _text(value: Any) -> str:

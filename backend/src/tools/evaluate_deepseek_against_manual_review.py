@@ -18,21 +18,29 @@ from src.services.ai_assessment_service import (
 )
 from src.services.ai_evaluation_service import (
     AIEvaluationCase,
+    apply_final_adjudications,
     evaluate_ai_suggestions,
     load_adjudication_pending_ids,
+    load_final_adjudications,
     load_manual_review_baseline,
 )
 from src.standards.gri import GRIAdapter
+from src.standards.requirement_structure import canonical_requirement_id
 from src.tools.llm_client import LLMClient
 
 
 BACKEND_ROOT = Path(__file__).resolve().parents[2]
 PROJECT_ROOT = BACKEND_ROOT.parent
-DEFAULT_REQUIREMENTS = BACKEND_ROOT / "data/manifests/gri_requirement_checklist_v2.json"
+DEFAULT_REQUIREMENTS = BACKEND_ROOT / "data/manifests/gri_requirement_checklist_v3.json"
 DEFAULT_ASSETS_MANIFEST = BACKEND_ROOT / "data/manifests/assets_manifest.json"
 DEFAULT_ADJUDICATION_RECOMMENDATIONS = (
     BACKEND_ROOT
     / "data/review_inputs/envision_2024/manual/envision_2024_577_Pro_second_review_recommendations_20260719.csv"
+)
+DEFAULT_FINAL_ADJUDICATIONS = (
+    BACKEND_ROOT
+    / "data/review_inputs/envision_2024/adjudication/"
+    "envision_2024_result_adjudication_v1.csv"
 )
 
 
@@ -51,6 +59,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         type=Path,
         default=DEFAULT_ADJUDICATION_RECOMMENDATIONS,
     )
+    parser.add_argument(
+        "--final-adjudications",
+        type=Path,
+        default=DEFAULT_FINAL_ADJUDICATIONS,
+    )
     parser.add_argument("--retry-hard-gate-failures", action="store_true")
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--dry-run", action="store_true")
@@ -63,12 +76,27 @@ def build_evaluation_cases(
     *,
     review_workbook: Path,
     requirements_path: Path,
+    final_adjudications_path: Path | None = None,
     expected_count: int = 225,
 ) -> tuple[list[AIEvaluationCase], str, str]:
     baseline = load_manual_review_baseline(
         review_workbook,
         expected_count=expected_count,
     )
+    adapter = GRIAdapter(requirements_path)
+    if final_adjudications_path is not None:
+        valid_requirement_ids = {
+            canonical_requirement_id(
+                str(item.get("requirement_id") or ""),
+                str(item.get("canonical_disclosure_id") or "") or None,
+            )
+            for item in adapter.load_scope_items()
+        }
+        final_adjudications = load_final_adjudications(
+            final_adjudications_path,
+            valid_requirement_ids=valid_requirement_ids,
+        )
+        baseline = apply_final_adjudications(baseline, final_adjudications)
     report = repository.get_report(baseline.report_id)
     if report is None:
         raise ValueError(f"fixed report not found in database: {baseline.report_id}")
@@ -82,7 +110,7 @@ def build_evaluation_cases(
     }
     tasks = {
         task.requirement_id: task
-        for task in GRIAdapter(requirements_path).build_tasks(
+        for task in adapter.build_tasks(
             run_id=baseline.run_id,
             report_id=baseline.report_id,
         )
@@ -104,7 +132,7 @@ def build_evaluation_cases(
         task = tasks.get(record.requirement_id)
         if task is None:
             raise ValueError(
-                f"v2 effective requirement not found: {record.requirement_id}"
+                f"frozen effective requirement not found: {record.requirement_id}"
             )
         risk = risks.get(assessment.assessment_id)
         if risk is None:
@@ -134,10 +162,13 @@ def run_evaluation(
         repository,
         review_workbook=args.review_workbook,
         requirements_path=args.requirements,
+        final_adjudications_path=args.final_adjudications,
         expected_count=args.expected_count,
     )
-    adjudication_pending_ids = load_adjudication_pending_ids(
-        args.adjudication_recommendations
+    adjudication_pending_ids = (
+        set()
+        if args.final_adjudications is not None
+        else load_adjudication_pending_ids(args.adjudication_recommendations)
     )
     selected_ids = {case.manual.requirement_id for case in cases}
     adjudication_pending_ids &= selected_ids
