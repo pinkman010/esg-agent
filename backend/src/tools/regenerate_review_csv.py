@@ -163,6 +163,15 @@ def write_diff_summary(
                 manual_baseline,
                 resolved,
             )
+            adjudication_summary = summarize_final_adjudication_statuses(
+                resolved,
+                _read_review_csv(regenerated),
+            )
+            if adjudication_summary["final_adjudication_pending_count"]:
+                raise ValueError(
+                    "final adjudication has no regenerated rule result"
+                )
+            payload.update(adjudication_summary)
         payload.update(
             compare_manual_review_regression(
                 manual_baseline.records,
@@ -175,6 +184,57 @@ def write_diff_summary(
         json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
+
+
+def summarize_final_adjudication_statuses(
+    adjudications: dict[str, Any],
+    current_rows: list[dict[str, str]],
+) -> dict[str, Any]:
+    current = _aggregate_review_rows(current_rows)
+    statuses = []
+    pending_count = 0
+    rule_match_count = 0
+    human_override_count = 0
+    for requirement_id in sorted(adjudications):
+        final = adjudications[requirement_id]
+        item = current.get(requirement_id)
+        final_verdict = _get(
+            _get(final, "final_verdict"),
+            "value",
+            _get(final, "final_verdict"),
+        )
+        final_pages = sorted(_get(final, "final_pdf_pages", []))
+        if item is None:
+            status = "pending_rule_result"
+            rule_verdict = None
+            rule_pages = []
+            pending_count += 1
+        else:
+            rule_verdict = item["verdict"]
+            rule_pages = sorted(item["pages"])
+            if rule_verdict == final_verdict and rule_pages == final_pages:
+                status = "rule_matches_final"
+                rule_match_count += 1
+            else:
+                status = "final_human_override_required"
+                human_override_count += 1
+        statuses.append(
+            {
+                "requirement_id": requirement_id,
+                "status": status,
+                "rule_verdict": rule_verdict,
+                "final_verdict": final_verdict,
+                "rule_pdf_pages": rule_pages,
+                "final_pdf_pages": final_pages,
+            }
+        )
+    return {
+        "final_adjudication_count": len(adjudications),
+        "final_adjudication_pending_count": pending_count,
+        "final_adjudication_rule_match_count": rule_match_count,
+        "final_adjudication_human_override_count": human_override_count,
+        "final_adjudication_statuses": statuses,
+    }
 
 
 def write_scope_summary(

@@ -9,6 +9,7 @@ from src.tools.regenerate_review_csv import (
     enrich_assessments_with_tasks,
     filter_eligible_assessments,
     parse_args,
+    summarize_final_adjudication_statuses,
 )
 
 
@@ -161,6 +162,55 @@ def test_compare_manual_review_regression_reports_only_new_failures():
     assert result["new_false_disclosed_count"] == 1
     assert result["new_wrong_source_page_count"] == 1
     assert result["new_false_disclosed_requirement_ids"] == ["GRI 2-1-a"]
+
+
+def test_final_adjudication_statuses_make_rule_differences_explicit():
+    class Final:
+        def __init__(self, verdict, pages):
+            self.final_verdict = verdict
+            self.final_pdf_pages = pages
+
+    adjudications = {
+        "GRI 2-1-a": Final(AssessmentVerdict.DISCLOSED, [6]),
+        "GRI 2-1-b": Final(AssessmentVerdict.UNKNOWN, []),
+    }
+    current = [
+        {
+            "requirement_id": "GRI 2-1-a",
+            "verdict": "disclosed",
+            "source_pdf_page": "6",
+        },
+        {
+            "requirement_id": "GRI 2-1-b",
+            "verdict": "unknown",
+            "source_pdf_page": "72",
+        },
+    ]
+
+    result = summarize_final_adjudication_statuses(adjudications, current)
+
+    assert result["final_adjudication_count"] == 2
+    assert result["final_adjudication_pending_count"] == 0
+    assert result["final_adjudication_rule_match_count"] == 1
+    assert result["final_adjudication_human_override_count"] == 1
+    assert result["final_adjudication_statuses"] == [
+        {
+            "requirement_id": "GRI 2-1-a",
+            "status": "rule_matches_final",
+            "rule_verdict": "disclosed",
+            "final_verdict": "disclosed",
+            "rule_pdf_pages": [6],
+            "final_pdf_pages": [6],
+        },
+        {
+            "requirement_id": "GRI 2-1-b",
+            "status": "final_human_override_required",
+            "rule_verdict": "unknown",
+            "final_verdict": "unknown",
+            "rule_pdf_pages": [72],
+            "final_pdf_pages": [],
+        },
+    ]
 
 
 def test_run_single_report_regeneration_uses_workflow_without_llm_or_ocr(monkeypatch, tmp_path):
