@@ -240,6 +240,7 @@ class DisclosureAgent:
         evidence = self._filter_requirement_specific_pages(task, evidence)
         evidence = self._filter_supplier_social_screening_evidence(task, evidence)
         evidence = self._filter_customer_privacy_complaint_evidence(task, evidence)
+        evidence = self._filter_waste_compilation_method_evidence(task, evidence)
         self._mark_requirement_specific_quality_flags(task, evidence)
         self._mark_requirement_specific_previews(task, evidence)
         self._mark_omission_note_evidence(task, evidence)
@@ -258,6 +259,31 @@ class DisclosureAgent:
         if task.requirement_id != "GRI 418-1-a":
             return evidence
         return [item for item in evidence if self._has_customer_privacy_complaint_evidence(item.source_text)]
+
+    def _filter_waste_compilation_method_evidence(
+        self,
+        task: DisclosureTask,
+        evidence: list[EvidenceItem],
+    ) -> list[EvidenceItem]:
+        if task.requirement_id not in {"GRI 306-3-b", "GRI 306-4-e"}:
+            return evidence
+        waste_terms = ("废弃物", "waste")
+        method_terms = (
+            "编制方法",
+            "测量方法",
+            "估算方法",
+            "数据来源",
+            "methodolog",
+            "measurement",
+            "estimation",
+            "data source",
+        )
+        return [
+            item
+            for item in evidence
+            if any(term in item.source_text.lower() for term in waste_terms)
+            and any(term in item.source_text.lower() for term in method_terms)
+        ]
 
     def _filter_supplier_social_screening_evidence(
         self,
@@ -382,7 +408,6 @@ class DisclosureAgent:
             "GRI 303-3-b-iii",
             "GRI 303-3-b-iv",
             "GRI 303-3-b-v",
-            "GRI 303-3-d",
             "GRI 303-4-a-i",
             "GRI 303-4-a-ii",
             "GRI 303-4-a-iii",
@@ -413,7 +438,7 @@ class DisclosureAgent:
             "GRI 2-6-b-i": {4, 6},
             "GRI 2-6-b-ii": {52, 53, 54},
             "GRI 2-6-c": {4, 9, 52, 54},
-            "GRI 2-22-a": {4, 5},
+            "GRI 2-22-a": {4, 9},
             "GRI 2-23-a": {9, 11, 32, 54, 57, 59},
             "GRI 2-23-a-i": {9, 32},
             "GRI 2-23-a-ii": {53, 58},
@@ -814,6 +839,35 @@ class DisclosureAgent:
                 ["实质披露内容", "从略披露原因对应的人工复核"],
             )
 
+        if task.requirement_id == "GRI 2-22-a":
+            statement_text = " ".join(
+                item.source_text for item in bounded_evidence if item.source_page == 4
+            )
+            identity_text = " ".join(
+                item.source_text for item in bounded_evidence if item.source_page == 9
+            )
+            has_statement = bool(statement_text) and any(
+                term in statement_text
+                for term in ("董事长致辞", "可持续发展", "零碳")
+            )
+            identity_text_lower = identity_text.lower()
+            has_senior_identity = bool(identity_text) and (
+                "首席执行官" in identity_text
+                or "ceo" in identity_text_lower
+                or "董事长" in identity_text
+            )
+            if has_statement and has_senior_identity:
+                return (
+                    AssessmentVerdict.DISCLOSED,
+                    "PDF 第4页包含可持续发展声明，第9页确认声明签署人为首席执行官或最高管理者，两页组合满足该项披露要求。",
+                    [],
+                )
+            return (
+                AssessmentVerdict.PARTIALLY_DISCLOSED,
+                "现有证据未同时确认可持续发展声明内容和声明人的最高治理机构或最高管理者身份。",
+                ["可持续发展声明", "声明人的最高治理机构或最高管理者身份"],
+            )
+
         contract = get_requirement_contract(task.requirement_id)
         if contract is not None and contract.verdict is not None:
             for item in evidence:
@@ -885,7 +939,6 @@ class DisclosureAgent:
             )
 
         current_150_partial_items = {
-            "GRI 2-22-a",
             "GRI 2-23-a",
             "GRI 2-23-a-i",
             "GRI 2-23-a-ii",

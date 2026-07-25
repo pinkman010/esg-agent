@@ -1736,9 +1736,51 @@ def test_disclosure_agent_propagates_new_omission_notes_for_current_150():
         assert result.assessment.evidence[0].metadata["omission_reason"] == "confidentiality"
 
 
+def test_disclosure_agent_combines_sustainability_statement_and_ceo_identity():
+    task = DisclosureTask(
+        task_id="task-GRI-2-22-a",
+        run_id="run-1",
+        report_id="report-1",
+        standard_id="GRI 2",
+        standard_version="2021",
+        disclosure_id="GRI 2-22",
+        requirement_id="GRI 2-22-a",
+        requirement_text=(
+            "report a statement from the highest governance body or most senior "
+            "executive about the relevance of sustainable development"
+        ),
+        keywords=["董事长致辞", "可持续发展", "首席执行官", "CEO"],
+        candidate_pages=[4, 9],
+        candidate_page_source="gri_report_index+requirement_supplement",
+        index_page=70,
+    )
+    chunks = [
+        DocumentChunk(
+            chunk_id="chunk-2-22-a-4",
+            report_id="report-1",
+            text="董事长致辞 可持续发展 零碳目标 张雷",
+            source_page=4,
+            source_method=EvidenceSourceMethod.PDFPLUMBER,
+            source_file_hash="hash-1",
+        ),
+        DocumentChunk(
+            chunk_id="chunk-2-22-a-9",
+            report_id="report-1",
+            text="远景能源创始人兼 CEO 张雷",
+            source_page=9,
+            source_method=EvidenceSourceMethod.PDFPLUMBER,
+            source_file_hash="hash-1",
+        ),
+    ]
+
+    result = DisclosureAgent().analyze(task, chunks, confirm_llm=False)
+
+    assert result.assessment.verdict is AssessmentVerdict.DISCLOSED
+    assert [item.source_page for item in result.assessment.evidence] == [4, 9]
+
+
 def test_disclosure_agent_marks_current_150_policy_items_as_partial():
     cases = [
-        ("GRI 2-22-a", "GRI 2-22", [(4, "董事长致辞 可持续发展 零碳目标"), (5, "CSO 致辞 可持续发展")], [4, 5]),
         ("GRI 2-23-a", "GRI 2-23", [(9, "UNGC 世界人权宣言"), (11, "政策承诺"), (32, "劳工与人权 ILO"), (54, "供应商行为准则"), (57, "合规制度"), (59, "举报机制")], [9, 11, 32, 54, 57, 59]),
         ("GRI 2-23-a-i", "GRI 2-23", [(9, "UNGC 十项原则"), (32, "ILO 世界人权宣言")], [9, 32]),
         ("GRI 2-23-a-ii", "GRI 2-23", [(53, "供应商尽调"), (58, "第三方反腐败尽调")], [53, 58]),
@@ -2639,7 +2681,6 @@ def test_disclosure_agent_keeps_unreported_303_water_subitems_unknown():
         "GRI 303-3-b-iii",
         "GRI 303-3-b-iv",
         "GRI 303-3-b-v",
-        "GRI 303-3-d",
         "GRI 303-4-a-i",
         "GRI 303-4-a-ii",
         "GRI 303-4-a-iii",
@@ -2674,6 +2715,107 @@ def test_disclosure_agent_keeps_unreported_303_water_subitems_unknown():
 
         assert result.assessment.verdict is AssessmentVerdict.UNKNOWN
         assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+        assert result.assessment.evidence == []
+
+
+def test_disclosure_agent_marks_water_data_without_full_method_as_partial():
+    cases = [
+        (
+            "GRI 303-3-d",
+            "GRI 303-3",
+            [(25, "水风险分类和取水数据背景"), (63, "取水总量 KPI 数据")],
+            [25, 63],
+        ),
+        (
+            "GRI 303-4-e",
+            "GRI 303-4",
+            [
+                (22, "废水分类收集和处理"),
+                (25, "排水管理背景"),
+                (63, "排水总量 KPI 数据"),
+            ],
+            [22, 25, 63],
+        ),
+        (
+            "GRI 303-5-d",
+            "GRI 303-5",
+            [(25, "取水排水耗水数据背景"), (63, "耗水量 KPI 数据")],
+            [25, 63],
+        ),
+    ]
+    for requirement_id, disclosure_id, page_texts, expected_pages in cases:
+        task = DisclosureTask(
+            task_id=f"task-{requirement_id}",
+            run_id="run-1",
+            report_id="report-1",
+            standard_id="GRI 303",
+            standard_version="2018",
+            disclosure_id=disclosure_id,
+            requirement_id=requirement_id,
+            requirement_text=(
+                "report contextual information necessary to understand how "
+                "the data have been compiled"
+            ),
+            keywords=["水资源", "取水", "排水", "耗水", "数据", "编制方法"],
+            candidate_pages=expected_pages,
+            candidate_page_source="gri_report_index+requirement_supplement",
+            index_page=73,
+        )
+        chunks = [
+            DocumentChunk(
+                chunk_id=f"chunk-{requirement_id}-{page}",
+                report_id="report-1",
+                text=text,
+                source_page=page,
+                source_method=EvidenceSourceMethod.PDFPLUMBER,
+                source_file_hash="hash-1",
+            )
+            for page, text in page_texts
+        ]
+
+        result = DisclosureAgent().analyze(task, chunks, confirm_llm=False)
+
+        assert result.assessment.verdict is AssessmentVerdict.PARTIALLY_DISCLOSED
+        assert result.assessment.review_status is ReviewStatus.NEEDS_MANUAL_REVIEW
+        assert [
+            item.source_page for item in result.assessment.evidence
+        ] == expected_pages
+
+
+def test_disclosure_agent_rejects_generic_digital_process_for_waste_compilation():
+    for requirement_id, disclosure_id in [
+        ("GRI 306-3-b", "GRI 306-3"),
+        ("GRI 306-4-e", "GRI 306-4"),
+    ]:
+        task = DisclosureTask(
+            task_id=f"task-{requirement_id}",
+            run_id="run-1",
+            report_id="report-1",
+            standard_id="GRI 306",
+            standard_version="2020",
+            disclosure_id=disclosure_id,
+            requirement_id=requirement_id,
+            requirement_text=(
+                "describe the methodologies and assumptions used to compile "
+                "the data"
+            ),
+            keywords=["废弃物", "数据", "编制方法"],
+            candidate_pages=[18, 21, 64],
+            candidate_page_source="gri_report_index+requirement_supplement",
+            index_page=74,
+        )
+        chunk = DocumentChunk(
+            chunk_id=f"chunk-{requirement_id}",
+            report_id="report-1",
+            text="公司使用数字化平台上传 ESG 数据和证明材料并进行内部审核。",
+            source_page=21,
+            source_method=EvidenceSourceMethod.PDFPLUMBER,
+            source_file_hash="hash-1",
+        )
+
+        result = DisclosureAgent().analyze(task, [chunk], confirm_llm=False)
+
+        assert result.assessment.verdict is AssessmentVerdict.UNKNOWN
         assert result.assessment.evidence == []
 
 
@@ -3410,8 +3552,8 @@ def test_disclosure_agent_handles_403_9_work_injury_kpi_rules():
         ("GRI 403-9-c-i", [(40, "高后果工伤风险 管控措施")], AssessmentVerdict.PARTIALLY_DISCLOSED, [40]),
         ("GRI 403-9-c-ii", [(67, "工伤 KPI")], AssessmentVerdict.UNKNOWN, []),
         ("GRI 403-9-c-iii", [(40, "工伤风险管控措施")], AssessmentVerdict.PARTIALLY_DISCLOSED, [40]),
-        ("GRI 403-9-d", [(40, "事故调查 整改闭环"), (67, "TRIR LTIR")], AssessmentVerdict.PARTIALLY_DISCLOSED, [40, 67]),
-        ("GRI 403-9-e", [(67, "TRIR 和 LTIR 按百万工时计算")], AssessmentVerdict.DISCLOSED, [67]),
+        ("GRI 403-9-d", [(41, "采用消除、替代、工程控制、行政管理以及个体防护在内的风险管控措施")], AssessmentVerdict.DISCLOSED, [41]),
+        ("GRI 403-9-e", [(41, "事故调查和控制层级"), (67, "TRIR 和 LTIR 按百万工时计算")], AssessmentVerdict.DISCLOSED, [67]),
         ("GRI 403-9-f", [(67, "TRIR LTIR")], AssessmentVerdict.UNKNOWN, []),
         ("GRI 403-9-g", [(67, "TRIR LTIR")], AssessmentVerdict.UNKNOWN, []),
     ]
@@ -3762,6 +3904,40 @@ def test_disclosure_agent_handles_413_and_414_community_and_supplier_social_rule
         assert [item.source_page for item in result.assessment.evidence] == expected_pages
         if 67 in expected_pages:
             assert PageQualityFlag.COMPLEX_TABLE in result.assessment.evidence[-1].quality_flags
+
+
+def test_disclosure_agent_414_1_a_uses_page_67_without_contradictory_missing_items():
+    task = DisclosureTask(
+        task_id="task-GRI-414-1-a-final",
+        run_id="run-1",
+        report_id="report-1",
+        standard_id="GRI 414",
+        standard_version="2016",
+        disclosure_id="GRI 414-1",
+        requirement_id="GRI 414-1-a",
+        requirement_text=(
+            "percentage of new suppliers that were screened using social criteria"
+        ),
+        keywords=["新供应商", "社会评价", "筛选", "百分比"],
+        candidate_pages=[67],
+        candidate_page_source="gri_report_index+requirement_supplement",
+        index_page=76,
+    )
+    chunk = DocumentChunk(
+        chunk_id="chunk-GRI-414-1-a-final",
+        report_id="report-1",
+        text="使用社会评价维度筛选的新供应商百分比（%） 100",
+        source_page=67,
+        source_method=EvidenceSourceMethod.PDFPLUMBER,
+        source_file_hash="hash-1",
+    )
+
+    result = DisclosureAgent().analyze(task, [chunk], confirm_llm=False)
+
+    assert result.assessment.verdict is AssessmentVerdict.DISCLOSED
+    assert result.assessment.missing_items == []
+    assert "67" in result.assessment.rationale or "100%" in result.assessment.rationale
+    assert "31" not in result.assessment.rationale
 
 
 def test_disclosure_agent_handles_416_417_418_product_and_privacy_rules():

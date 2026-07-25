@@ -61,6 +61,22 @@ def test_kpi_profile_owned_requirement_contract_keeps_semantic_metadata_without_
     assert contract.evidence_kinds == (EvidenceKind.KPI_VALUE,)
 
 
+def test_water_compilation_contracts_preserve_data_pages_and_partial_method_gap():
+    expected_pages = {
+        "GRI 303-3-d": (25, 63),
+        "GRI 303-4-e": (22, 25, 63),
+        "GRI 303-5-d": (25, 63),
+    }
+
+    for requirement_id, pages in expected_pages.items():
+        contract = get_requirement_contract(requirement_id)
+        assert contract is not None
+        assert contract.allowed_pages == pages
+        assert contract.semantic_group is SemanticGroup.WATER_KPI
+        assert contract.evidence_kinds == (EvidenceKind.KPI_VALUE,)
+        assert contract.verdict is AssessmentVerdict.PARTIALLY_DISCLOSED
+
+
 def test_supplier_assessment_contracts_have_shared_ontology_metadata():
     cases = {
         "GRI 308-1-a": {RequirementFacet.REQUIRES_PERCENTAGE, RequirementFacet.REQUIRES_NEW_SUPPLIER_SCOPE},
@@ -117,7 +133,7 @@ def test_ohs_kpi_contracts_have_pilot_ontology_metadata():
         "GRI 403-9-b-iii": ({RequirementFacet.REQUIRES_COUNT, RequirementFacet.REQUIRES_WORKER_BOUNDARY}, {EvidenceKind.KPI_VALUE}),
         "GRI 403-9-b-v": ({RequirementFacet.REQUIRES_COUNT, RequirementFacet.REQUIRES_WORKER_BOUNDARY}, {EvidenceKind.KPI_VALUE}),
         "GRI 403-9-c": ({RequirementFacet.REQUIRES_IMPACT_TYPE}, {EvidenceKind.KPI_VALUE}),
-        "GRI 403-9-d": ({RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION}, {EvidenceKind.KPI_VALUE}),
+        "GRI 403-9-d": (set(), {EvidenceKind.MANAGEMENT_MECHANISM}),
         "GRI 403-9-e": ({RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION}, {EvidenceKind.METHODOLOGY}),
         "GRI 403-10-a": ({RequirementFacet.REQUIRES_COUNT, RequirementFacet.REQUIRES_METHOD_OR_ASSUMPTION}, {EvidenceKind.KPI_VALUE}),
         "GRI 403-10-a-i": ({RequirementFacet.REQUIRES_COUNT}, {EvidenceKind.KPI_VALUE}),
@@ -138,7 +154,12 @@ def test_ohs_kpi_contracts_have_pilot_ontology_metadata():
     for requirement_id, (expected_facets, expected_evidence_kinds) in cases.items():
         contract = get_requirement_contract(requirement_id)
         assert contract is not None
-        assert contract.semantic_group is SemanticGroup.OHS_KPI
+        expected_group = (
+            SemanticGroup.OHS_MANAGEMENT
+            if requirement_id == "GRI 403-9-d"
+            else SemanticGroup.OHS_KPI
+        )
+        assert contract.semantic_group is expected_group
         assert set(contract.facets) == expected_facets
         assert set(contract.evidence_kinds) == expected_evidence_kinds
 
@@ -191,8 +212,8 @@ def test_holdout_leaf_contracts_define_atomic_review_narratives():
             ("识别出的重大腐败风险类型", "涉及重大腐败风险的高风险业务环节", "重大腐败风险涉及的运营地点或完整风险清单"),
         ),
         "GRI 414-1-a": (
-            "PDF 第31页披露2024年完成85家供应商社会责任审核及A、B级审核结果，可支撑供应商社会标准审核方向；但未明确这些供应商是否为报告期新供应商，也未披露新供应商总数、经社会标准筛选的数量和百分比，因此判定为 partially_disclosed。",
-            ("报告期内新供应商总数或计算分母", "使用社会标准筛选的新供应商数量", "使用社会标准筛选的新供应商百分比"),
+            "PDF 第67页披露使用社会评价维度筛选的新供应商百分比为100%，直接满足该项披露要求，因此判定为 disclosed。",
+            (),
         ),
         "GRI 403-9-a-i": (
             "PDF 第47页明确披露2024年员工因工死亡人数为1，可支撑死亡数量；但未披露员工工伤死亡率、计算使用的工作小时数分母及比率计算口径，因此判定为 partially_disclosed。",
