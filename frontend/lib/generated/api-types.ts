@@ -140,6 +140,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/reports/{report_id}/scope-items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Scope Items */
+        get: operations["list_scope_items_api_reports__report_id__scope_items_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/reports/{report_id}/assessments": {
         parameters: {
             query?: never;
@@ -1312,6 +1329,8 @@ export interface components {
             report_id: string;
             /** Run Id */
             run_id: string | null;
+            /** Standard Unit Count */
+            standard_unit_count: number;
             /** Verdict Counts */
             verdict_counts: {
                 [key: string]: number;
@@ -1400,6 +1419,47 @@ export interface components {
              * @constant
              */
             status: "uploaded";
+        };
+        /** RequirementScopeItemResponse */
+        RequirementScopeItemResponse: {
+            /** Requirement Id */
+            requirement_id: string;
+            /** Gri Topic */
+            gri_topic: string;
+            /**
+             * Unit Status
+             * @enum {string}
+             */
+            unit_status: "assessed" | "context_incorporated";
+            /** Source Requirement Text */
+            source_requirement_text: string;
+            /** Effective Requirement Text */
+            effective_requirement_text: string;
+            /** Component Requirement Ids */
+            component_requirement_ids: string[];
+            /** Incorporated Into Requirement Ids */
+            incorporated_into_requirement_ids: string[];
+            /** Assessment Id */
+            assessment_id: string | null;
+            /** Effective Verdict */
+            effective_verdict: string | null;
+            /** Review Priority */
+            review_priority: string | null;
+            /** Review Status */
+            review_status: string | null;
+            /** Source Pdf Pages */
+            source_pdf_pages: number[];
+        };
+        /** RequirementScopeListResponse */
+        RequirementScopeListResponse: {
+            /** Items */
+            items: components["schemas"]["RequirementScopeItemResponse"][];
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+            /** Total */
+            total: number;
         };
         /** RetryFailedRequest */
         RetryFailedRequest: {
@@ -1791,6 +1851,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ReportDashboardResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_scope_items_api_reports__report_id__scope_items_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path: {
+                report_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RequirementScopeListResponse"];
                 };
             };
             /** @description Validation Error */

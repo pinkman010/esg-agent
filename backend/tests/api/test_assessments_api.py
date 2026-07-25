@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 
 from src.db.models import AssessmentRecord, AssessmentRiskRecord, ReviewSnapshotRecord
@@ -17,6 +19,7 @@ from src.domain.enums import (
 from src.domain.models import AnalysisRun, AssessmentRisk, DisclosureAssessment, DisclosureTask, EvidenceItem, Report
 from src.services.risk_service import calculate_and_store_risk
 from src.services.review_service import ReviewService
+from src.standards.gri import GRIAdapter
 from src.domain.enums import ReviewOperation
 
 pytestmark = pytest.mark.anyio
@@ -445,3 +448,87 @@ async def test_dashboard_separates_priority_and_applicability_counts(
         "applicable": 234,
     }
     assert body["applicability_undetermined_total"] == 343
+
+
+def seed_v3_scope_assessments(session):
+    repo = Repository(session)
+    repo.create_report(
+        Report(
+            report_id="report-v3-scope",
+            original_filename="report.pdf",
+            stored_path="x",
+            file_hash="hash-v3-scope",
+            status=ReportStatus.ANALYSIS_COMPLETED,
+        )
+    )
+    repo.create_run(
+        AnalysisRun(
+            run_id="run-v3-scope",
+            report_id="report-v3-scope",
+            status=RunStatus.COMPLETED,
+            risk_rule_version="risk-v2.1",
+            eligible_requirement_count=499,
+            succeeded_requirement_count=499,
+        )
+    )
+    backend_root = Path(__file__).resolve().parents[2]
+    requirements = GRIAdapter(
+        backend_root / "data/manifests/gri_requirement_checklist_v3.json"
+    ).load_requirements()
+    session.add_all(
+        [
+            AssessmentRecord(
+                assessment_id=f"assessment-v3-{index:03d}",
+                run_id="run-v3-scope",
+                report_id="report-v3-scope",
+                standard_id=requirement.standard_id,
+                standard_version=requirement.standard_version,
+                disclosure_id=requirement.disclosure_id,
+                requirement_id=requirement.requirement_id,
+                verdict="unknown",
+                rationale="待核实",
+                missing_items=[],
+                model_called=False,
+                review_status="needs_manual_review",
+            )
+            for index, requirement in enumerate(requirements, start=1)
+        ]
+    )
+    session.commit()
+
+
+async def test_scope_items_exposes_complete_577_unit_range_without_fake_context_assessments(
+    api_client,
+    api_session,
+):
+    seed_v3_scope_assessments(api_session)
+
+    first_page = await api_client.get(
+        "/api/reports/report-v3-scope/scope-items",
+        params={"page": 1, "page_size": 100},
+    )
+    last_page = await api_client.get(
+        "/api/reports/report-v3-scope/scope-items",
+        params={"page": 6, "page_size": 100},
+    )
+    dashboard = await api_client.get("/api/reports/report-v3-scope/dashboard")
+
+    assert first_page.status_code == 200
+    assert last_page.status_code == 200
+    assert first_page.json()["total"] == last_page.json()["total"] == 577
+    all_items = first_page.json()["items"] + last_page.json()["items"]
+    assert any(item["unit_status"] == "assessed" for item in all_items)
+    assert any(
+        item["unit_status"] == "context_incorporated" for item in all_items
+    )
+    context = next(
+        item
+        for item in all_items
+        if item["unit_status"] == "context_incorporated"
+    )
+    assert context["assessment_id"] is None
+    assert context["effective_verdict"] is None
+    assert context["review_priority"] is None
+    assert context["review_status"] is None
+    assert dashboard.status_code == 200
+    assert dashboard.json()["standard_unit_count"] == 577

@@ -4,11 +4,19 @@ import re
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from src.api.schemas import AssessmentDetailResponse, AssessmentListResponse, ReportDashboardResponse
+from src.api.schemas import (
+    AssessmentDetailResponse,
+    AssessmentListResponse,
+    ReportDashboardResponse,
+    RequirementScopeListResponse,
+)
 from src.db.repositories import Repository
 from src.db.session import get_db_session
 from src.domain.enums import ApplicabilityStatus, RiskLevel
+from src.services.analysis_runner import GRI_REQUIREMENTS_PATH
 from src.services.presentation_localization import localize_missing_items, localize_rationale
+from src.services.requirement_scope_service import RequirementScopeService
+from src.standards.gri import GRIAdapter
 
 
 router = APIRouter(prefix="/api/reports/{report_id}", tags=["assessments"])
@@ -97,6 +105,7 @@ def dashboard(report_id: str, session: Session = Depends(get_db_session)) -> dic
     repo = Repository(session)
     if repo.get_report(report_id) is None:
         raise HTTPException(status_code=404, detail="report not found")
+    scope_service = RequirementScopeService(repo, GRIAdapter(GRI_REQUIREMENTS_PATH))
     run, assessments, risks, snapshots = _report_assessments(repo, report_id)
     risk_counts = Counter((risks.get(item.assessment_id).risk_level.value if risks.get(item.assessment_id) else "high") for item in assessments)
     failed_count = run.failed_requirement_count if run else 0
@@ -120,6 +129,7 @@ def dashboard(report_id: str, session: Session = Depends(get_db_session)) -> dic
     return {
         "report_id": report_id,
         "run_id": run.run_id if run else None,
+        "standard_unit_count": scope_service.scope_summary()["standard_unit_count"],
         "verdict_counts": dict(verdict_counts),
         "risk_counts": dict(risk_counts),
         "review_priority_counts": dict(review_priority_counts),
@@ -135,6 +145,24 @@ def dashboard(report_id: str, session: Session = Depends(get_db_session)) -> dic
         ),
         "failed_requirement_count": failed_count,
     }
+
+
+@router.get("/scope-items", response_model=RequirementScopeListResponse)
+def list_scope_items(
+    report_id: str,
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=100, ge=1, le=100),
+    session: Session = Depends(get_db_session),
+) -> dict:
+    repo = Repository(session)
+    if repo.get_report(report_id) is None:
+        raise HTTPException(status_code=404, detail="report not found")
+    service = RequirementScopeService(repo, GRIAdapter(GRI_REQUIREMENTS_PATH))
+    try:
+        items = service.list_items(report_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return _paginate(items, page=page, page_size=page_size)
 
 
 @router.get("/assessments", response_model=AssessmentListResponse)

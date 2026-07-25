@@ -106,9 +106,32 @@ class AssessmentListResponse(BaseModel):
     total: int
 
 
+class RequirementScopeItemResponse(BaseModel):
+    requirement_id: str
+    gri_topic: str
+    unit_status: Literal["assessed", "context_incorporated"]
+    source_requirement_text: str
+    effective_requirement_text: str
+    component_requirement_ids: list[str]
+    incorporated_into_requirement_ids: list[str]
+    assessment_id: str | None
+    effective_verdict: str | None
+    review_priority: str | None
+    review_status: str | None
+    source_pdf_pages: list[int]
+
+
+class RequirementScopeListResponse(BaseModel):
+    items: list[RequirementScopeItemResponse]
+    page: int
+    page_size: int
+    total: int
+
+
 class ReportDashboardResponse(BaseModel):
     report_id: str
     run_id: str | None
+    standard_unit_count: int
     verdict_counts: dict[str, int]
     risk_counts: dict[str, int]
     review_priority_counts: dict[str, int]
