@@ -4,8 +4,9 @@ from pathlib import Path
 from typing import Literal
 from uuid import uuid4
 
+import pdfplumber
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -77,6 +78,37 @@ def get_report_file(report_id: str, session: Session = Depends(get_db_session)):
     if not path.exists():
         raise HTTPException(status_code=404, detail="report file not found")
     return FileResponse(path, media_type="application/pdf", headers={"Content-Disposition": "inline"})
+
+
+@router.get("/{report_id}/pages/{page_number}/image")
+def get_report_page_image(
+    report_id: str,
+    page_number: int,
+    session: Session = Depends(get_db_session),
+):
+    report = Repository(session).get_report(report_id)
+    if report is None:
+        raise HTTPException(status_code=404, detail="report not found")
+    path = Path(report.stored_path)
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="report file not found")
+    if page_number < 1:
+        raise HTTPException(status_code=404, detail="report page not found")
+
+    with pdfplumber.open(path) as pdf:
+        if page_number > len(pdf.pages):
+            raise HTTPException(status_code=404, detail="report page not found")
+        image = pdf.pages[page_number - 1].to_image(
+            resolution=108,
+            antialias=True,
+        ).original
+        output = BytesIO()
+        image.save(output, format="PNG")
+    return Response(
+        content=output.getvalue(),
+        media_type="image/png",
+        headers={"Cache-Control": "private, max-age=3600"},
+    )
 
 
 @router.post("/upload", response_model=ReportUploadResponse)

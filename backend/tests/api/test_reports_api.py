@@ -51,6 +51,28 @@ async def test_report_file_is_embedded_inline_instead_of_downloaded(api_client):
     assert "attachment" not in disposition
 
 
+async def test_report_page_image_renders_for_embedded_evidence_viewer(api_client):
+    upload = await api_client.post(
+        "/api/reports/upload",
+        files={"file": ("report.pdf", make_pdf_bytes(), "application/pdf")},
+    )
+    report_id = upload.json()["report_id"]
+
+    response = await api_client.get(
+        f"/api/reports/{report_id}/pages/1/image"
+    )
+    missing = await api_client.get(
+        f"/api/reports/{report_id}/pages/2/image"
+    )
+
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "image/png"
+    assert response.content.startswith(b"\x89PNG\r\n\x1a\n")
+    assert response.headers["cache-control"] == "private, max-age=3600"
+    assert missing.status_code == 404
+    assert missing.json()["detail"] == "report page not found"
+
+
 async def test_upload_persists_detected_metadata_candidates(api_client, monkeypatch):
     monkeypatch.setattr(
         "src.api.routes.reports.detect_report_metadata",

@@ -24,7 +24,7 @@ describe("ReviewWorkspace", () => {
     renderWithQuery(<ReviewWorkspace reportId="report-1" reviewerName="张三" initialAssessmentId="a-direct" />);
 
     expect(await screen.findByRole("heading", { name: "GRI 2-22-a" })).toBeInTheDocument();
-    expect(screen.getByTitle("PDF 证据")).toHaveAttribute("src", expect.stringContaining("#page=13"));
+    expect(screen.getByTitle("PDF 证据")).toHaveAttribute("src", expect.stringContaining("/pages/13/image"));
     expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("/assessments/a-direct"), expect.anything());
   });
 
@@ -46,13 +46,13 @@ describe("ReviewWorkspace", () => {
     expect(screen.getByText("适用")).toBeInTheDocument();
     expect(screen.getByText("复核优先级")).toBeInTheDocument();
     expect(screen.getAllByText("高优先级")).toHaveLength(2);
-    expect(screen.getByTitle("PDF 证据")).toHaveAttribute("src", expect.stringContaining("#page=6"));
+    expect(screen.getByTitle("PDF 证据")).toHaveAttribute("src", expect.stringContaining("/pages/6/image"));
     const aiEvidenceButton = screen.getByRole("button", { name: "查看 AI 证据 PDF 第 67 页" });
     expect(aiEvidenceButton).not.toHaveAttribute("download");
     fireEvent.click(aiEvidenceButton);
-    expect(screen.getByTitle("PDF 证据")).toHaveAttribute("src", expect.stringContaining("#page=67"));
+    expect(screen.getByTitle("PDF 证据")).toHaveAttribute("src", expect.stringContaining("/pages/67/image"));
     fireEvent.click(screen.getByRole("button", { name: /PDF 第 6 页 \/ 报告页 5/ }));
-    expect(screen.getByTitle("PDF 证据")).toHaveAttribute("src", expect.stringContaining("#page=6"));
+    expect(screen.getByTitle("PDF 证据")).toHaveAttribute("src", expect.stringContaining("/pages/6/image"));
   });
 
   it("resets the human draft and PDF while switching assessments", async () => {
@@ -102,14 +102,14 @@ describe("ReviewWorkspace", () => {
     expect(await screen.findByRole("heading", { name: "GRI 2-1-a" })).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("复核备注"), { target: { value: "未保存的第一项备注" } });
     fireEvent.click(screen.getByRole("button", { name: "查看 AI 证据 PDF 第 67 页" }));
-    expect(screen.getByTitle("PDF 证据")).toHaveAttribute("src", expect.stringContaining("#page=67"));
+    expect(screen.getByTitle("PDF 证据")).toHaveAttribute("src", expect.stringContaining("/pages/67/image"));
 
     fireEvent.click(screen.getByText("GRI 2-2-a"));
     expect(await screen.findByRole("heading", { name: "GRI 2-2-a" })).toBeInTheDocument();
     expect(screen.getByLabelText("复核备注")).toHaveValue("");
-    expect(screen.getByTitle("PDF 证据")).toHaveAttribute("src", expect.stringContaining("#page=8"));
+    expect(screen.getByTitle("PDF 证据")).toHaveAttribute("src", expect.stringContaining("/pages/8/image"));
     fireEvent.click(screen.getByRole("button", { name: "查看 AI 证据 PDF 第 70 页" }));
-    expect(screen.getByTitle("PDF 证据")).toHaveAttribute("src", expect.stringContaining("#page=70"));
+    expect(screen.getByTitle("PDF 证据")).toHaveAttribute("src", expect.stringContaining("/pages/70/image"));
   });
 
   it("switches to the independent applicability queue", async () => {
@@ -144,7 +144,7 @@ describe("ReviewWorkspace", () => {
     renderWithQuery(<ReviewWorkspace reportId="report-1" reviewerName="张三" />);
     fireEvent.click(await screen.findByText("GRI 2-1-a"));
     expect(await screen.findByRole("heading", { name: "GRI 2-1-a" })).toBeInTheDocument();
-    expect(screen.getByTitle("PDF 证据")).toHaveAttribute("src", expect.stringContaining("#page=6"));
+    expect(screen.getByTitle("PDF 证据")).toHaveAttribute("src", expect.stringContaining("/pages/6/image"));
     fireEvent.click(screen.getByText("GRI 2-2-a"));
 
     expect(await screen.findByText("正在加载核查详情...")).toBeInTheDocument();

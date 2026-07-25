@@ -8,11 +8,11 @@ describe("PdfEvidenceViewer", () => {
     render(<PdfEvidenceViewer reportId="report-1" initialPage={6} />);
     const frame = screen.getByTitle("PDF 证据");
     expect(screen.getByText("正在加载 PDF 证据...")).toBeInTheDocument();
-    expect(frame).toHaveAttribute("src", expect.stringContaining("#page=6"));
+    expect(frame).toHaveAttribute("src", expect.stringContaining("/pages/6/image"));
     fireEvent.load(frame);
     expect(screen.queryByText("正在加载 PDF 证据...")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "下一页" }));
-    expect(screen.getByTitle("PDF 证据")).toHaveAttribute("src", expect.stringContaining("#page=7"));
+    expect(screen.getByTitle("PDF 证据")).toHaveAttribute("src", expect.stringContaining("/pages/7/image"));
     expect(screen.getByText("正在加载 PDF 证据...")).toBeInTheDocument();
   });
 

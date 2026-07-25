@@ -44,13 +44,14 @@ export function PdfEvidenceViewer({ reportId, initialPage = 1 }: { reportId: str
       <div className="relative flex min-h-0 flex-1">
         {isLoading && !loadFailed ? <p className="absolute inset-0 grid place-items-center text-sm text-muted-foreground">正在加载 PDF 证据...</p> : null}
         {loadFailed ? <p className="absolute inset-0 grid place-items-center px-6 text-center text-sm text-red-600">PDF 证据加载失败，请检查报告文件。</p> : null}
-        <iframe
+        <img
+          key={`${reportId}-${page}`}
           title="PDF 证据"
-          className="min-h-0 flex-1"
-          src={`${apiUrl(`/api/reports/${reportId}/file`)}#page=${page}&view=FitH`}
+          alt={`PDF 第 ${page} 页证据`}
+          className="h-full w-full object-contain object-top"
+          src={apiUrl(`/api/reports/${reportId}/pages/${page}/image`)}
           onLoad={() => setIsLoading(false)}
           onError={showLoadError}
-          onErrorCapture={showLoadError}
         />
       </div>
     </div>
