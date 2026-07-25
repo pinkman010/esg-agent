@@ -70,6 +70,26 @@ f1eeb37444de1eeda86b8ae0813dbfd6e88c94719781b98a8de659d9fbd7ddea
 
 验收时直接查询数据库确认：`esg_agent_demo` 有 5 份报告，`esg_agent` 有 61 份报告，两库 migration 均为 `0011_ai_suggestions`。这些数量只用于证明环境隔离，不属于长期产品断言。
 
+### 正式库与 demo 冻结基线一致性审计
+
+2026-07-25 对两库执行只读逐项审计：
+
+| 项目 | 正式库 | Demo 库 |
+| --- | --- | --- |
+| 对比 run | `run-48c73aa456f04a198f0fc4729e539a01` | `run-92bf75b11eb042dab6cb689311634fe1` |
+| run 来源 | Envision v3 regeneration | 实际产品上传与分析 |
+| 内部范围 | `577/499/78/0` | `577/499/78/0` |
+| 成功 / 失败 | `499/0` | `499/0` |
+| 引擎 / 风险规则 | `rules-v1 / risk-v2.1` | `rules-v1 / risk-v2.1` |
+
+两边 499 个 `requirement_id` 完全一致。逐项规范化比较 task 结构、规则 verdict、判断依据、缺失项、证据页、证据片段、证据质量、OCR/VLM 标志和最新 risk-v2.1 维度，差异数为 0；规范化 SHA256 相同：
+
+```text
+66a7edc337d44cebc662a5e5c3cf60a7ce6a3426da8efb5dfc5ea7ad8561b29a
+```
+
+该结论证明正式库 regeneration 基线与 demo 产品 run 的确定性计算结果一致。两库的报告数量、历史 run、人工复核和输出记录继续隔离；历史 v1/v2 结果不会自动改写。
+
 ## 5. 自动门禁
 
 | 门禁 | 结果 |

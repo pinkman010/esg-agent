@@ -388,6 +388,7 @@ pnpm generate:api
 - 新增 577 项只读范围接口和完整范围输出；499 个独立项生成 assessment，78 个上下文项显示 `context_incorporated` 且不生成伪 verdict。
 - 普通 Chrome 在 `APP_ENV=demo`、`esg_agent_demo` 完成无 AI 主流程。修复证据 iframe 空白问题，右栏改为只读页图接口；点击复核项不下载 PDF。
 - 最终门禁：后端 651 项、前端 80 项、typecheck、production build 和 Envision v3 gate 通过；global fallback、新增 false disclosed、新增 wrong source page、audit error/warning 均为 0。
+- 正式库最新 v3 regeneration run 与 demo 最新产品 run 完成只读逐项一致性审计：两边均为 `577/499/78/0`、499 成功、0 失败，499 个 requirement 的 task 结构、规则结果、证据和 risk-v2.1 维度差异为 0，规范化 SHA256 均为 `66a7edc337d44cebc662a5e5c3cf60a7ce6a3426da8efb5dfc5ea7ad8561b29a`。以后修改结构、规则、证据路由或 risk 规则时必须重新执行该对比。
 - DeepSeek 模型、Prompt、调用范围和 guardrail 未改变；本轮 `confirm_llm=false`，OCR/VLM 未启用。Goldwind 不阻塞本轮冻结。
 
 ### 2026-07-20
