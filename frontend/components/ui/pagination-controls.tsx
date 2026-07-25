@@ -3,9 +3,10 @@ type PaginationControlsProps = {
   pageSize: number;
   total: number;
   onPageChange: (page: number) => void;
+  unitLabel?: string;
 };
 
-export function PaginationControls({ page, pageSize, total, onPageChange }: PaginationControlsProps) {
+export function PaginationControls({ page, pageSize, total, onPageChange, unitLabel = "条" }: PaginationControlsProps) {
   const lastPage = Math.max(1, Math.ceil(total / pageSize));
   const start = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const end = Math.min(page * pageSize, total);
@@ -13,7 +14,7 @@ export function PaginationControls({ page, pageSize, total, onPageChange }: Pagi
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 py-3 text-xs text-muted-foreground">
-      <span>第 {start}–{end} 条，共 {total} 条</span>
+      <span>第 {start}–{end} {unitLabel}，共 {total} {unitLabel}</span>
       <div className="flex items-center gap-1">
         <button type="button" className={buttonClass} disabled={page <= 1} onClick={() => onPageChange(1)}>首页</button>
         <button type="button" className={buttonClass} disabled={page <= 1} onClick={() => onPageChange(page - 1)}>上一页</button>

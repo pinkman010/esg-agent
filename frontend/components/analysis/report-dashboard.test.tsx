@@ -11,6 +11,7 @@ describe("ReportDashboard", () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
       report_id: "report-1",
       run_id: "run-1",
+      standard_unit_count: 577,
       verdict_counts: { disclosed: 35, partially_disclosed: 187, unknown: 355 },
       risk_counts: { high: 12, medium: 60, low: 505 },
       review_priority_counts: { high: 12, medium: 60, low: 505 },
@@ -31,6 +32,8 @@ describe("ReportDashboard", () => {
     expect(screen.getByText("低优先级")).toBeInTheDocument();
     expect(screen.getByText("适用性待判定")).toBeInTheDocument();
     expect(screen.getByText("高优先级复核 2/12")).toBeInTheDocument();
+    expect(screen.getByText("核查范围 577 项")).toBeInTheDocument();
+    expect(screen.queryByText(/\/577/)).not.toBeInTheDocument();
     expect(screen.queryByText("高风险")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "查看整改任务" })).toHaveAttribute("href", "/reports/report-1/actions");
     expect(screen.getByRole("link", { name: "查看输出与版本" })).toHaveAttribute("href", "/reports/report-1/exports");
@@ -40,6 +43,7 @@ describe("ReportDashboard", () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
       report_id: "report-1",
       run_id: "run-1",
+      standard_unit_count: 577,
       verdict_counts: { unknown: 2 },
       risk_counts: { high: 1, low: 1 },
       review_priority_counts: { high: 2, low: 1 },

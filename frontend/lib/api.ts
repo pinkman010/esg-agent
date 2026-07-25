@@ -3,6 +3,7 @@ import type {
   AnalysisStageResponse,
   AssessmentListResponse,
   AssessmentDetailResponse,
+  RequirementScopeListResponse,
   ReportDashboardResponse,
   ImprovementAction,
   CreateActionRequest,
@@ -113,6 +114,9 @@ export function saveApplicabilityBatch(reportId: string, payload: ApplicabilityB
 }
 export function listReportAssessments(reportId: string, page = 1, pageSize = 50): Promise<AssessmentListResponse> {
   return request<AssessmentListResponse>(`/api/reports/${reportId}/assessments?page=${page}&page_size=${pageSize}`);
+}
+export function listReportScopeItems(reportId: string, page = 1, pageSize = 50): Promise<RequirementScopeListResponse> {
+  return request<RequirementScopeListResponse>(`/api/reports/${reportId}/scope-items?page=${page}&page_size=${pageSize}`);
 }
 export function saveReviewSnapshot(assessmentId: string, payload: ReviewSnapshotRequest): Promise<ReviewSnapshot> {
   return request<ReviewSnapshot>(`/api/assessments/${assessmentId}/review-decisions`, { method: "POST", body: payload });
