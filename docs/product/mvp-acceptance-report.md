@@ -2,116 +2,149 @@
 
 ## 1. 验收结论
 
-截至 2026-07-20，Envision 2024 中文 ESG 报告主线通过本地 MVP 产品验收。产品可以完成：重复上传选择、metadata 确认、577 个标准核查单元编译、493 个独立判断项分析、显式授权 DeepSeek、规则/AI/人工三层复核、PDF 证据定位、AI 建议采纳/修改/拒绝、整改入口和版本化草稿输出。
+截至 2026-07-25，Envision 2024 中文报告已完成 577 项 GRI 核查，达到本地 MVP 后端冻结条件。冻结名称：
 
-本结论属于产品与工程验收，不构成 GRI 专家认证、外部鉴证或最终合规结论。16 条 Sol/Pro 方法差异和 6 个方法待确认项继续保留；高优先级队列完成也不代表 577 个标准核查单元均已人工确认。
+```text
+Envision 2024 中文报告 MVP 后端基线 v1.1
+范围：577 项 GRI 核查
+性质：本地产品与工程基线
+```
 
-## 2. 范围与环境
+产品已形成上传、metadata 确认、八阶段分析、完整范围查看、优先级复核、整改入口和版本化输出闭环。规则 assessment、AI suggestion 和人工 snapshot 分层保存。高优先级队列完成只表示该队列已处理，不表示 577 项均已人工确认。
+
+该结论不构成 GRI 专家认证、外部鉴证、最终合规结论或企业部署承诺。企业条件适用性仍可能需要企业确认。
+
+## 2. 冻结身份
+
+| 项目 | 冻结事实 |
+| --- | --- |
+| 分支 | `main` |
+| 实现冻结 head | `3541b14` |
+| 数据库 migration | `0011_ai_suggestions` |
+| 结构 manifest | `gri-requirement-checklist-v3` |
+| 产品方法版本 | `envision-method-v1.1` |
+| 结果裁决版本 | `envision-result-v1.1` |
+| 复核优先级规则 | `risk-v2.1` |
+| DeepSeek | 模型、Prompt、调用范围和 guardrail 本轮未改变 |
+| OCR / VLM | 均未启用 |
+| Goldwind | 保留历史 100 条 gate，不阻塞 Envision 冻结 |
+
+## 3. 范围口径
+
+普通产品页面和演示材料统一使用：
+
+```text
+Envision 2024 中文报告完成 577 项 GRI 核查。
+```
+
+技术审计结构为：
+
+| 内部计数 | 数量 | 含义 |
+| --- | ---: | --- |
+| 标准单元 | 577 | 完整产品核查范围 |
+| 独立判断项 | 499 | 生成确定性 assessment 的单元 |
+| 上下文项 | 78 | 纳入相关独立判断，不生成伪 verdict |
+| 方法待确认项 | 0 | 当前无公开未决方法项 |
+| 已裁决复合结构 | 6 | 历史合并/拆分问题，已按 v1.1 方法固化 |
+
+16 条历史 Sol/Pro 结果差异已写入独立最终裁决资产：13 条规则结果与最终裁决一致，3 条保留明确的最终人工覆盖，0 条 pending。原始人工工作簿未覆盖，SHA256 保持：
+
+```text
+f1eeb37444de1eeda86b8ae0813dbfd6e88c94719781b98a8de659d9fbd7ddea
+```
+
+## 4. 验收环境
 
 | 项目 | 验收事实 |
 | --- | --- |
-| 分支 | `main` |
-| P1 修复提交 | `4abdac9` |
-| 数据库 | `esg_agent_demo` |
-| Alembic head | `0011_ai_suggestions` |
+| 应用环境 | `APP_ENV=demo` |
+| 当前业务数据库 | `esg_agent_demo` |
+| 主库对照 | `esg_agent`，未清空、未重建 |
 | 前端 | `http://localhost:3000` |
-| 后端 | `http://localhost:8000` |
+| 后端 OpenAPI | `http://localhost:8000/docs` |
 | 报告 | Envision Energy 2024 中文 PDF，78 页 |
-| 外部模型 | DeepSeek `deepseek-v4-flash`，显式授权后调用 |
+| 本轮 report | `report-15401bb4334e40d4a0885730f2635b22` |
+| 本轮 run | `run-92bf75b11eb042dab6cb689311634fe1` |
+| 本轮 AI | `confirm_llm=false`，AI 阶段 skipped |
 | OCR / VLM | 均关闭 |
-| Goldwind | 保留历史 100 条 gate，优先级低于 Envision，不作为本轮阻塞门禁 |
 
-运行时证据保存在 `backend/data/runtime/acceptance/frontend-ai/`，不提交截图二进制；路径、SHA256、大小、用途和日期已登记到 `backend/data/manifests/assets_manifest.json`。
+验收时直接查询数据库确认：`esg_agent_demo` 有 5 份报告，`esg_agent` 有 61 份报告，两库 migration 均为 `0011_ai_suggestions`。这些数量只用于证明环境隔离，不属于长期产品断言。
 
-## 3. 自动门禁
+## 5. 自动门禁
 
 | 门禁 | 结果 |
 | --- | --- |
-| 后端全量测试 | 627 passed |
+| 后端全量测试 | 651 passed |
 | 前端测试 | 22 个测试文件，80 passed |
 | 前端 typecheck | 通过 |
 | 前端 production build | 通过 |
-| Envision 结构范围 | 577 / 493 / 78 / 6 |
-| Envision 唯一独立判断项 | 493 |
-| Envision `global_fallback` | 0 |
-| Envision 新增 false disclosed | 0 |
-| Envision 新增 wrong source page | 0 |
+| Envision v3 范围 | `577/499/78/0` |
+| 唯一独立 requirement | 499 |
+| `global_fallback` | 0 |
+| 新增 false disclosed | 0 |
+| 新增 wrong source page | 0 |
+| 最终裁决 pending | 0 |
 | Envision audit | `ok=true`，0 error，0 warning |
 
-## 4. 真实 AI 产品 run
+v3 gate 在未启用 LLM、OCR 或 VLM 的条件下运行。运行产物位于 `backend/data/runtime/evaluations/envision_2024/`，相对路径、SHA256、大小和用途登记在 `backend/data/manifests/assets_manifest.json`。
 
-本轮通过 metadata 页面显式勾选 AI 后启动：
-
-- report：`report-2b0c98b72f3c47beb285f712379e573b`；
-- run：`run-021eeb43338f4381910218628b64554b`；
-- 规则结果：493 成功、0 失败；
-- AI：4 条符合调用条件，成功 4、失败 0、跳过 489；
-- 八阶段全部完成，终态 100%，没有继续转圈；
-- 页面提供“查看分析结果”和“进入高优先级复核”。
-
-产品 run 只调用“结构独立 + 高/中复核优先级 + 有实质证据”的条目，因此本次调用 4 条。225 条是固定人工基线的工程评估集，不等于每次新报告都调用 225 条。固定基线 run 为 `run-526bd97aef5d4b9baa14618b719081c9`；其追加式历史包含 230 条成功和 13 条失败记录，数量高于 225 的原因是定向重试与补跑。
-
-## 5. 普通 Chrome 主流程结果
+## 6. 产品主流程验收
 
 | 验收点 | 结果 |
 | --- | --- |
-| 重复上传 | 同时提供“查看已有结果”和“重新上传并分析” |
-| 新报告 | 重新上传创建新 `report_id`，历史数据保留 |
-| metadata | 企业、年度、语言可修改；企业识别为“远景能源有限公司” |
-| AI 授权 | 默认关闭；勾选后显示发送范围与不覆盖规则/人工的边界 |
-| 分析进度 | 八阶段顺序正确；终态显示 AI 4/0/489 汇总 |
-| 完整核查表 | 显示 493 个独立判断项并解释 577/493/78/6 |
-| 直接定位 | 点击 requirement 后进入带 `assessmentId` 的三栏工作台 |
-| 三层复核 | 规则、AI、人工标题和字段独立 |
-| PDF | 证据在右栏 iframe 定位，未触发下载或新窗口 |
-| 高优先级口径 | 明确说明不代表全部 requirement 均已人工确认 |
-| 草稿输出 | 生成 3 个文件并包含 AI 辅助免责声明 |
+| 重复上传 | 后端 `reject` 返回 `409 duplicate_report` 和最新报告；`create_new` 创建新 report 并保留历史 |
+| metadata | 企业识别为“远景能源有限公司”；年度 2024、语言 zh-CN、页数 78 |
+| AI 授权 | 默认关闭；本轮没有外部模型调用 |
+| 分析进度 | 八阶段按真实工作量完成；终态 100%，无持续转圈 |
+| Dashboard | 只显示“核查范围 577 项” |
+| 优先级 | 本轮独立判断项为高 9、中 54、低 436；数量由规则动态产生 |
+| 适用性 | 本轮待企业确认 309 项 |
+| 完整核查表 | 首尾分页均通过，范围为 577 项 |
+| 上下文项 | 显示“已纳入相关判断”，无伪 verdict、优先级、复核状态或证据 |
+| 三栏复核 | 点击独立项不触发 PDF 下载；规则、AI、人工三层分离 |
+| PDF 证据 | 右栏按页显示 PNG 预览，已验证第 77 页，原始 PDF 保持不变 |
+| 草稿输出 | `export-715d7cdfdb5d46b68456ec105fe1dfd0` 生成 3 个文件 |
+| 输出范围 | XLSX 577 行；HTML 显示“共 577 项” |
+| 输出声明 | 包含 AI 辅助免责声明和实际人工复核范围，没有“577 项均已人工确认”表述 |
 
-## 6. 三类人工决策审计
+Chrome 扩展无法自动向本机原生文件选择器赋值，返回 `Not allowed`。重复上传双路径由后端真实 API 和前端自动测试共同验证；其余主流程由普通 Chrome 验收。该限制影响浏览器自动化，不影响产品上传能力。
 
-| 操作 | Requirement | Suggestion | Snapshot | Reason code | 结果 |
-| --- | --- | --- | --- | --- | --- |
-| 采纳 | `GRI 201-1-b` | `ai-suggestion-77e1243946d840ab811a3241fd581266` | `snapshot-c4f56fc7ff8f40f485710c7c8b70191c` | `ai_suggestion_accepted` | 通过 |
-| 载入并修改 | `GRI 203-1-c` | `ai-suggestion-4c0acb6fc9bb4a3eb99dcd7284060eb2` | `snapshot-c09733610a6b4d64a32f5c2bfc25203d` | `ai_suggestion_modified` | 通过 |
-| 拒绝并保留规则 | `GRI 203-2-b` | `ai-suggestion-1850d5e3dd0045518a20ab39ffb42f3d` | `snapshot-7ed3af55697c4f3d834e76f8fa375d53` | `ai_suggestion_rejected` | 通过 |
+## 7. AI 辅助基线边界
 
-三条 snapshot 均记录 `Codex产品验收`、时间、reason code、suggestion id 和完整结果字段。三条 AI suggestion 仍保留原内容；`assessments` 的规则结论、依据和缺失项未被更新或删除。
+此前 225 条真实 DeepSeek 评估继续保留为工程基线：可比项一致 162/224（72.32%），适用性例外 1；guardrail 后 false disclosed、证据 ID 越界、可比错页、schema 失败和模型失败均为 0。
 
-## 7. 问题记录
+该基线用于证明产品能够受控调用模型、保存可追溯建议并阻止越界建议直接成为最终结论。它不等同于 225 条 ESG 专家认证，也不代表本轮 577 项分析调用了外部模型。本轮产品 run 明确关闭 AI。
 
-| 编号 | 严重程度 | 页面/接口 | 前置条件 | 复现步骤 | 实际结果 | 期望结果 | 影响范围 | 建议修复 | 状态 |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| MVP-AI-001 | P1 | assessment detail | 已存在 AI 建议 | 采纳 AI 后刷新详情 | 规则区一度显示人工 snapshot 的 AI 依据和缺失项 | 规则区始终显示不可变规则字段 | 三层权威边界和拒绝 AI 行为 | API 增加 `system_rationale` / `system_missing_items` 及展示字段，前端规则区和拒绝操作只读这些字段 | 已修复，提交 `4abdac9`；相关与全量门禁通过 |
-| ENV-001 | 环境限制 | Chrome 本地文件选择器 | Chrome 扩展控制本机页面 | 自动把本地 PDF 赋给原生文件选择器 | Chrome 返回 `Not allowed` | 自动选择文件 | 只影响验收自动化，不影响产品上传能力 | 人工选择文件后继续自动验收 | 已绕过；不列为产品缺陷 |
+## 8. 问题记录
+
+| 编号 | 严重程度 | 复现与影响 | 修复 | 状态 |
+| --- | --- | --- | --- | --- |
+| MVP-AI-001 | P1 | 采纳 AI 后，规则区一度读取人工 snapshot 字段，破坏三层权威边界 | API 提供不可变 `system_*` 字段，前端规则区只读规则结果 | 已修复，提交 `4abdac9` |
+| MVP-PDF-001 | P1 | 三栏工作台的 PDF iframe 在受控浏览器中持续空白，证据无法内联查看 | 新增只读页图接口，前端以 `<img>` 按页加载，保留加载和错误状态 | 已修复，提交 `3541b14`；第 77 页实测通过 |
+| MVP-COPY-001 | P2 | 首页曾使用“577 条 GRI 要求”，与统一“577 项”口径不一致 | 首页改为“577 项 GRI 要求” | 已修复，提交 `3541b14` |
+| ENV-001 | 环境限制 | Chrome 扩展不能自动控制本机文件选择器 | 使用真实 API 与前端自动测试补足重复上传验证 | 已记录，不列为产品缺陷 |
 
 当前无未解决 P0/P1 产品问题。
 
-## 8. 证据索引
+## 9. 已知限制
 
-| 文件 | 用途 |
-| --- | --- |
-| `01-duplicate-report-options.png` | 重复上传双路径 |
-| `02-metadata-ai-default-off.png` | AI 默认关闭 |
-| `03-metadata-ai-enabled.png` | 显式授权与数据边界 |
-| `05-analysis-completed-ai4.png` | 八阶段终态与 AI 4/0/489 |
-| `06-assessment-table-493.png` | 493 项及 577/493/78/6 解释 |
-| `07-three-layer-review-pdf.png` | 三层详情与右栏 PDF |
-| `08-dashboard-review-scope.png` | 高优先级范围文案 |
-| `09-rule-ai-human-separated-after-accept.png` | 采纳后规则层仍独立 |
-| `10-ai-modified-gri-203-1-c.png` | AI 建议载入并人工修改 |
-| `11-ai-rejected-gri-203-2-b.png` | 拒绝 AI 并保留规则结论 |
-| `12-draft-output.png` | 版本化草稿输出 |
-| `acceptance-summary.json` | 运行、决策、问题和限制的机器可读摘要 |
-
-草稿 export 为 `export-110b3cdea933420bb676e7593437af50`，包含 assessment XLSX、管理层摘要 PDF 和打印 HTML。打印 HTML 明确写入：“AI建议未经人工确认时不构成最终披露结论。”
-
-## 9. 已知限制与下一步
-
-- `actions_xlsx` 尚未生成完整整改任务清单；
+- `actions_xlsx` 尚未按整改任务字段生成完整任务清单；
 - 通用 verdict 批量复核、独立 reopen、report 级审计和单 export 下载仍为规划接口；
 - 旧 `review_decisions`、旧 API 和旧页面仍有调用者，继续保留；
-- 16 条 Sol/Pro 差异和 6 个方法待确认项需要未来 GRI 方法负责人裁决；
-- 225 条 AI 基线属于工程验证，不等同 ESG 专家复核；
-- 当前验收主线只承诺 Envision 2024 中文报告，Goldwind 仅保留为次级泛化证据。
+- 225 条 AI 基线属于工程验证；
+- 企业条件适用性可能需要企业确认；
+- 当前冻结主线只承诺 Envision 2024 中文报告；
+- Goldwind 作为次级泛化证据，当前不阻塞；
+- 项目只承诺本地 MVP 验证，不承诺企业部署能力。
 
-下一阶段可以冻结 Envision 后端事实与接口，集中做前端演示优化、交互收敛和简历/演示材料整理。任何规则、Prompt、GRI 结构或 risk-v2.1 变化都应重新运行 627 项后端测试、Envision gate 和相关前端门禁。
+## 10. 冻结后的变更控制
+
+前端布局、中文文案、演示引导和不改变接口语义的 P0/P1 修复可在冻结状态下继续。以下变化必须解除冻结并重跑后端全量、前端 test/typecheck/build 和 Envision v3 gate：
+
+- 577 清单或 6 条复合结构裁决；
+- 证据路由、证据合同或 verdict 规则；
+- `risk-v2.1`；
+- DeepSeek 模型、Prompt、调用范围或 guardrail；
+- 数据库 schema 或 API 字段语义；
+- 规则、AI、人工的权威关系；
+- 正式输出门禁。

@@ -53,7 +53,7 @@
   "stage_code": "evidence_assessment",
   "status": "running",
   "completed_units": 240,
-  "total_units": 493,
+  "total_units": 499,
   "error_summary": null,
   "started_at": "2026-07-11T00:00:00Z",
   "completed_at": null
@@ -115,6 +115,29 @@ EvidenceItem 对普通界面只返回：`evidence_id`、`source_pdf_page`、`sou
 }
 ```
 
+### 2.6 RequirementScopeItem
+
+完整产品范围行：
+
+```json
+{
+  "requirement_id": "GRI 2-1",
+  "gri_topic": "GRI 2",
+  "unit_status": "context_incorporated",
+  "source_requirement_text": "原始标准文本",
+  "effective_requirement_text": "纳入相关独立判断的上下文文本",
+  "component_requirement_ids": [],
+  "incorporated_into_requirement_ids": ["GRI 2-1-a"],
+  "assessment_id": null,
+  "effective_verdict": null,
+  "review_priority": null,
+  "review_status": null,
+  "source_pdf_pages": []
+}
+```
+
+`unit_status` 只有 `assessed | context_incorporated`。上下文行的 assessment、结论、优先级、复核状态和证据页必须为空。
+
 ## 3. 报告接口
 
 ### `GET /api/reports`
@@ -153,6 +176,10 @@ multipart 上传 PDF。查询参数 `duplicate_policy` 取值为 `reject | creat
 ### `GET /api/reports/{report_id}/file`
 
 返回已上传的 PDF 文件，用于证据查看器。
+
+### `GET /api/reports/{report_id}/pages/{page_number}/image`
+
+返回指定 PDF 页的只读 PNG 预览，用于三栏工作台内联显示。`page_number` 从 1 开始；报告、文件或页码不存在时返回 404。响应允许 `private, max-age=3600` 缓存，不修改原始 PDF，也不触发 OCR、VLM 或外部模型。
 
 ### `POST /api/reports/{report_id}/confirm-metadata`
 
@@ -209,7 +236,7 @@ multipart 上传 PDF。查询参数 `duplicate_policy` 取值为 `reject | creat
 
 ### `GET /api/runs/{run_id}`
 
-返回 run 状态、引擎版本、风险规则版本、577/493/78/6 范围计数、成功/失败 requirement 数、错误摘要和 `ai_summary`。`ai_summary` 包含 eligible、succeeded、failed、skipped；AI 失败不改变确定性 run 的 completed/partially_completed 判定。
+返回 run 状态、引擎版本、风险规则版本、标准单元/独立判断/上下文/方法待确认范围计数、成功/失败 requirement 数、错误摘要和 `ai_summary`。当前 v3 技术计数为 `577/499/78/0`。`ai_summary` 包含 eligible、succeeded、failed、skipped；AI 失败不改变确定性 run 的 completed/partially_completed 判定。
 
 ### `GET /api/runs/{run_id}/stages`
 
@@ -223,7 +250,11 @@ multipart 上传 PDF。查询参数 `duplicate_policy` 取值为 `reject | creat
 
 ### `GET /api/reports/{report_id}/dashboard`
 
-当前返回 report/run id、结论分布、兼容风险分布、复核优先级分布、高优先级复核进度、适用性分布/待判定数量和分析失败项数。GRI 主题分布、整改摘要和最新输出为后续增强。
+当前返回 report/run id、`standard_unit_count`、结论分布、兼容风险分布、复核优先级分布、高优先级复核进度、适用性分布/待判定数量和分析失败项数。普通产品页面使用 `standard_unit_count=577` 作为核查范围。GRI 主题分布、整改摘要和最新输出为后续增强。
+
+### `GET /api/reports/{report_id}/scope-items`
+
+查询参数：`page`、`page_size`。返回分页 `RequirementScopeItem`，当前 v3 总数固定为 577。499 个独立判断项的 `unit_status=assessed`，可关联 assessment；78 个上下文项的 `unit_status=context_incorporated`，不生成伪 verdict。默认使用 GRI requirement 自然顺序，供完整核查页面和输出服务复用。
 
 ### `GET /api/reports/{report_id}/assessments`
 
@@ -233,7 +264,7 @@ multipart 上传 PDF。查询参数 `duplicate_policy` 取值为 `reject | creat
 
 ### `GET /api/reports/{report_id}/assessments/{assessment_id}`
 
-返回 `AssessmentDetail`。assessment 必须属于 report，否则返回 404。v2 新 run 只为 493 个独立判断项创建 assessment；78 个上下文项和 6 个方法待确认项不生成伪 verdict。
+返回 `AssessmentDetail`。assessment 必须属于 report，否则返回 404。v3 新 run 为 499 个独立判断项创建 assessment；78 个上下文项通过范围接口展示且不生成伪 verdict。当前方法待确认项为 0。
 
 ## 6. 人工复核接口
 

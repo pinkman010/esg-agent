@@ -37,7 +37,7 @@
 - `failed_requirement_count INTEGER NOT NULL DEFAULT 0`；
 - `failure_summary JSONB NOT NULL DEFAULT '{}'`。
 
-RunStatus 扩展 `partially_completed`。父 run 用于失败项重跑，不覆盖旧 run。`0011` 后，`eligible_requirement_count` 表示实际进入独立判断的 requirement 数；当前 v2 清单对应 493，完整范围通过 `standard_unit_count=577`、`context_only_count=78`、`method_pending_count=6` 共同表达。三个新增范围字段对历史 run 保持 nullable，避免把旧数据伪装成已经完成结构编译。
+RunStatus 扩展 `partially_completed`。父 run 用于失败项重跑，不覆盖旧 run。`0011` 后，`eligible_requirement_count` 表示实际进入独立判断的 requirement 数。当前 v3 内部结构为 `standard_unit_count=577`、`eligible_requirement_count=499`、`context_only_count=78`、`method_pending_count=0`。三个新增范围字段对历史 run 保持 nullable，避免把旧数据伪装成已经完成结构编译。
 
 `0009_active_analysis_run_gate` 增加唯一索引 `uq_analysis_runs_one_active_per_report`，键为 `report_id`，条件为 `status IN ('pending', 'running')`。该索引只限制 active run，不删除或合并任何历史终态 run；repository 把该索引的竞态冲突转换为 `analysis_already_running`。
 
@@ -53,7 +53,7 @@ RunStatus 扩展 `partially_completed`。父 run 用于失败项重跑，不覆�
 - `context_requirement_ids JSONB`：参与构成有效判断语义的父级或上下文 requirement id；
 - `structure_status VARCHAR(32)`：`verified`、`normalized` 或历史兼容状态。
 
-`requirement_text` 继续保存进入规则判断的有效文本。新 v2 run 只为 `verified`、`normalized` 独立判断项创建 task 和 assessment；上下文项与方法待确认项保留在版本化结构清单中，不生成伪结论。
+`requirement_text` 继续保存进入规则判断的有效文本。新 v3 run 只为 `verified`、`normalized` 独立判断项创建 task 和 assessment；上下文项保留在版本化结构清单中，通过范围服务标记为 `context_incorporated`，不生成伪结论。当前方法待确认项为 0。
 
 ### `document_pages` / `document_chunks`
 

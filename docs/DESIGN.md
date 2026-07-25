@@ -2,7 +2,7 @@
 
 ## 1. 产品结论
 
-ESG-Agent 第一版面向企业 ESG 团队，提供单报告 GRI 核查闭环。系统保留 577 个 GRI 标准核查单元，经版本化结构编译形成 493 个独立判断项、78 个父级上下文项和 6 个方法待确认项；只有独立判断项生成 verdict，避免把父级容器和方法说明伪装成并列披露结论。
+ESG-Agent 第一版面向企业 ESG 团队，提供单报告 GRI 核查闭环。产品统一呈现 577 项 GRI 核查。版本化结构编译在内部形成 499 个独立判断项和 78 个上下文项，方法待确认项为 0；只有独立判断项生成 verdict，上下文项标记为已纳入相关判断。
 
 第一版用户流程：
 
@@ -11,7 +11,7 @@ ESG-Agent 第一版面向企业 ESG 团队，提供单报告 GRI 核查闭环。
 → 上传 PDF
 → 自动识别企业、年度、语言和页数
 → 用户确认报告信息
-→ 编译 577 个标准核查单元并分析 493 个独立 requirement
+→ 完成 577 项 GRI 核查
 → 展示业务阶段进度和部分失败
 → 高优先级队列优先人工复核
 → 独立处理适用性待判定项
@@ -24,7 +24,7 @@ ESG-Agent 第一版面向企业 ESG 团队，提供单报告 GRI 核查闭环。
 
 ## 2. 核心产品原则
 
-1. **范围完整：** 后端固定校验 577 个标准核查单元，并对其中 493 个结构完整的独立 requirement 生成 assessment。
+1. **范围完整：** 后端固定校验 577 个标准核查单元，对其中 499 个独立 requirement 生成 assessment，并将 78 个上下文项关联到对应判断。
 2. **复核聚焦：** 前端以高优先级队列为主，适用性待判定队列和完整核查表为辅。
 3. **维度分离：** 披露结论、证据状态、适用性状态和复核优先级分别保存和展示；`unknown` 或无证据不能天然升级为高优先级。
 4. **系统与人工分离：** 系统 assessment 保持不可变，人工操作形成只追加 review snapshot。
@@ -90,7 +90,7 @@ metadata 预检测优先使用文件名和 PDF 前两页可提取文本，识别
 仪表盘显示：
 
 - 分析状态和最新正式输出版本；
-- 493 个独立判断项的结果分布，以及 577/493/78/6 范围说明；
+- 577 项核查范围，以及独立判断结果分布；
 - 高、中、低复核优先级数量；
 - 高优先级复核进度；
 - 适用性待判定数量；
@@ -112,7 +112,7 @@ metadata 预检测优先使用文件名和 PDF 前两页可提取文本，识别
 
 ### 4.5 完整核查表
 
-当前完整核查表承载 493 个独立判断结果，必须分页并支持；78 个上下文项和 6 个方法待确认项通过标准范围说明保留，下一前端计划再补充 577 单元的结构化范围展示：
+完整核查表分页展示全部 577 项。499 个独立判断项显示结论、优先级、复核和证据；78 个上下文项显示“已纳入相关判断”，不生成伪 verdict、优先级、复核状态或证据：
 
 - GRI 主题；
 - 复核优先级；
@@ -318,7 +318,7 @@ report profile 只提供当前报告的候选证据路由。通用逻辑依赖�
 
 `0010_risk_v2_dimensions` 为 `assessment_risks` 增加 nullable `evidence_status`、`applicability_status`，并为 `review_snapshots` 增加 nullable `reviewed_applicability_status`。迁移不回填 risk-v1 历史行，不删除旧列；新 risk-v2.1 快照由服务写入明确维度值。
 
-`0011_ai_suggestions` 为 `analysis_runs` 增加 577/493/78/6 范围计数字段，为 `disclosure_tasks` 增加原始文本、父级上下文和结构状态，并新增追加式 `ai_assessment_suggestions`。AI suggestion 记录模型、Prompt 版本、输入哈希、建议 verdict、中文依据、缺失项、证据引用、guardrail、usage、失败和原始响应；外键删除只随所属 report/run 级联，不提供覆盖规则 assessment 或人工 snapshot 的写路径。
+`0011_ai_suggestions` 为 `analysis_runs` 增加标准单元、独立判断、上下文和方法待确认四类范围计数字段，为 `disclosure_tasks` 增加原始文本、父级上下文和结构状态，并新增追加式 `ai_assessment_suggestions`。当前 v3 内部计数为 `577/499/78/0`。AI suggestion 记录模型、Prompt 版本、输入哈希、建议 verdict、中文依据、缺失项、证据引用、guardrail、usage、失败和原始响应；外键删除只随所属 report/run 级联，不提供覆盖规则 assessment 或人工 snapshot 的写路径。
 
 替代接口或新表实际启用后，旧接口和旧表进入两个连续阶段验收周期的兼容窗口。每个周期必须有自动回归覆盖；连续两轮通过且历史数据映射一致后，才允许在后续独立迁移中清理。审批日期和仅完成代码定义不计入兼容周期。
 
@@ -343,6 +343,8 @@ API 前缀保持 `/api`。资源分组：
 
 PDF 继续采用分级路由：pypdf/pdfplumber 为默认主链路；扫描关键页可显式启用 OCR；复杂失败页允许 Docling fallback；VLM 只有用户显式确认后才允许调用。
 
+证据工作台通过 `GET /api/reports/{report_id}/pages/{page_number}/image` 按页渲染原始 PDF 的 PNG 预览。该预览只读、按需生成并允许私有缓存；原始 PDF 仍通过文件接口保留，不覆盖、不转换为新的事实来源。
+
 DeepSeek 使用 OpenAI-compatible 薄适配层。`confirm_llm=false` 时 AI 阶段记录为 skipped 且不实例化外部调用；`confirm_llm=true` 仍只对结构独立、具有直接证据并进入高/中复核优先级的条目调用。AI 建议只追加保存，不能设置适用性、风险优先级、人工复核状态或正式输出状态；模型失败只使 AI 阶段部分失败，不使确定性分析 run 失败。
 
 硬性原则：
@@ -366,7 +368,7 @@ DeepSeek 使用 OpenAI-compatible 薄适配层。`confirm_llm=false` 时 AI 阶�
 
 草稿输出带草稿标识。正式输出只有在分析结果完整且高优先级复核完成后生成，并绑定：原文件哈希、run、GRI requirement 版本、分析引擎版本、风险规则版本和 review snapshot 版本。
 
-输出必须区分人工确认结果与系统待确认结果，并注明仍未人工复核的中优先级、低优先级和适用性待判定数量。高优先级完成文案不得暗示全部 577 条均已人工确认。
+输出必须区分人工确认结果与系统待确认结果，并注明仍未人工复核的中优先级、低优先级和适用性待判定数量。高优先级完成文案不得暗示全部 577 项均已人工确认。
 
 ## 15. 前端设计约束
 
@@ -375,21 +377,21 @@ DeepSeek 使用 OpenAI-compatible 薄适配层。`confirm_llm=false` 时 AI 阶�
 - 使用紧凑信息密度，不使用营销式 hero；
 - 按钮使用 lucide icons 和明确 tooltip；
 - 页面不直接依赖 Recharts API；
-- 577 条表格分页和按需加载证据；
+- 577 项表格分页和按需加载证据；
 - 所有核心指标来自后端 API；
 - 空、加载、部分失败、失败和无权限外的单用户状态均有明确呈现；
 - 中文业务名称优先，内部字段仅在高级说明出现。
 - metadata 页面默认不启用 AI，只有用户显式勾选后才发送 `confirm_llm=true`；
 - 复核详情固定拆分为规则、AI、人工三层，规则层读取不可变 `system_*` 字段；
 - AI 建议的采纳、修改和拒绝只追加人工 snapshot，不更新 AI suggestion 或规则 assessment；
-- 完整核查表展示 493 个独立判断项并解释 577/493/78/6 结构范围。
+- 完整核查表展示 577 项产品范围；上下文项不得生成伪 verdict。
 
 ## 16. 测试与验收
 
 后端重点：
 
-- 577 条任务生成；
-- 577/493/78/6 结构编译计数和有效 requirement 文本；
+- 577 项范围完整性；
+- `577/499/78/0` 内部结构编译计数和有效 requirement 文本；
 - AI 显式授权、追加保存、证据引用、schema 和失败降级；
 - 报告 metadata 确认；
 - 阶段进度和部分失败；
@@ -427,7 +429,7 @@ pnpm build
 ## 17. 实施顺序
 
 1. 报告列表、metadata 检测与确认；
-2. 577 个标准核查单元结构编译、493 个独立判断项后台分析、阶段进度和部分失败；
+2. 577 项范围编译、499 个独立判断项后台分析、阶段进度和部分失败；
 3. risk-v2.1 四维模型与双队列 API；
 4. review snapshot、字段级审计和重开；
 5. 报告仪表盘与三栏复核工作台；
@@ -437,9 +439,13 @@ pnpm build
 
 ## 18. 当前实现与验收状态
 
-截至 2026-07-20，代码迁移 head 为 `0011_ai_suggestions`。报告上传与 metadata 确认、577/493/78/6 标准结构编译、规则分析、后端 AI 辅助阶段、active run 门禁、后台任务恢复、risk-v2.1 四维模型、双队列、追加式复核、三栏工作台、整改任务、版本化输出和 demo 在线重置均已有实现。Envision v2 regeneration gate 是当前阻断门禁；Goldwind 100 条人工 gold gate 保留为低优先级历史泛化证据。
+截至 2026-07-25，Envision 2024 中文报告 MVP 后端基线 v1.1 已冻结。代码迁移 head 为 `0011_ai_suggestions`；结构 manifest 为 `gri-requirement-checklist-v3`；产品方法版本为 `envision-method-v1.1`；结果裁决版本为 `envision-result-v1.1`；复核优先级规则为 `risk-v2.1`。报告上传与 metadata 确认、577 项范围、规则分析、AI 辅助阶段、active run 门禁、后台任务恢复、双队列、追加式复核、三栏工作台、整改任务和版本化输出均已有实现。
 
-Envision 2024 中文报告的本地 MVP 产品验收已经完成。225 条真实 DeepSeek 工程基线评估一致率为 72.32%，guardrail 后 false disclosed、证据越界、可比错页、schema 失败和模型失败均为 0；新的显式授权产品 run 对符合“结构独立 + 高/中优先级 + 有实质证据”的 4 条生成建议，成功 4、失败 0、其余 489 条跳过。前端已实现八阶段进度、规则/AI/人工三层、AI 采纳/修改/拒绝和 493 项直接定位。浏览器验收发现并修复规则层误用人工字段的 P1 问题，修复提交为 `4abdac9`。最终门禁为后端 627 项测试、前端 22 个测试文件 80 项测试、typecheck、production build 和 Envision v2 回归通过。Goldwind 历史 100 条 gate 保留为低优先级泛化证据，不再阻塞本轮验收。通用 verdict 批量复核、独立 reopen API、report 级审计、单 export 下载和完整整改任务清单导出仍为后续项。
+v3 技术结构为 `577/499/78/0`：577 个范围单元均处于 `assessed` 或 `context_incorporated` 终态；6 条历史复合提取问题已按版本化方法裁决转为独立判断，16 条历史结果差异已写入最终裁决资产，当前 pending 为 0。Envision v3 gate 的 global fallback、新增 false disclosed 和新增 wrong source page 均为 0，audit 为 0 error、0 warning。后端 651 项测试、前端 22 个测试文件 80 项测试、typecheck 和 production build 全部通过。
+
+225 条真实 DeepSeek 评估继续作为 AI 辅助工程基线；模型和 Prompt 未因本轮冻结改变。本轮最终产品 run 使用 `confirm_llm=false`，OCR/VLM 均未启用。规则、AI 和人工三层权威关系保持独立。该冻结属于本地产品与工程基线，不构成 GRI 专家认证、外部鉴证或企业部署承诺；企业条件适用性仍可能需要企业确认。Goldwind 历史 100 条 gate 保留为低优先级泛化证据，不阻塞本轮冻结。
+
+通用 verdict 批量复核、独立 reopen API、report 级审计、单 export 下载和完整整改任务清单导出仍为后续项。旧 `review_decisions` 和旧 API 继续处于兼容窗口。
 
 旧 `review_decisions` 已完成两个连续兼容周期的数据映射验证，但旧 API、旧前端页面和旧导出仍有调用者，因此继续保留。验收风险、运行命令和下一步见 `docs/DEVELOPMENT.md`。
 

@@ -196,7 +196,9 @@ uv run --no-sync uvicorn src.main:app --reload --port 8000
 
 - `POST /api/reports/upload`（支持 `duplicate_policy=reject|create_new`）、`POST /api/reports/{report_id}/confirm-metadata`
 - `POST /api/reports/{report_id}/analyze`、`GET /api/runs/{run_id}/stages`
-- `GET /api/reports/{report_id}/dashboard`、`GET /api/reports/{report_id}/review-queue`、`GET /api/reports/{report_id}/applicability-queue`
+- `GET /api/reports/{report_id}/dashboard`、`GET /api/reports/{report_id}/scope-items`
+- `GET /api/reports/{report_id}/review-queue`、`GET /api/reports/{report_id}/applicability-queue`
+- `GET /api/reports/{report_id}/pages/{page_number}/image`
 - `POST /api/assessments/{assessment_id}/review-decisions`
 - `POST /api/reports/{report_id}/applicability-decisions`
 - `POST /api/reports/{report_id}/actions`、`PATCH /api/actions/{action_id}`
@@ -205,7 +207,7 @@ uv run --no-sync uvicorn src.main:app --reload --port 8000
 
 正式输出门禁：分析必须完整，且全部高复核优先级 assessment 必须已有有效 review snapshot。草稿不受该门禁限制，但 review scope 会记录草稿标识、分析不完整数、高/中优先级复核范围、适用性待判定数、run、engine version 和 risk rule version。正式版本使用递增版本号，旧正式版本标记为 superseded，文件 manifest 保存路径、大小和 SHA256。
 
-risk-v2.1 将披露结论、证据状态、适用性状态和复核优先级分开。`unknown + 无证据` 为低优先级，`unknown + 仅索引/从略说明` 为中优先级，只有明确冲突、证据失效或严重质量异常进入高优先级。当前固定 Envision 输入的只读回归基线为高 12、中 60、低 505，另有适用性待判定 343；数量只作为本次数据回归断言，不能写入规则或配置。
+risk-v2.1 将披露结论、证据状态、适用性状态和复核优先级分开。`unknown + 无证据` 为低优先级，`unknown + 仅索引/从略说明` 为中优先级，只有明确冲突、证据失效或严重质量异常进入高优先级。优先级数量由当前 499 个独立判断结果动态产生，不能硬编码比例；上下文项不进入优先级分布。
 
 产品闭环自动验收命令：
 
@@ -240,11 +242,11 @@ API 端到端测试覆盖上传、metadata 确认、标准范围计数、规则�
 - Codex 内置浏览器控制在本机发生两次桌面应用闪退。自动页面截图改用独立无头 Edge；人工验收使用普通浏览器，不再启用 Codex 内置浏览器。
 - 外部模型和 OCR/VLM 默认关闭。DeepSeek 只在 `confirm_llm=true` 且用户明确批准后启用；OCR/VLM 本轮未启用。
 
-当前自动门禁（2026-07-20）：后端 627 项测试通过；前端 22 个测试文件、80 项测试、typecheck 和 production build 通过；Envision v2 为 577/493/78/6、493 个唯一独立判断项、global fallback 0、224 个可比人工 verdict 加 1 个适用性例外无新增 false disclosed 或 wrong source page。Goldwind 100 条历史人工 gold 为 recall 96.08%、false disclosed 0、wrong source page 0、unknown leakage 2，当前作为低优先级泛化证据，不再阻塞 Envision 主线验收。main 与 demo 数据库 head 均为 `0011_ai_suggestions`。
+当前自动门禁（2026-07-25）：后端 651 项测试通过；前端 22 个测试文件、80 项测试、typecheck 和 production build 通过；Envision v3 内部结构为 `577/499/78/0`，global fallback、新增 false disclosed 和新增 wrong source page 均为 0，audit 为 0 error、0 warning。16 条历史结果差异全部进入最终裁决资产，其中 13 条与规则一致、3 条需要最终人工覆盖、0 条 pending。Goldwind 100 条历史人工 gold 为 recall 96.08%、false disclosed 0、wrong source page 0、unknown leakage 2，作为低优先级泛化证据，不阻塞 Envision 主线验收。main 与 demo 数据库 head 均为 `0011_ai_suggestions`。
 
-DeepSeek 225 条真实评估固定使用 Envision 报告 `report-14864b1a3ef64512b0e5d3676a120bc1` 和 run `run-526bd97aef5d4b9baa14618b719081c9`。最终指标：一致 162/224（72.32%），适用性例外 1，累计定向补跑 18 次；guardrail 后 false disclosed、证据 ID 越界、可比错页、schema 失败和模型失败均为 0。Sol/Pro 尚未裁决的 16 条继续单列，人工—AI证据页差异 4 条继续保留。该结果标记为 AI 辅助工程基线，不构成 GRI 专家认证或最终合规结论。
+DeepSeek 225 条真实评估固定使用 Envision 报告 `report-14864b1a3ef64512b0e5d3676a120bc1` 和 run `run-526bd97aef5d4b9baa14618b719081c9`。最终指标：一致 162/224（72.32%），适用性例外 1，累计定向补跑 18 次；guardrail 后 false disclosed、证据 ID 越界、可比错页、schema 失败和模型失败均为 0。该结果保留为 AI 辅助工程基线，不构成 GRI 专家认证或最终合规结论。本轮 v1.1 冻结没有修改 DeepSeek 模型、Prompt、调用范围或 guardrail。
 
-普通 Chrome 已在 `APP_ENV=demo`、`esg_agent_demo` 和 demo runtime 下完成 Envision 主流程验收。当前产品流程保留历史，通过“重新上传并分析”创建新的 `report_id`，不要求 reset 空库。同一哈希存在多份历史时，重复响应按创建时间返回最新报告。新产品 run `run-021eeb43338f4381910218628b64554b` 完成 493 个独立判断项，规则失败 0；显式启用 AI 后，4 条满足产品调用条件并全部成功，489 条按规则跳过。固定 225 条工程基线用于三层交互样例，已通过普通 Chrome 生成采纳、人工修改、拒绝各一条追加式 snapshot，并生成带 AI 免责声明的草稿输出。验收事实和截图索引见 `docs/product/mvp-acceptance-report.md`。
+普通 Chrome 已在 `APP_ENV=demo`、`esg_agent_demo` 和 demo runtime 下完成 Envision v1.1 主流程验收。产品通过“重新上传并分析”创建新的 `report_id`，不要求 reset 空库；同一哈希存在多份历史时，重复响应按创建时间返回最新报告。本轮 report 为 `report-15401bb4334e40d4a0885730f2635b22`，run 为 `run-92bf75b11eb042dab6cb689311634fe1`；`confirm_llm=false`，八阶段完成，499 个独立判断项规则失败 0，AI 阶段 skipped，OCR/VLM 均未启用。Dashboard 显示核查范围 577 项；完整范围首尾分页、上下文状态、三栏页图证据和 577 行草稿输出均通过。验收事实见 `docs/product/mvp-acceptance-report.md`。
 
 review CSV 生成后必须执行硬门禁自查：
 
@@ -303,32 +305,34 @@ uv run --no-sync python -m src.tools.first_pass_quality ../tmp/review/current_55
 
 该工具按 `requirement_id` 聚合首行，并支持人工复核字段：`manual_label`、`correct_pdf_pages`、`suggested_verdict`、`issue_type`。输出指标包括 first-pass recall、false disclosed、wrong source page、unknown leakage 和 after-rules delta。
 
-## 8. Envision v2 Review CSV Regeneration Gate
+## 8. Envision v3 Review CSV Regeneration Gate
 
-用途：从 Envision 2024 源报告、report profile 和 v2 标准结构重新生成 493 个独立 assessment 的证据展开 CSV，并验证 577/493/78/6 范围及已批准人工基线。
+用途：从 Envision 2024 源报告、report profile 和 v3 标准结构重新生成 499 个独立 assessment 的证据展开 CSV，并验证 `577/499/78/0` 内部范围、最终裁决和已批准人工基线。
 
 命令：
 
 ```powershell
 cd backend
 uv run --no-sync python -m src.tools.regenerate_review_csv `
-  --report-id envision_2024_v2 `
+  --report-id envision_2024_v3 `
   --pdf "data/reports/Envision Energy 2024-zh.pdf" `
   --profile data/reports/profiles/envision_2024.json `
-  --requirements data/manifests/gri_requirement_checklist_v2.json `
+  --requirements data/manifests/gri_requirement_checklist_v3.json `
   --manual-review-workbook data/review_inputs/envision_2024/manual/envision_2024_577_manual_review_second_review_Pro_20260719.xlsx `
-  --output data/runtime/evaluations/envision_2024/current_493_review_regenerated.csv `
+  --final-adjudications data/review_inputs/envision_2024/adjudication/envision_2024_result_adjudication_v1.csv `
+  --output data/runtime/evaluations/envision_2024/current_499_review_regenerated.csv `
   --baseline data/review_inputs/envision_2024/baselines/current_577_review_regenerated.csv `
-  --audit-output data/runtime/evaluations/envision_2024/current_493_review_regenerated_audit.json `
-  --diff-summary-output data/runtime/evaluations/envision_2024/current_493_review_regeneration_diff_summary.json `
-  --scope-summary-output data/runtime/evaluations/envision_2024/current_493_review_scope_summary.json `
+  --audit-output data/runtime/evaluations/envision_2024/current_499_review_regenerated_audit.json `
+  --diff-summary-output data/runtime/evaluations/envision_2024/current_499_review_regeneration_diff_summary.json `
+  --scope-summary-output data/runtime/evaluations/envision_2024/current_499_review_scope_summary.json `
   --report-total-pages 78
 ```
 
 通过标准：
 
-- 标准单元 577、独立 assessment 493、上下文项 78、方法待确认项 6。
-- 唯一 assessment requirement 为 493；多证据可展开为多行。
+- 标准单元 577、独立 assessment 499、上下文项 78、方法待确认项 0。
+- 唯一 assessment requirement 为 499；多证据可展开为多行。
+- 6 条复合结构裁决全部可追溯，16 条结果裁决为 0 pending。
 - `structure_status`、`source_requirement_text`、`effective_requirement_text` 不得为空。
 - `review_csv_audit` 通过。
 - `global_fallback=0`。
@@ -376,6 +380,15 @@ pnpm generate:api
 生成前需要后端在 `http://localhost:8000` 提供 `/openapi.json`。
 
 ## 11. 开发日志
+
+### 2026-07-25
+
+- 冻结 `Envision 2024 中文报告 MVP 后端基线 v1.1`：普通产品口径统一为 577 项；v3 内部结构为 `577/499/78/0`。
+- 6 条历史复合结构问题按 `envision-method-v1.1` 裁决；16 条历史结果差异按 `envision-result-v1.1` 固化，13 条规则一致、3 条最终人工覆盖、0 条 pending。原始 Sol/Pro 工作簿保持只读且 SHA256 不变。
+- 新增 577 项只读范围接口和完整范围输出；499 个独立项生成 assessment，78 个上下文项显示 `context_incorporated` 且不生成伪 verdict。
+- 普通 Chrome 在 `APP_ENV=demo`、`esg_agent_demo` 完成无 AI 主流程。修复证据 iframe 空白问题，右栏改为只读页图接口；点击复核项不下载 PDF。
+- 最终门禁：后端 651 项、前端 80 项、typecheck、production build 和 Envision v3 gate 通过；global fallback、新增 false disclosed、新增 wrong source page、audit error/warning 均为 0。
+- DeepSeek 模型、Prompt、调用范围和 guardrail 未改变；本轮 `confirm_llm=false`，OCR/VLM 未启用。Goldwind 不阻塞本轮冻结。
 
 ### 2026-07-20
 

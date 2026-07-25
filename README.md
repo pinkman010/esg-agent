@@ -1,10 +1,14 @@
 # ESG-Agent
 
-面向企业 ESG 团队的单报告 GRI 核查系统，支持报告上传、577 个 GRI 标准核查单元编译、493 个独立 requirement 分析、证据追溯、AI 辅助建议、人工复核、整改任务和版本化输出。
+面向企业 ESG 团队的单报告 GRI 核查系统，支持报告上传、577 项 GRI 核查、证据追溯、AI 辅助建议、人工复核、整改任务和版本化输出。
 
 ## 项目状态
 
-Envision 2024 中文报告的本地 MVP 已完成产品验收：577 个标准核查单元被确定性编译为 493 个独立判断项、78 个父级上下文项和 6 个方法待确认项；规则 assessment、DeepSeek 独立建议和人工结果分层保存。225 条真实 AI 工程基线评估的一致率为 72.32%，证据越界、可比错页、schema 失败、模型失败和 guardrail 后的 false disclosed 均为 0；16 条 Sol/Pro 差异继续等待方法裁决。最终门禁为后端 627 项测试、前端 22 个测试文件 80 项测试、typecheck、production build 和 Envision v2 回归全部通过。Goldwind 100 条历史 gate 继续保留，当前优先级低于 Envision 主线。
+Envision 2024 中文报告 MVP 后端基线 v1.1 已冻结。产品统一对外表达为“完成 577 项 GRI 核查”；内部结构为 577 个标准单元、499 个独立判断项、78 个上下文项、0 个方法待确认项。规则 assessment、DeepSeek suggestion 和人工 snapshot 分层保存，16 条历史判断差异已写入最终裁决资产，当前待裁决数为 0。
+
+当前门禁：后端 651 项测试通过；前端 22 个测试文件、80 项测试、typecheck 和 production build 通过；Envision v3 回归的新增 false disclosed、wrong source page 和 global fallback 均为 0。Goldwind 100 条历史 gate 保留为次级泛化证据，不阻塞 Envision 主线。
+
+该基线属于本地产品与工程验收，不构成 GRI 专家认证、外部鉴证或企业部署承诺。企业条件适用性仍可能需要企业确认。
 
 ## 仓库结构
 
@@ -25,57 +29,36 @@ esg-agent/
 - 技术设计：`docs/DESIGN.md`
 - 开发、运行、测试：`docs/DEVELOPMENT.md`
 - 资产与证据边界：`docs/ASSETS.md`
+- API 契约：`docs/product/api-contract.md`
+- MVP 验收：`docs/product/mvp-acceptance-report.md`
 - 实施计划：`docs/plan/`
-- 本地代理执行规则：`AGENTS.md`，该文件不提交到仓库。
 
 ## 第一版范围
-
-第一版围绕企业 ESG 团队的单报告闭环：
 
 ```text
 报告列表或上传空状态
   -> 上传 PDF 并识别企业、年度、语言和页数
   -> 用户确认报告信息
-  -> 编译 577 个标准核查单元并分析 493 个独立 requirement
-  -> 展示业务阶段进度和部分失败
+  -> 完成 577 项 GRI 核查
+  -> 展示八阶段进度和部分失败
   -> 高优先级队列优先人工复核，并独立处理适用性待判定项
   -> 形成整改任务
   -> 生成版本化核查表、管理层摘要和打印版输出
 ```
 
-前端以高复核优先级队列为主要入口，并支持访问适用性待判定队列和全部独立判断结果。高优先级项全部完成后只表示该队列已处理，不表示全部 577 个标准核查单元均已人工确认。`unknown` 是披露结论，不能单独解释为高优先级。
+前端以高复核优先级队列为主要入口，并支持适用性待判定队列和完整 577 项核查范围。高优先级队列完成只表示该队列已处理，不表示 577 项均已人工确认。`unknown` 属于披露结论，不能单独触发高优先级。
 
-`actions_xlsx` 完整改任务清单导出、通用 verdict 批量复核、独立 reopen、report 级审计和单 export 下载仍为增强项；当前正式输出在全部高优先级项目完成有效人工复核前会被阻止。
-
-第一版保留跨企业、跨报告格式的识别泛化能力，不做多租户、复杂权限、顾问项目空间、多公司批量处理、同行对标、舆情监测和多标准混合分析。
+`actions_xlsx` 完整改任务清单导出、通用 verdict 批量复核、独立 reopen、report 级审计和单 export 下载仍为增强项。正式输出要求分析完整且全部高优先级项已有有效人工复核；草稿可随时生成，并披露实际复核范围。
 
 ## 技术栈
 
-完整技术选型以 `docs/DESIGN.md` 为准。当前已确认：
-
 - 后端：Python 3.11、FastAPI、Pydantic v2、PostgreSQL、SQLAlchemy 2.0、Alembic。
-- 前端：Next.js App Router、TypeScript、Tailwind CSS、shadcn/ui、TanStack Query、TanStack Table、Recharts。
-- PDF：混合多路由管线，包含 pypdf、pdfplumber、OCRmyPDF/Tesseract、Docling fallback、VLM 辅助识别。
-- AI：DeepSeek OpenAI-compatible API；默认关闭，仅在用户显式确认后生成追加式辅助建议，不覆盖规则或人工结果。
+- 前端：Next.js App Router、TypeScript、Tailwind CSS、TanStack Query、TanStack Table、Recharts。
+- PDF：pypdf、pdfplumber；OCR、Docling 和 VLM 仅作为显式授权后的降级能力。
+- AI：DeepSeek OpenAI-compatible API；默认关闭，只生成追加式辅助建议。
 - 包管理：后端 uv，前端 pnpm。
 
-OCR 本地前置条件：
-
-- Tesseract 需可用，并安装 `chi_sim`、`eng` 语言包。
-- OCRmyPDF 由后端依赖安装；真实 OCR 执行还需要 Ghostscript 命令可用。
-- OCR 默认关闭，只在分析请求显式传入 `enable_ocr=true` 时运行。
-
-## 开发提示
-
-- 修改技术设计前先更新 `docs/DESIGN.md`。
-- 涉及资产迁移或证据材料时先读 `docs/ASSETS.md`。
-- 涉及本地运行、依赖、测试命令时先读 `docs/DEVELOPMENT.md`。
-
-## 资产恢复
-
-仓库不提交 PDF、Word、Excel 等二进制文档资产。
-
-首次克隆后，按 `docs/ASSETS.md` 的“本地资产恢复”说明，将必需资产恢复到 `backend/data/reports/` 和 `backend/data/standards/`，并根据 `backend/data/manifests/assets_manifest.json` 完成 SHA256 校验。
+原始 PDF 不覆盖。OCR 默认关闭，仅在分析请求显式传入 `enable_ocr=true` 后运行；外部模型只有用户显式确认后才允许调用。
 
 ## 本地运行
 
@@ -92,7 +75,7 @@ pnpm install
 pnpm dev
 ```
 
-前端默认访问 `http://localhost:3000`，后端默认访问 `http://localhost:8000`。
+前端默认访问 `http://localhost:3000`，后端 OpenAPI 默认访问 `http://localhost:8000/docs`。数据库 head 为 `0011_ai_suggestions`。
 
 ## 验证命令
 
@@ -101,11 +84,9 @@ cd backend
 uv run pytest
 
 cd ../frontend
+pnpm test -- --run
 pnpm typecheck
-pnpm test
 pnpm build
 ```
 
-当前数据库 head 为 `0011_ai_suggestions`。正式输出要求独立判断结果完整且全部高优先级项完成复核；草稿可随时生成，并明确披露未复核的中优先级和适用性待判定范围。完整产品验收说明见 `docs/DEVELOPMENT.md` 的“企业产品闭环验收”章节。
-
-当前已实现 metadata 显式 AI 授权、八阶段进度、规则/AI/人工三层复核、AI 建议采纳/修改/拒绝、493 个独立判断项定位和版本化草稿输出。完整结论与证据见 `docs/product/mvp-acceptance-report.md`；已知限制和尚未实现的规划接口记录在 `docs/DEVELOPMENT.md`。
+普通页面只使用 577 项产品口径。内部技术审计可以使用 `577/499/78/0`，含义依次为标准单元、独立判断项、上下文项和方法待确认项。任何 GRI 清单、结构裁决、证据规则、risk-v2.1、模型/Prompt、数据库 schema 或 API 语义变更都需要解除冻结并重跑完整门禁。
