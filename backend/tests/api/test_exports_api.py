@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 from openpyxl import load_workbook
 
@@ -5,13 +7,14 @@ pytestmark = pytest.mark.anyio
 
 from sqlalchemy import select
 
-from src.db.models import AuditEventRecord
+from src.db.models import AssessmentRecord, AuditEventRecord
 from src.db.repositories import Repository
 from src.domain.ai_models import AIAssessmentSuggestion
 from src.domain.enums import AISuggestionStatus, AssessmentVerdict, EvidenceSourceMethod, PageQualityFlag, ReportStatus, ReviewOperation, ReviewStatus, RunStatus
 from src.domain.models import AnalysisRun, DisclosureAssessment, DisclosureTask, EvidenceItem, Report, ReviewDecision
 from src.services.risk_service import calculate_and_store_risk
 from src.services.review_service import ReviewService
+from src.standards.gri import GRIAdapter
 
 
 def seed_export_data(session):
@@ -409,3 +412,105 @@ async def test_risk_v2_1_formal_export_blocks_incomplete_analysis(api_client, ap
         "code": "analysis_incomplete",
         "remaining": 1,
     }
+
+
+def seed_complete_v3_export_scope(session):
+    repo = Repository(session)
+    repo.create_report(
+        Report(
+            report_id="report-v3-export",
+            original_filename="envision.pdf",
+            stored_path="x",
+            file_hash="hash-v3-export",
+            status=ReportStatus.ANALYSIS_COMPLETED,
+        )
+    )
+    repo.create_run(
+        AnalysisRun(
+            run_id="run-v3-export",
+            report_id="report-v3-export",
+            status=RunStatus.COMPLETED,
+            risk_rule_version="risk-v2.1",
+            eligible_requirement_count=499,
+            succeeded_requirement_count=499,
+        )
+    )
+    backend_root = Path(__file__).resolve().parents[2]
+    requirements = GRIAdapter(
+        backend_root / "data/manifests/gri_requirement_checklist_v3.json"
+    ).load_requirements()
+    session.add_all(
+        [
+            AssessmentRecord(
+                assessment_id=f"assessment-v3-export-{index:03d}",
+                run_id="run-v3-export",
+                report_id="report-v3-export",
+                standard_id=requirement.standard_id,
+                standard_version=requirement.standard_version,
+                disclosure_id=requirement.disclosure_id,
+                requirement_id=requirement.requirement_id,
+                verdict="unknown",
+                rationale="待核实",
+                missing_items=[],
+                model_called=False,
+                review_status="needs_manual_review",
+            )
+            for index, requirement in enumerate(requirements, start=1)
+        ]
+    )
+    session.commit()
+
+
+async def test_v3_export_covers_all_577_standard_units_without_fake_context_results(
+    api_client,
+    api_session,
+):
+    seed_complete_v3_export_scope(api_session)
+
+    response = await api_client.post(
+        "/api/reports/report-v3-export/exports/draft",
+        json={
+            "formats": ["assessment_xlsx", "print_html"],
+            "created_by": "产品验收",
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    scope = body["review_scope"]
+    assert scope["standard_unit_total"] == 577
+    assert scope["human_reviewed_total"] == 0
+    assert "全部 577 项均已人工确认" not in scope["review_scope_statement"]
+
+    files = {item["format"]: item["path"] for item in body["file_manifest"]}
+    workbook = load_workbook(files["assessment_xlsx"], read_only=True)
+    sheet = workbook["GRI核查"]
+    assert "AI建议未经人工确认时不构成最终披露结论" in sheet["A1"].value
+    headers = [cell.value for cell in sheet[2]]
+    data = [
+        dict(zip(headers, row))
+        for row in sheet.iter_rows(min_row=3, values_only=True)
+    ]
+    assert len(data) == 577
+    assessed = [row for row in data if row["unit_status"] == "assessed"]
+    context = [
+        row for row in data if row["unit_status"] == "context_incorporated"
+    ]
+    assert len(assessed) == 499
+    assert len(context) == 78
+    assert all(row["effective_verdict"] for row in assessed)
+    assert all(
+        row["effective_verdict"] is None
+        and row["review_priority"] is None
+        and row["review_status"] is None
+        and row["source_pdf_pages"] in (None, "[]")
+        for row in context
+    )
+    workbook.close()
+
+    html = Path(files["print_html"]).read_text(encoding="utf-8")
+    assert "共 577 项" in html
+    assert html.count('data-unit-status="assessed"') == 499
+    assert html.count('data-unit-status="context_incorporated"') == 78
+    assert "已作为上下文纳入相关判断" in html
+    assert "全部 577 项均已人工确认" not in html

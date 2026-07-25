@@ -1,5 +1,7 @@
 import csv
+import html
 import io
+import json
 from hashlib import sha256
 from pathlib import Path
 
@@ -11,7 +13,10 @@ from reportlab.pdfgen import canvas
 from src.db.repositories import Repository
 from src.domain.enums import ReportStatus, RiskLevel
 from src.domain.models import ExportVersion
+from src.services.analysis_runner import GRI_REQUIREMENTS_PATH
 from src.services.presentation_localization import localize_missing_items, localize_rationale
+from src.services.requirement_scope_service import RequirementScopeService
+from src.standards.gri import GRIAdapter
 from src.domain.versions import CURRENT_RISK_RULE_VERSION
 
 
@@ -187,13 +192,36 @@ class VersionedExportService:
             if uses_current_risk_rule
             else run.failed_requirement_count
         )
+        adapter = GRIAdapter(GRI_REQUIREMENTS_PATH)
+        scope_summary = adapter.get_scope_summary()
+        uses_complete_scope = (
+            run.eligible_requirement_count
+            == scope_summary["independent_assessment_count"]
+            or len(assessments) == scope_summary["independent_assessment_count"]
+        )
+        standard_unit_total = (
+            scope_summary["standard_unit_count"]
+            if uses_complete_scope
+            else eligible_total
+        )
         high_priority_unresolved = len(high_ids) - len(reviewed_high)
         review_scope_statement = (
             f"当前仍有高复核优先级未处理 {high_priority_unresolved} 条、"
             f"分析失败或未生成结果 {analysis_incomplete_total} 条；"
-            f"不代表全部 {eligible_total} 条均已人工确认。"
+            + (
+                f"不代表核查范围 {standard_unit_total} 项均已人工确认。"
+                if uses_complete_scope
+                else f"不代表全部 {standard_unit_total} 条均已人工确认。"
+            )
             if high_priority_unresolved or analysis_incomplete_total
-            else f"高复核优先级项目已处理；不代表全部 {eligible_total} 条均已人工确认。"
+            else (
+                "高复核优先级项目已处理；"
+                + (
+                    f"不代表核查范围 {standard_unit_total} 项均已人工确认。"
+                    if uses_complete_scope
+                    else f"不代表全部 {standard_unit_total} 条均已人工确认。"
+                )
+            )
         )
         if not is_draft and analysis_incomplete_total:
             raise ExportGateError("analysis_incomplete", analysis_incomplete_total)
@@ -208,7 +236,16 @@ class VersionedExportService:
         previous = None if is_draft else self.repository.latest_formal_export(report_id)
         destination = self.output_root / "exports" / report_id / export_id
         destination.mkdir(parents=True, exist_ok=True)
-        rows = assessments_rows(self.repository, run.run_id)
+        assessment_rows = assessments_rows(self.repository, run.run_id)
+        rows = (
+            self._complete_scope_rows(
+                report_id=report_id,
+                adapter=adapter,
+                assessment_rows=assessment_rows,
+            )
+            if uses_complete_scope
+            else assessment_rows
+        )
         manifest = [self._write_format(destination, item, rows, report_id, is_draft) for item in formats]
         digest = sha256("".join(item["sha256"] for item in manifest).encode()).hexdigest()
         export = self.repository.save_export_version(
@@ -234,6 +271,7 @@ class VersionedExportService:
                     "applicability_undetermined_total": len(applicability_undetermined),
                     "analysis_incomplete_total": analysis_incomplete_total,
                     "eligible_requirement_total": eligible_total,
+                    "standard_unit_total": standard_unit_total,
                     "human_reviewed_total": len(reviewed_ids.intersection(ids)),
                     "review_scope_statement": review_scope_statement,
                     "system_pending_count": len(assessments) - len(snapshots),
@@ -250,6 +288,31 @@ class VersionedExportService:
             self.repository.update_report_status(report_id, ReportStatus.FORMALLY_EXPORTED)
         return export
 
+    def _complete_scope_rows(
+        self,
+        *,
+        report_id: str,
+        adapter: GRIAdapter,
+        assessment_rows: list[dict],
+    ) -> list[dict]:
+        scope_rows = RequirementScopeService(
+            self.repository,
+            adapter,
+        ).list_items(report_id)
+        details_by_assessment = {
+            row["assessment_id"]: row for row in assessment_rows
+        }
+        rows = []
+        for scope_row in scope_rows:
+            detail = details_by_assessment.get(scope_row["assessment_id"], {})
+            row = {**detail, **scope_row}
+            if scope_row["unit_status"] == "context_incorporated":
+                row["scope_note"] = "已作为上下文纳入相关判断"
+            else:
+                row["scope_note"] = ""
+            rows.append(row)
+        return rows
+
     def _write_format(self, destination: Path, format_name: str, rows: list[dict], report_id: str, is_draft: bool) -> dict:
         if format_name == "assessment_xlsx":
             path = destination / f"{format_name}.xlsx"
@@ -260,7 +323,12 @@ class VersionedExportService:
             if rows:
                 sheet.append(list(rows[0].keys()))
                 for row in rows:
-                    sheet.append([str(row.get(key, "")) for key in rows[0].keys()])
+                    sheet.append(
+                        [
+                            _xlsx_value(row.get(key))
+                            for key in rows[0].keys()
+                        ]
+                    )
             workbook.save(path)
         elif format_name == "management_pdf":
             path = destination / "management-summary.pdf"
@@ -275,8 +343,54 @@ class VersionedExportService:
         elif format_name == "print_html":
             path = destination / "print.html"
             label = "<strong>草稿</strong>" if is_draft else "正式版本"
-            path.write_text(f"<!doctype html><html lang='zh'><meta charset='utf-8'><title>ESG 核查</title><body><h1>ESG 核查表</h1><p>{label}</p><p>{AI_DISCLAIMER}</p><p>共 {len(rows)} 条</p></body></html>", encoding="utf-8")
+            table_rows = []
+            for row in rows:
+                unit_status = str(row.get("unit_status") or "assessed")
+                conclusion = (
+                    "已作为上下文纳入相关判断"
+                    if unit_status == "context_incorporated"
+                    else str(
+                        row.get("effective_verdict")
+                        or row.get("verdict")
+                        or ""
+                    )
+                )
+                table_rows.append(
+                    '<tr data-unit-status="'
+                    + html.escape(unit_status)
+                    + '"><td>'
+                    + html.escape(str(row.get("requirement_id") or ""))
+                    + "</td><td>"
+                    + html.escape(conclusion)
+                    + "</td><td>"
+                    + html.escape(str(row.get("review_priority") or ""))
+                    + "</td><td>"
+                    + html.escape(str(row.get("review_status") or ""))
+                    + "</td><td>"
+                    + html.escape(str(row.get("source_pdf_pages") or ""))
+                    + "</td></tr>"
+                )
+            path.write_text(
+                "<!doctype html><html lang='zh'><meta charset='utf-8'>"
+                "<title>ESG 核查</title><body><h1>ESG 核查表</h1>"
+                f"<p>{label}</p><p>{AI_DISCLAIMER}</p>"
+                f"<p>共 {len(rows)} 项</p>"
+                "<table><thead><tr><th>Requirement</th><th>结论</th>"
+                "<th>复核优先级</th><th>复核状态</th><th>证据页</th>"
+                "</tr></thead><tbody>"
+                + "".join(table_rows)
+                + "</tbody></table></body></html>",
+                encoding="utf-8",
+            )
         else:
             raise ValueError(f"unsupported export format: {format_name}")
         content = path.read_bytes()
         return {"format": format_name, "path": path.as_posix(), "size": len(content), "sha256": sha256(content).hexdigest()}
+
+
+def _xlsx_value(value):
+    if value is None:
+        return ""
+    if isinstance(value, (list, dict)):
+        return json.dumps(value, ensure_ascii=False)
+    return value
