@@ -223,7 +223,7 @@ export function ReviewEditor({ detail, reviewerName, onEvidencePage }: Props) {
         </div>
 
         {saved && <p className="text-sm text-emerald-700">复核记录已保存</p>}
-        {errorMessage && <p className="text-sm text-red-600">{errorMessage}</p>}
+        {errorMessage && <p role="alert" className="text-sm text-red-600">{errorMessage}</p>}
       </section>
     </div>
   );

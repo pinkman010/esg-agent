@@ -110,7 +110,7 @@ export function RiskQueue({ reportId, onSelect, queueType = "priority", reviewer
             </button>
           </div>
           {batchMessage && <p className="text-xs text-emerald-700">{batchMessage}</p>}
-          {batchMutation.isError && <p className="text-xs text-red-600">批量处理失败，队列可能已变化，请刷新后重试。</p>}
+          {batchMutation.isError && <p role="alert" className="text-xs text-red-600">批量处理失败，队列可能已变化，请刷新后重试。</p>}
         </div>
       )}
       <div className="divide-y divide-border">{query.data?.items.map((item) => {

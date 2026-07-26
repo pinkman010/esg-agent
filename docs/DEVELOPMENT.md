@@ -228,6 +228,56 @@ API 端到端测试覆盖上传、metadata 确认、标准范围计数、规则�
 
 首次上传演示还必须检查：企业名称、年度和语言由文件名及 PDF 前两页本地文本自动预填；普通页面不显示内部 `report_id`；前端按八个业务阶段权重和真实 units 计算进度，不显示固定条数；AI 阶段展示 succeeded/failed/skipped 汇总，终态不转圈；超过 120 秒无 stage event 时显示中断提示。重复上传需同时验证“查看已有结果”和“重新上传并分析→新 report metadata 确认”两条路径。
 
+### 前端演示体验人工验收
+
+本轮以普通 Edge 或 Chrome 验收，不使用 Codex 内置浏览器。启动后先确认后端实际读取 Demo 配置：
+
+```powershell
+$env:APP_ENV="demo"
+$env:DATABASE_URL="postgresql+psycopg://esg_agent:esg_agent@localhost:5432/esg_agent_demo"
+$env:UPLOAD_DIR="backend/data/runtime/demo/uploads"
+$env:DERIVED_DIR="backend/data/runtime/demo/derived"
+
+cd backend
+uv run --no-sync python -c "from sqlalchemy.engine import make_url; from src.config.settings import get_settings; print(make_url(get_settings().database_url).database)"
+```
+
+命令必须输出 `esg_agent_demo`。再访问 `http://localhost:8000/api/health`，应返回 `{"status":"ok"}`。任一结果不符时停止写入操作，检查启动终端中的环境变量。
+
+前端演示主路径：
+
+1. 打开工作台首页，确认无报告、分析中和已完成报告分别提供真实下一步。
+2. 上传 Envision 2024 中文报告，确认首次上传页不预先显示 577。
+3. 核对自动识别的企业、年度和语言；人工确认后启动分析。AI 默认关闭，只有明确授权时才开启。
+4. 查看八阶段进度、当前阶段、完成阶段数、终态按钮和 120 秒中断提示。
+5. 在报告总览核对 577 项范围、披露结论、复核优先级、适用性和规则/AI/人工分层。
+6. 验证完整核查范围首页、末页、上下文项和复核详情跳转。
+7. 在三栏工作台验证队列、规则/AI/人工三层、PDF 页图、缩放、翻页、重试和追加式人工快照。
+8. 创建并更新整改任务，确认关联 requirement、负责人、截止日期和变更说明。
+9. 生成草稿并检查输出门禁、复核范围和版本信息；页面不得声称单文件下载或完整 `actions_xlsx` 已实现。
+10. 再次上传相同 PDF，分别验证“查看已有结果”和“重新上传并分析”两条路径。
+
+三个验收视口：
+
+- 1440px：完整报告侧栏和三栏复核同时可见。
+- 1024px：报告侧栏收窄；复核区可通过“队列 / 判断 / 证据”切换。
+- 768px：使用顶部导航；表格仅在自身区域横向滚动，页面主体不产生横向溢出。
+
+发现问题按以下格式记录：
+
+```text
+标题：
+严重程度：阻断 / 严重 / 一般 / 轻微
+环境：浏览器、视口、APP_ENV、数据库名、report/run
+前置条件：
+复现步骤：
+预期结果：
+实际结果：
+影响范围：
+证据：截图、接口响应或日志
+建议修复：
+```
+
 旧 `review_decisions` 已完成两个连续阶段的数据映射兼容测试，但旧 API、旧前端工作台和旧导出仍有调用者，因此暂不删除。完成调用迁移后，应以独立 migration 验证 upgrade/downgrade，再申请清理。
 
 ### 当前验收风险与后续项

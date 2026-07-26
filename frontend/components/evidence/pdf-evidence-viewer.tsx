@@ -65,7 +65,7 @@ export function PdfEvidenceViewer({ reportId, initialPage = 1 }: { reportId: str
       <div className="relative min-h-0 flex-1 overflow-auto">
         {isLoading && !loadFailed ? <p className="absolute inset-0 grid place-items-center text-sm text-muted-foreground">正在加载 PDF 证据...</p> : null}
         {loadFailed ? (
-          <div className="absolute inset-0 z-10 grid place-items-center px-6 text-center text-sm text-red-600">
+          <div role="alert" className="absolute inset-0 z-10 grid place-items-center px-6 text-center text-sm text-red-600">
             <div>
               <p>PDF 证据加载失败，请检查报告文件。</p>
               <button type="button" className="mt-3 inline-flex items-center gap-2 rounded-md border border-red-200 bg-white px-3 py-2 font-medium" onClick={retryLoad}>

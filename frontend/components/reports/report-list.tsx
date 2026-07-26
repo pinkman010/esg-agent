@@ -46,7 +46,7 @@ export function ReportList() {
   });
 
   if (query.isLoading) return <p className="py-8 text-sm text-muted-foreground">正在加载报告...</p>;
-  if (query.isError) return <p className="py-8 text-sm text-red-700">报告列表加载失败。</p>;
+  if (query.isError) return <p role="alert" className="py-8 text-sm text-red-700">报告列表加载失败。</p>;
   if (!query.data?.items.length) {
     return (
       <div className="flex min-h-48 flex-col items-center justify-center border-y border-border py-10 text-center">

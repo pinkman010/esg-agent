@@ -19,7 +19,7 @@ export function ReviewWorkspace({ reportId, reviewerName, initialAssessmentId }:
   if (detail.isLoading) {
     detailContent = <p className="p-6 text-sm text-muted-foreground">正在加载核查详情...</p>;
   } else if (detail.isError) {
-    detailContent = <p className="p-6 text-sm text-red-600">核查详情加载失败，请重新选择或稍后重试。</p>;
+    detailContent = <p role="alert" className="p-6 text-sm text-red-600">核查详情加载失败，请重新选择或稍后重试。</p>;
   } else if (detail.data) {
     detailContent = <AssessmentDetail reportId={reportId} detail={detail.data} reviewerName={reviewerName} onEvidencePage={setSelectedPdfPage} />;
   }
@@ -32,7 +32,7 @@ export function ReviewWorkspace({ reportId, reviewerName, initialAssessmentId }:
 
   return (
     <div className="min-h-[calc(100vh-3.5rem)]">
-      <nav className="sticky top-0 z-20 grid grid-cols-3 border-b border-border bg-white p-2 lg:hidden" aria-label="复核工作台栏位">
+      <nav className="sticky top-0 z-20 grid grid-cols-3 border-b border-border bg-white p-2 xl:hidden" aria-label="复核工作台栏位">
         {([["queue", "队列"], ["detail", "判断"], ["evidence", "证据"]] as const).map(([value, label]) => (
           <button
             key={value}
@@ -45,13 +45,13 @@ export function ReviewWorkspace({ reportId, reviewerName, initialAssessmentId }:
           </button>
         ))}
       </nav>
-      <div className="grid grid-cols-1 lg:grid-cols-[300px_minmax(360px,1fr)_minmax(360px,1fr)]">
-        <aside className={`${mobilePane === "queue" ? "block" : "hidden"} border-r border-border bg-white lg:block`}>
+      <div className="grid grid-cols-1 xl:grid-cols-[300px_minmax(360px,1fr)_minmax(360px,1fr)]">
+        <aside className={`${mobilePane === "queue" ? "block" : "hidden"} border-r border-border bg-white xl:block`}>
           <div className="border-b border-border p-2"><div className="grid grid-cols-2 gap-1"><button type="button" className={`rounded-md px-2 py-2 text-xs font-medium ${queueType === "priority" ? "bg-accent text-accent-foreground" : "bg-muted"}`} onClick={() => setQueueType("priority")}>高优先级复核</button><button type="button" className={`rounded-md px-2 py-2 text-xs font-medium ${queueType === "applicability" ? "bg-accent text-accent-foreground" : "bg-muted"}`} onClick={() => setQueueType("applicability")}>适用性待判定</button></div></div>
           <RiskQueue reportId={reportId} queueType={queueType} reviewerName={reviewerName} selectedAssessmentId={assessmentId} onSelect={selectAssessment} />
         </aside>
-        <section className={`${mobilePane === "detail" ? "block" : "hidden"} min-w-0 border-r border-border bg-white lg:block`}>{detailContent}</section>
-        <section className={`${mobilePane === "evidence" ? "block" : "hidden"} min-w-0 lg:block`}>
+        <section className={`${mobilePane === "detail" ? "block" : "hidden"} min-w-0 border-r border-border bg-white xl:block`}>{detailContent}</section>
+        <section className={`${mobilePane === "evidence" ? "block" : "hidden"} min-w-0 xl:block`}>
           {detail.data ? <PdfEvidenceViewer key={`pdf-${assessmentId}`} reportId={reportId} initialPage={selectedPdfPage ?? detail.data.evidence_items[0]?.source_pdf_page ?? 1} /> : <p className="p-6 text-sm text-muted-foreground">选择核查项后显示 PDF 证据。</p>}
         </section>
       </div>

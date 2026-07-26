@@ -83,7 +83,7 @@ export function ReportUploadPanel() {
             上传 PDF
           </button>
           {uploadMutation.error && (
-            <div className={`flex items-start gap-2 rounded-lg border p-3 text-sm ${duplicateReport ? "border-amber-200 bg-amber-50 text-amber-900" : "border-red-200 bg-red-50 text-red-700"}`}>
+            <div role="alert" className={`flex items-start gap-2 rounded-lg border p-3 text-sm ${duplicateReport ? "border-amber-200 bg-amber-50 text-amber-900" : "border-red-200 bg-red-50 text-red-700"}`}>
               <AlertCircle aria-hidden="true" className="mt-0.5 h-4 w-4" />
               {duplicateReport ? (
                 <div className="space-y-2">

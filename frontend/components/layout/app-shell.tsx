@@ -24,7 +24,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               <span className="hidden text-[11px] text-muted-foreground sm:block">GRI 核查工作台</span>
             </span>
           </Link>
-          <nav className="flex items-center gap-1 md:hidden" aria-label="移动端主导航">
+          <nav className="flex items-center gap-1 lg:hidden" aria-label="移动端主导航">
             {mobileNavItems.map((item) => {
               const Icon = item.icon;
               return (
@@ -41,8 +41,8 @@ export function AppShell({ children }: { children: ReactNode }) {
           </nav>
         </div>
       </header>
-      <div className="mx-auto grid w-full max-w-[1800px] grid-cols-1 md:grid-cols-[236px_minmax(0,1fr)]">
-        <aside className="hidden min-h-[calc(100vh-4rem)] border-r border-border bg-white px-3 py-5 md:block">
+      <div className="mx-auto grid w-full max-w-[1800px] grid-cols-1 lg:grid-cols-[210px_minmax(0,1fr)] xl:grid-cols-[236px_minmax(0,1fr)]">
+        <aside className="hidden min-h-[calc(100vh-4rem)] border-r border-border bg-white px-3 py-5 lg:block">
           <ReportContextNav />
         </aside>
         <main className="min-w-0">{children}</main>

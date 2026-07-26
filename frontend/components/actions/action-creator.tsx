@@ -85,7 +85,7 @@ export function ActionCreator({
           创建整改任务
         </button>
         {created && <><span className="text-sm text-emerald-700">整改任务已创建</span><Link className="text-sm font-medium text-accent" href={`/reports/${reportId}/actions`}>查看整改任务</Link></>}
-        {mutation.isError && <span className="text-sm text-red-600">整改任务创建失败，请重试。</span>}
+        {mutation.isError && <span role="alert" className="text-sm text-red-600">整改任务创建失败，请重试。</span>}
       </div>
       </section>
     </details>

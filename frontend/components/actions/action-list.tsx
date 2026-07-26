@@ -74,7 +74,7 @@ function ActionItem({ action, reportId }: { action: ImprovementAction; reportId:
       <div className="flex flex-wrap items-center gap-3">
         <button type="button" className="inline-flex h-9 items-center rounded-md border border-border bg-white px-3 text-sm font-medium disabled:opacity-50" disabled={!hasChanges || (statusChanged && !completionNote.trim()) || mutation.isPending} onClick={() => mutation.mutate()}>保存任务更新</button>
         {saved && <span className="text-sm text-emerald-700">任务已更新</span>}
-        {mutation.isError && <span className="text-sm text-red-600">任务更新失败，请重试。</span>}
+        {mutation.isError && <span role="alert" className="text-sm text-red-600">任务更新失败，请重试。</span>}
       </div>
     </article>
   );

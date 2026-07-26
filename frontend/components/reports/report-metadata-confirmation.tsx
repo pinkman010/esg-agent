@@ -56,7 +56,7 @@ export function ReportMetadataConfirmation({ reportId }: { reportId: string }) {
   });
 
   if (reportQuery.isLoading) return <p className="p-6 text-sm text-muted-foreground">正在读取报告信息...</p>;
-  if (!reportQuery.data) return <p className="p-6 text-sm text-red-700">报告信息读取失败。</p>;
+  if (!reportQuery.data) return <p role="alert" className="p-6 text-sm text-red-700">报告信息读取失败。</p>;
 
   const editableStatuses = new Set(["uploaded", "metadata_detected", "awaiting_confirmation", "ready_for_analysis"]);
   const resultStatuses = new Set(["analysis_completed", "partially_completed", "high_risk_review_completed", "formally_exported", "reopened"]);
@@ -150,7 +150,7 @@ export function ReportMetadataConfirmation({ reportId }: { reportId: string }) {
           </div>
         )}
         {analyzeMutation.isError && !concurrentRunId && (
-          <span className="w-full text-sm text-red-700">分析启动失败，请检查服务配置后重试。</span>
+          <span role="alert" className="w-full text-sm text-red-700">分析启动失败，请检查服务配置后重试。</span>
         )}
       </div>}
     </section>
