@@ -74,4 +74,27 @@ describe("AssessmentTable", () => {
     expect(screen.getByText("第 551–577 项，共 577 项")).toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("page=12"), expect.anything());
   });
+
+  it("shows a clear API error instead of an empty table", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network failed")));
+
+    renderWithQuery(<AssessmentTable reportId="report-1" />);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("完整 GRI 核查范围加载失败");
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+  });
+
+  it("shows a clear empty state when the report has no scope items", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      items: [],
+      page: 1,
+      page_size: 50,
+      total: 0,
+    }), { status: 200, headers: { "content-type": "application/json" } })));
+
+    renderWithQuery(<AssessmentTable reportId="report-1" />);
+
+    expect(await screen.findByText("当前报告暂无 GRI 核查范围")).toBeInTheDocument();
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+  });
 });
