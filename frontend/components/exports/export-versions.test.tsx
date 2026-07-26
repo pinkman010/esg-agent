@@ -34,4 +34,64 @@ describe("ExportVersions", () => {
 
     expect(await screen.findByText("正式输出被阻止：仍有 1 条分析失败或未生成结果。")).toBeInTheDocument();
   });
+
+  it("uses review-priority wording for the review gate", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response("[]", { status: 200, headers: { "content-type": "application/json" } }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        detail: { code: "high_risk_review_incomplete", remaining: 3 },
+      }), { status: 409, headers: { "content-type": "application/json" } }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    renderWithQuery(<ExportVersions reportId="report-1" createdBy="张三" />);
+    fireEvent.click(await screen.findByRole("button", { name: "生成正式输出" }));
+
+    expect(await screen.findByText("正式输出被阻止：仍有 3 条高优先级项目未完成复核。")).toBeInTheDocument();
+    expect(screen.queryByText("高风险")).not.toBeInTheDocument();
+  });
+
+  it("shows auditable version metadata without unsupported download controls", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify([{
+      export_id: "export-2",
+      report_id: "report-1",
+      run_id: "run-1",
+      version_number: 1,
+      status: "formal",
+      is_draft: false,
+      file_hash: "hash",
+      engine_version: "rules-v1",
+      risk_rule_version: "risk-v2.1",
+      requirement_version: "gri-eligible-577-v1",
+      review_scope: {
+        high_priority_total: 12,
+        high_priority_reviewed: 12,
+        analysis_incomplete_total: 0,
+        review_scope_statement: "高优先级队列已完成；不代表全部 577 项均已人工确认。",
+      },
+      file_manifest: [{ format: "xlsx" }],
+      supersedes_export_id: null,
+      created_by: "张三",
+      created_at: "2026-07-26T08:00:00Z",
+    }]), { status: 200, headers: { "content-type": "application/json" } })));
+
+    renderWithQuery(<ExportVersions reportId="report-1" createdBy="张三" />);
+
+    expect(await screen.findByText("正式版本 v1")).toBeInTheDocument();
+    expect(screen.getByText("状态：正式输出")).toBeInTheDocument();
+    expect(screen.getByText(/创建人：张三/)).toBeInTheDocument();
+    expect(screen.getByText(/2026/)).toBeInTheDocument();
+    expect(screen.getByText("高优先级队列已完成；不代表全部 577 项均已人工确认。")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /下载/ })).not.toBeInTheDocument();
+  });
+
+  it("shows an explicit empty state", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("[]", {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    })));
+
+    renderWithQuery(<ExportVersions reportId="report-1" createdBy="张三" />);
+
+    expect(await screen.findByText("尚未生成输出版本")).toBeInTheDocument();
+  });
 });
