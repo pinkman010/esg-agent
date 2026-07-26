@@ -6,7 +6,7 @@
 
 Envision 2024 中文报告 MVP 后端基线 v1.1 已冻结。产品统一对外表达为“完成 577 项 GRI 核查”；内部结构为 577 个标准单元、499 个独立判断项、78 个上下文项、0 个方法待确认项。规则 assessment、DeepSeek suggestion 和人工 snapshot 分层保存，16 条历史判断差异已写入最终裁决资产，当前待裁决数为 0。
 
-当前门禁：后端 651 项测试通过；前端 22 个测试文件、80 项测试、typecheck 和 production build 通过；Envision v3 回归的新增 false disclosed、wrong source page 和 global fallback 均为 0。Goldwind 100 条历史 gate 保留为次级泛化证据，不阻塞 Envision 主线。
+当前门禁：后端 651 项测试通过；前端 28 个测试文件、103 项测试、typecheck 和 production build 通过；Envision v3 回归的新增 false disclosed、wrong source page 和 global fallback 均为 0。Goldwind 100 条历史 gate 保留为次级泛化证据，不阻塞 Envision 主线。
 
 该基线属于本地产品与工程验收，不构成 GRI 专家认证、外部鉴证或企业部署承诺。企业条件适用性仍可能需要企业确认。
 

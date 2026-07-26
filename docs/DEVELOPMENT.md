@@ -292,11 +292,11 @@ uv run --no-sync python -c "from sqlalchemy.engine import make_url; from src.con
 - Codex 内置浏览器控制在本机发生两次桌面应用闪退。自动页面截图改用独立无头 Edge；人工验收使用普通浏览器，不再启用 Codex 内置浏览器。
 - 外部模型和 OCR/VLM 默认关闭。DeepSeek 只在 `confirm_llm=true` 且用户明确批准后启用；OCR/VLM 本轮未启用。
 
-当前自动门禁（2026-07-25）：后端 651 项测试通过；前端 22 个测试文件、80 项测试、typecheck 和 production build 通过；Envision v3 内部结构为 `577/499/78/0`，global fallback、新增 false disclosed 和新增 wrong source page 均为 0，audit 为 0 error、0 warning。16 条历史结果差异全部进入最终裁决资产，其中 13 条与规则一致、3 条需要最终人工覆盖、0 条 pending。Goldwind 100 条历史人工 gold 为 recall 96.08%、false disclosed 0、wrong source page 0、unknown leakage 2，作为低优先级泛化证据，不阻塞 Envision 主线验收。main 与 demo 数据库 head 均为 `0011_ai_suggestions`。
+当前自动门禁（2026-07-26）：后端 651 项测试通过；前端 28 个测试文件、103 项测试、typecheck 和 production build 通过；Envision v3 内部结构为 `577/499/78/0`，global fallback、新增 false disclosed 和新增 wrong source page 均为 0，audit 为 0 error、0 warning。16 条历史结果差异全部进入最终裁决资产，其中 13 条与规则一致、3 条需要最终人工覆盖、0 条 pending。Goldwind 100 条历史人工 gold 为 recall 96.08%、false disclosed 0、wrong source page 0、unknown leakage 2，作为低优先级泛化证据，不阻塞 Envision 主线验收。main 与 demo 数据库 head 均为 `0011_ai_suggestions`。
 
 DeepSeek 225 条真实评估固定使用 Envision 报告 `report-14864b1a3ef64512b0e5d3676a120bc1` 和 run `run-526bd97aef5d4b9baa14618b719081c9`。最终指标：一致 162/224（72.32%），适用性例外 1，累计定向补跑 18 次；guardrail 后 false disclosed、证据 ID 越界、可比错页、schema 失败和模型失败均为 0。该结果保留为 AI 辅助工程基线，不构成 GRI 专家认证或最终合规结论。本轮 v1.1 冻结没有修改 DeepSeek 模型、Prompt、调用范围或 guardrail。
 
-普通 Chrome 已在 `APP_ENV=demo`、`esg_agent_demo` 和 demo runtime 下完成 Envision v1.1 主流程验收。产品通过“重新上传并分析”创建新的 `report_id`，不要求 reset 空库；同一哈希存在多份历史时，重复响应按创建时间返回最新报告。本轮 report 为 `report-15401bb4334e40d4a0885730f2635b22`，run 为 `run-92bf75b11eb042dab6cb689311634fe1`；`confirm_llm=false`，八阶段完成，499 个独立判断项规则失败 0，AI 阶段 skipped，OCR/VLM 均未启用。Dashboard 显示核查范围 577 项；完整范围首尾分页、上下文状态、三栏页图证据和 577 行草稿输出均通过。验收事实见 `docs/product/mvp-acceptance-report.md`。
+普通 Chrome 已在 `APP_ENV=demo`、`esg_agent_demo` 和 demo runtime 下完成 Envision v1.1 主流程验收。产品通过“重新上传并分析”创建新的 `report_id`，不要求 reset 空库；同一哈希存在多份历史时，重复响应按创建时间返回最新报告。本轮 report 为 `report-15401bb4334e40d4a0885730f2635b22`，run 为 `run-92bf75b11eb042dab6cb689311634fe1`；`confirm_llm=false`，八阶段完成，499 个独立判断项规则失败 0，AI 阶段 skipped，OCR/VLM 均未启用。Dashboard 显示核查范围 577 项；完整范围首尾分页、上下文状态和三栏页图证据均通过。验收保存 1 条追加式人工 snapshot，高优先级进度更新为 1/9；创建 1 条关联 `GRI 2-5-a` 的整改任务，并生成草稿 `export-cbe69421eda24bb4b67ca7fa2b9df3b9`。Chrome 自动化无法向原生文件选择器赋值，用户已在普通 Chrome 完成真实重复上传，双路径继续由真实 API 和前端自动测试覆盖。验收事实见 `docs/product/mvp-acceptance-report.md`。
 
 review CSV 生成后必须执行硬门禁自查：
 
@@ -430,6 +430,14 @@ pnpm generate:api
 生成前需要后端在 `http://localhost:8000` 提供 `/openapi.json`。
 
 ## 11. 开发日志
+
+### 2026-07-26
+
+- 完成报告中心前端演示体验优化：首页、报告总览、八阶段进度、完整 577 项核查、三栏复核、整改任务和版本化输出形成连续主路径。
+- 普通产品页面继续统一使用 577 项口径；499 个独立判断项和 78 个上下文项只在技术审计中使用。完整核查支持真实总数、首尾分页和独立项复核跳转，全局搜索与组合筛选保留为非阻断后续项。
+- Demo 验收保存 1 条追加式人工 snapshot，高优先级进度由 0/9 更新为 1/9；创建 1 条关联 `GRI 2-5-a` 的整改任务，并生成记录实际复核范围的新草稿。
+- 最终门禁：后端 651 项、前端 28 个测试文件 103 项、typecheck、production build 和 Envision v3 gate 全部通过；`577/499/78/0`、global fallback 0、新增 false disclosed 0、新增 wrong source page 0、audit 0 error/0 warning。
+- 当前服务和真实写入均确认连接 `esg_agent_demo`；正式库未清空、未重建。外部模型、OCR 和 VLM 均未调用。
 
 ### 2026-07-25
 

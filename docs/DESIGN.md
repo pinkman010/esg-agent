@@ -441,7 +441,7 @@ pnpm build
 
 截至 2026-07-25，Envision 2024 中文报告 MVP 后端基线 v1.1 已冻结。代码迁移 head 为 `0011_ai_suggestions`；结构 manifest 为 `gri-requirement-checklist-v3`；产品方法版本为 `envision-method-v1.1`；结果裁决版本为 `envision-result-v1.1`；复核优先级规则为 `risk-v2.1`。报告上传与 metadata 确认、577 项范围、规则分析、AI 辅助阶段、active run 门禁、后台任务恢复、双队列、追加式复核、三栏工作台、整改任务和版本化输出均已有实现。
 
-v3 技术结构为 `577/499/78/0`：577 个范围单元均处于 `assessed` 或 `context_incorporated` 终态；6 条历史复合提取问题已按版本化方法裁决转为独立判断，16 条历史结果差异已写入最终裁决资产，当前 pending 为 0。Envision v3 gate 的 global fallback、新增 false disclosed 和新增 wrong source page 均为 0，audit 为 0 error、0 warning。后端 651 项测试、前端 22 个测试文件 80 项测试、typecheck 和 production build 全部通过。
+v3 技术结构为 `577/499/78/0`：577 个范围单元均处于 `assessed` 或 `context_incorporated` 终态；6 条历史复合提取问题已按版本化方法裁决转为独立判断，16 条历史结果差异已写入最终裁决资产，当前 pending 为 0。Envision v3 gate 的 global fallback、新增 false disclosed 和新增 wrong source page 均为 0，audit 为 0 error、0 warning。后端 651 项测试、前端 28 个测试文件 103 项测试、typecheck 和 production build 全部通过。
 
 225 条真实 DeepSeek 评估继续作为 AI 辅助工程基线；模型和 Prompt 未因本轮冻结改变。本轮最终产品 run 使用 `confirm_llm=false`，OCR/VLM 均未启用。规则、AI 和人工三层权威关系保持独立。该冻结属于本地产品与工程基线，不构成 GRI 专家认证、外部鉴证或企业部署承诺；企业条件适用性仍可能需要企业确认。Goldwind 历史 100 条 gate 保留为低优先级泛化证据，不阻塞本轮冻结。
 
