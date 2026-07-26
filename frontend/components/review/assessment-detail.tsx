@@ -29,9 +29,10 @@ export function AssessmentDetail({ reportId, detail, reviewerName, onEvidencePag
         <p className="mt-2 text-sm text-muted-foreground">{detail.requirement_text}</p>
       </header>
 
-      <section aria-labelledby="rule-analysis-heading" className="space-y-4 rounded-md border border-border p-4">
+      <section aria-labelledby="rule-analysis-heading" className="space-y-4 rounded-xl border border-border bg-slate-50/60 p-4">
         <div>
-          <h3 id="rule-analysis-heading" className="text-sm font-semibold">规则分析</h3>
+          <p className="text-xs font-medium text-muted-foreground">第 1 层 · 系统字段不可变</p>
+          <h3 id="rule-analysis-heading" className="mt-1 text-sm font-semibold">规则分析</h3>
           <p className="mt-2 text-sm font-medium">
             规则结论：{verdictLabels[detail.system_verdict] ?? detail.system_verdict}
           </p>

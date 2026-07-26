@@ -56,6 +56,7 @@ export function ReviewEditor({ detail, reviewerName, onEvidencePage }: Props) {
         queryClient.invalidateQueries({ queryKey: ["assessment-detail"] }),
         queryClient.invalidateQueries({ queryKey: ["report-assessments"] }),
         queryClient.invalidateQueries({ queryKey: ["report-dashboard"] }),
+        queryClient.invalidateQueries({ queryKey: ["actions"] }),
       ]);
     },
     onError: (error) => setErrorMessage(apiErrorMessage(error)),
@@ -109,9 +110,10 @@ export function ReviewEditor({ detail, reviewerName, onEvidencePage }: Props) {
         onReject={() => suggestion && submit(() => buildRejectAIPayload(detail, suggestion, reviewerName))}
       />
 
-      <section aria-labelledby="human-review-heading" className="space-y-4">
+      <section aria-labelledby="human-review-heading" className="space-y-4 rounded-xl border border-amber-200 bg-amber-50/30 p-4">
         <div>
-          <h3 id="human-review-heading" className="text-sm font-semibold">人工复核</h3>
+          <p className="text-xs font-medium text-muted-foreground">第 3 层 · 追加式人工快照</p>
+          <h3 id="human-review-heading" className="mt-1 text-sm font-semibold">人工复核</h3>
           <p className="mt-2 text-sm font-medium">
             当前有效结论：{verdictLabels[detail.effective_verdict] ?? detail.effective_verdict}
           </p>

@@ -9,7 +9,14 @@ describe("RiskQueue", () => {
 
   it("shows paginated high-priority requirements with Chinese business reasons", async () => {
     const fetchMock = vi.fn((input: string | URL | Request) => {
-      const page = Number(new URL(String(input)).searchParams.get("page") ?? "1");
+      const url = String(input);
+      if (url.endsWith("/dashboard")) {
+        return Promise.resolve(new Response(JSON.stringify({
+          high_priority_total: 12,
+          high_priority_reviewed: 2,
+        }), { status: 200, headers: { "content-type": "application/json" } }));
+      }
+      const page = Number(new URL(url).searchParams.get("page") ?? "1");
       return Promise.resolve(new Response(JSON.stringify({
       items: [{
         assessment_id: `assessment-${page}`,
@@ -36,9 +43,13 @@ describe("RiskQueue", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    renderWithQuery(<RiskQueue reportId="report-1" />);
+    renderWithQuery(<RiskQueue reportId="report-1" selectedAssessmentId="assessment-1" />);
 
     expect(await screen.findByText("GRI 2-1-b")).toBeInTheDocument();
+    expect(screen.getByText("高优先级队列")).toBeInTheDocument();
+    expect(screen.getByText("共 60 项")).toBeInTheDocument();
+    expect(await screen.findByText("已复核 2/12")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /GRI 2-1-b/ })).toHaveAttribute("aria-current", "true");
     expect(screen.getByText("披露结论与证据充分性冲突")).toBeInTheDocument();
     expect(screen.getByText("第 1–50 条，共 60 条")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "下一页" }));

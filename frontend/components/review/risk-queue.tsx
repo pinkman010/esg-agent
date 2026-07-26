@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, ChevronRight, CircleHelp } from "lucide-react";
 import { useEffect, useState } from "react";
 
-import { getApplicabilityQueue, getReviewQueue, saveApplicabilityBatch } from "@/lib/api";
+import { getApplicabilityQueue, getReportDashboard, getReviewQueue, saveApplicabilityBatch } from "@/lib/api";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 
 const PAGE_SIZE = 50;
@@ -23,7 +23,7 @@ const reasonLabels: Record<string, string> = {
   analysis_failed: "该要求分析失败",
 };
 
-export function RiskQueue({ reportId, onSelect, queueType = "priority", reviewerName }: { reportId: string; onSelect?: (assessmentId: string) => void; queueType?: "priority" | "applicability"; reviewerName?: string }) {
+export function RiskQueue({ reportId, onSelect, queueType = "priority", reviewerName, selectedAssessmentId }: { reportId: string; onSelect?: (assessmentId: string) => void; queueType?: "priority" | "applicability"; reviewerName?: string; selectedAssessmentId?: string | null }) {
   const [page, setPage] = useState(1);
   const [batchNote, setBatchNote] = useState("");
   const [batchMessage, setBatchMessage] = useState("");
@@ -32,6 +32,11 @@ export function RiskQueue({ reportId, onSelect, queueType = "priority", reviewer
   const query = useQuery({
     queryKey: [queueType === "priority" ? "review-queue" : "applicability-queue", reportId, page, PAGE_SIZE],
     queryFn: () => queueType === "priority" ? getReviewQueue(reportId, page, PAGE_SIZE) : getApplicabilityQueue(reportId, page, PAGE_SIZE),
+  });
+  const dashboardQuery = useQuery({
+    queryKey: ["report-dashboard", reportId],
+    queryFn: () => getReportDashboard(reportId),
+    enabled: queueType === "priority",
   });
   const batchMutation = useMutation({
     mutationFn: (status: "applicable" | "not_applicable_confirmed") => saveApplicabilityBatch(reportId, {
@@ -52,10 +57,31 @@ export function RiskQueue({ reportId, onSelect, queueType = "priority", reviewer
   });
 
   if (query.isLoading) return <p className="p-4 text-sm text-muted-foreground">正在加载{queueType === "priority" ? "高优先级" : "适用性待判定"}队列...</p>;
+  if (query.isError) return <p role="alert" className="p-4 text-sm text-red-700">复核队列加载失败，请稍后重试。</p>;
   if (!query.data?.items.length && query.data?.total === 0) return <p className="p-4 text-sm text-muted-foreground">当前没有{queueType === "priority" ? "待复核的高优先级项目" : "适用性待判定项目"}。</p>;
 
   return (
     <div>
+      {query.data && (
+        <div className="border-b border-border p-3">
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-sm font-semibold">{queueType === "priority" ? "高优先级队列" : "适用性待判定队列"}</h2>
+            <span className="text-xs font-medium text-muted-foreground">共 {query.data.total} 项</span>
+          </div>
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">
+            {queueType === "priority"
+              ? "处理证据异常、结论冲突和分析失败等需优先人工确认的项目。"
+              : "确认 requirement 是否适用于当前企业；该队列独立于复核优先级。"}
+          </p>
+          {queueType === "priority"
+            && typeof dashboardQuery.data?.high_priority_reviewed === "number"
+            && typeof dashboardQuery.data?.high_priority_total === "number" && (
+            <p className="mt-2 text-xs font-medium text-emerald-800">
+              已复核 {dashboardQuery.data?.high_priority_reviewed}/{dashboardQuery.data?.high_priority_total}
+            </p>
+          )}
+        </div>
+      )}
       {queueType === "applicability" && query.data && (
         <div className="space-y-2 border-b border-border p-3">
           <p className="text-xs text-muted-foreground">批量处理当前页 {query.data.items.length} 条；每次判断均写入追加式审计记录。</p>
@@ -93,7 +119,8 @@ export function RiskQueue({ reportId, onSelect, queueType = "priority", reviewer
         <button
           key={item.assessment_id}
           type="button"
-          className="grid w-full grid-cols-[20px_1fr_18px] gap-2 px-3 py-3 text-left hover:bg-muted"
+          aria-current={selectedAssessmentId === item.assessment_id ? "true" : undefined}
+          className={`grid w-full grid-cols-[20px_1fr_18px] gap-2 border-l-2 px-3 py-3 text-left hover:bg-muted ${selectedAssessmentId === item.assessment_id ? "border-l-accent bg-emerald-50/70" : "border-l-transparent"}`}
           onClick={() => onSelect?.(item.assessment_id)}
         >
           <Icon aria-hidden="true" className={`mt-0.5 h-4 w-4 ${queueType === "priority" ? "text-red-600" : "text-amber-600"}`} />

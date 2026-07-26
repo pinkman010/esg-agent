@@ -45,7 +45,7 @@ describe("AISuggestionPanel", () => {
   it("shows a neutral empty state when no suggestion exists", () => {
     renderPanel(null);
 
-    expect(screen.getByText("该核查项暂无 AI 建议")).toBeInTheDocument();
+    expect(screen.getByText("本次分析未启用或该项无 AI 建议")).toBeInTheDocument();
     expect(screen.getByText(/AI 建议仅供人工复核参考/)).toBeInTheDocument();
   });
 

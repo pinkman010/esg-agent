@@ -35,6 +35,9 @@ describe("ActionCreator", () => {
       />,
     );
 
+    const summary = screen.getByText("创建整改任务", { selector: "summary" });
+    expect(summary.closest("details")).not.toHaveAttribute("open");
+    fireEvent.click(summary);
     fireEvent.click(screen.getByRole("button", { name: "创建整改任务" }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
 

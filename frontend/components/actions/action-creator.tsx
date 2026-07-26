@@ -48,9 +48,13 @@ export function ActionCreator({
   });
 
   return (
-    <section className="border-t border-border pt-4">
-      <h3 className="text-sm font-semibold">创建整改任务</h3>
-      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+    <details className="group border-t border-border pt-4">
+      <summary className="cursor-pointer list-none text-sm font-semibold text-foreground">
+        创建整改任务
+        <span className="ml-2 text-xs font-normal text-muted-foreground">复核完成后按需展开</span>
+      </summary>
+      <section className="mt-3 rounded-lg border border-border bg-muted/20 p-4">
+      <div className="grid gap-3 sm:grid-cols-2">
         <label className="text-xs font-medium sm:col-span-2">
           任务标题
           <input aria-label="任务标题" className="mt-1 h-9 w-full rounded-md border border-border px-3 font-normal" value={title} onChange={(event) => setTitle(event.target.value)} />
@@ -83,6 +87,7 @@ export function ActionCreator({
         {created && <><span className="text-sm text-emerald-700">整改任务已创建</span><Link className="text-sm font-medium text-accent" href={`/reports/${reportId}/actions`}>查看整改任务</Link></>}
         {mutation.isError && <span className="text-sm text-red-600">整改任务创建失败，请重试。</span>}
       </div>
-    </section>
+      </section>
+    </details>
   );
 }

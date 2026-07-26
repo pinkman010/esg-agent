@@ -29,14 +29,15 @@ export function AISuggestionPanel({
   const usable = isUsableAISuggestion(suggestion);
 
   return (
-    <section className="rounded-md border border-emerald-200 bg-emerald-50/40 p-4">
+    <section className="rounded-xl border border-sky-200 bg-sky-50/40 p-4">
+      <p className="mb-1 text-xs font-medium text-muted-foreground">第 2 层 · 辅助建议</p>
       <div className="flex items-center gap-2">
         <Sparkles aria-hidden="true" className="h-4 w-4 text-emerald-700" />
         <h3 className="text-sm font-semibold">AI 辅助建议</h3>
       </div>
 
       {!suggestion && (
-        <p className="mt-3 text-sm text-muted-foreground">该核查项暂无 AI 建议</p>
+        <p className="mt-3 text-sm text-muted-foreground">本次分析未启用或该项无 AI 建议</p>
       )}
 
       {suggestion && (
