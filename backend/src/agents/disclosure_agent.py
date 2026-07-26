@@ -668,7 +668,6 @@ class DisclosureAgent:
 
     def _apply_textual_sufficiency_guardrails(self, *, task: DisclosureTask, contract, evidence_text: str, ontology_result):
         evidence_text_lower = evidence_text.lower()
-        requirement_text_lower = task.requirement_text.lower()
         if (
             contract.semantic_group is SemanticGroup.SUPPLIER_ASSESSMENT
             and RequirementFacet.REQUIRES_PERCENTAGE in contract.facets

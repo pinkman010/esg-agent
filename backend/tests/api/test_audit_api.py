@@ -1,10 +1,10 @@
 import pytest
 
-pytestmark = pytest.mark.anyio
-
 from src.db.repositories import Repository
 from src.domain.enums import RunStatus
 from src.domain.models import AnalysisRun, Report
+
+pytestmark = pytest.mark.anyio
 
 
 def seed_audit_data(session):

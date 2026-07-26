@@ -7,7 +7,7 @@ from src.db.session import get_db_session
 from src.domain.enums import ReportStatus
 from src.services.analysis_job import execute_analysis_job
 from src.api.schemas import AnalysisRunResponse, AnalysisStageResponse
-from src.domain.models import AnalysisRun, AnalysisStageEvent, DisclosureAssessment, Recommendation
+from src.domain.models import AnalysisRun, DisclosureAssessment, Recommendation
 
 router = APIRouter(prefix="/api/runs", tags=["runs"])
 

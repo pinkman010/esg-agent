@@ -1,11 +1,11 @@
 import pytest
 
-pytestmark = pytest.mark.anyio
-
 from src.db.repositories import Repository
 from src.domain.ai_models import AIAssessmentSuggestion
 from src.domain.enums import AISuggestionStatus, AssessmentVerdict, EvidenceSourceMethod, ReviewStatus, RunStatus
 from src.domain.models import AnalysisRun, AnalysisStageEvent, DisclosureAssessment, EvidenceItem, Recommendation, Report
+
+pytestmark = pytest.mark.anyio
 
 
 def seed_run(session):

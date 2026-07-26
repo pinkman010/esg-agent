@@ -1,4 +1,4 @@
-from src.domain.enums import AssessmentVerdict, ReviewStatus
+from src.domain.enums import AssessmentVerdict
 from src.standards.evidence_contracts import get_requirement_contract
 from src.standards.evidence_ontology import EvidenceKind, RequirementFacet, SemanticGroup
 from src.standards.no_evidence_guardrails import NoEvidenceGuardrailCategory, get_no_evidence_guardrail

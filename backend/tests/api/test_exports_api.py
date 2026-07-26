@@ -3,8 +3,6 @@ from pathlib import Path
 import pytest
 from openpyxl import load_workbook
 
-pytestmark = pytest.mark.anyio
-
 from sqlalchemy import select
 
 from src.db.models import AssessmentRecord, AuditEventRecord
@@ -15,6 +13,8 @@ from src.domain.models import AnalysisRun, DisclosureAssessment, DisclosureTask,
 from src.services.risk_service import calculate_and_store_risk
 from src.services.review_service import ReviewService
 from src.standards.gri import GRIAdapter
+
+pytestmark = pytest.mark.anyio
 
 
 def seed_export_data(session):

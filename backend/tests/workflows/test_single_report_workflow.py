@@ -10,7 +10,7 @@ from src.db.base import Base
 from src.db.models import AnalysisStageEventRecord, AssessmentRecord, AuditEventRecord, DisclosureTaskRecord, EvidenceItemRecord, RecommendationRecord
 from src.db.repositories import Repository
 from src.domain.enums import AssessmentVerdict, EvidenceSourceMethod, RunStatus
-from src.domain.models import AnalysisRun, DisclosureAssessment, DisclosureRequirement, DocumentChunk, EvidenceItem, PageExtraction, Report
+from src.domain.models import DisclosureAssessment, DisclosureRequirement, DocumentChunk, EvidenceItem, PageExtraction, Report
 from src.services.ai_assessment_service import AIAssessmentService
 from src.services.document_parser import ParsedDocument
 from src.tools.llm_client import LLMCompletionError, LLMCompletionResult
