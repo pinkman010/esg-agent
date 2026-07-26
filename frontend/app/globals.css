@@ -3,13 +3,17 @@
 @tailwind utilities;
 
 :root {
-  --background: 150 18% 96%;
-  --foreground: 210 12% 14%;
-  --border: 180 8% 78%;
-  --muted: 150 9% 91%;
-  --muted-foreground: 210 8% 42%;
-  --accent: 168 72% 31%;
+  --background: 150 16% 97%;
+  --foreground: 156 23% 12%;
+  --border: 156 12% 84%;
+  --muted: 150 13% 93%;
+  --muted-foreground: 156 8% 43%;
+  --accent: 164 78% 29%;
   --accent-foreground: 0 0% 100%;
+  --priority-high: 0 72% 51%;
+  --priority-medium: 39 88% 48%;
+  --priority-low: 158 63% 39%;
+  --applicability: 202 69% 48%;
 }
 
 * {
@@ -25,7 +29,7 @@ body {
   margin: 0;
   background: hsl(var(--background));
   color: hsl(var(--foreground));
-  font-family: Inter, "Segoe UI", Arial, sans-serif;
+  font-family: "Segoe UI Variable", "Microsoft YaHei UI", "PingFang SC", "Noto Sans CJK SC", Arial, sans-serif;
   letter-spacing: 0;
 }
 
@@ -39,4 +43,20 @@ input,
 textarea,
 select {
   font: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid hsl(var(--accent));
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
