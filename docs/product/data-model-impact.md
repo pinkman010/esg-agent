@@ -102,6 +102,29 @@ RunStatus 扩展 `partially_completed`。父 run 用于失败项重跑，不覆�
 
 该表只追加，失败和重试均保留独立记录。AI suggestion 不覆盖 `assessments`、`assessment_risks` 或 `review_snapshots`，不能直接改变适用性、复核优先级和正式输出门禁。report/run 删除时才随外键 cascade 删除。
 
+### `document_chunk_embeddings`
+
+`0012_chunk_embeddings` 新增可重建的影子向量派生表：
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `chunk_id` | VARCHAR(64) FK/复合 PK | 来源 `document_chunks`，删除 chunk 时 cascade |
+| `provider` | VARCHAR(64)/复合 PK | 当前为 `siliconflow` |
+| `model` | VARCHAR(128)/复合 PK | 当前为 `BAAI/bge-m3` |
+| `embedding_dim` | INTEGER | 固定为 1024 |
+| `embedding` | nullable `vector(1024)` | succeeded 必填，failed 必须为空 |
+| `input_hash` | VARCHAR(64) | 规范化输入、provider 和 model 的 SHA256 |
+| `status` | VARCHAR(32) | succeeded / failed |
+| `error_code` / `error_message` | nullable | 失败分类，不保存密钥 |
+| `usage` | JSONB | 服务商返回的用量摘要 |
+| `latency_ms` | nullable INTEGER | 非负 |
+| `retry_count` | INTEGER | 非负 |
+| `created_at` / `updated_at` | TIMESTAMPTZ | 创建与最近重建时间 |
+
+主键 `(chunk_id, provider, model)` 允许同一 chunk 对不同模型独立重建。第一阶段只建立 provider/model 和 status 普通索引，单报告精确余弦检索不创建 IVFFlat/HNSW。failed 记录使用 `NULL` embedding，禁止零向量伪装成功。
+
+该表不复用或回写 `document_chunks.embedding_status`、`embedding_model`、`embedding_dim`、`embedding_updated_at` 旧字段。它不属于正式 evidence、AI suggestion、assessment 或审计事实；删除并重建不会改变规则结果。影子召回、批量指标和 RAG 生成结果只写 `tmp/embedding/`，不新增正式数据库消费者。
+
 ### `assessment_risks`
 
 | 字段 | 类型 |
@@ -210,11 +233,12 @@ API 只通过 repository/service 组装该视图，避免前端合并历史。
 6. 为 `analysis_runs(report_id)` 增加 active 状态部分唯一索引；
 7. 为风险快照和人工快照增加 risk-v2.1 三个 nullable 维度字段；
 8. 为 run/task 增加标准结构字段并创建追加式 AI suggestion 表；
-9. 回填现有 report/run 默认状态和版本；
-10. 将现有 review_decisions 转为 review snapshot，保留原表；
-11. 切换 API 写路径；
-12. 新写路径启用后，将旧 `review_decisions` 标记 deprecated，并开始两个连续阶段验收周期；每轮验证历史记录映射、只读查询和新旧结果一致性；
-13. 两轮均通过且备份、行数、主键关联和字段映射一致后，在独立 Alembic revision 中清理旧表。任一检查失败时停止清理并保留旧表。
+9. 启用 pgvector 并创建可重建的 `document_chunk_embeddings`；
+10. 回填现有 report/run 默认状态和版本；
+11. 将现有 review_decisions 转为 review snapshot，保留原表；
+12. 切换 API 写路径；
+13. 新写路径启用后，将旧 `review_decisions` 标记 deprecated，并开始两个连续阶段验收周期；每轮验证历史记录映射、只读查询和新旧结果一致性；
+14. 两轮均通过且备份、行数、主键关联和字段映射一致后，在独立 Alembic revision 中清理旧表。任一检查失败时停止清理并保留旧表。
 
 每步独立 Alembic revision，支持前滚和结构回滚。包含数据回填的 revision 在 downgrade 时不得静默丢失人工记录，应阻止 downgrade 并提示先导出备份。
 
@@ -227,7 +251,7 @@ API 只通过 repository/service 组装该视图，避免前端合并历史。
 
 ## 8. 当前实施状态
 
-截至 2026-07-20，代码 migration head 为 `0011_ai_suggestions`。`0010` 增加 risk-v2.1 维度；`0011` 增加 run 的标准结构计数、task 的原始文本/上下文/结构状态，并创建追加式 `ai_assessment_suggestions`。两个 migration 均不回填或删除历史记录。`0011 downgrade()` 会删除全部 AI suggestion、task 结构字段和 run 结构计数，因此验收环境禁止 downgrade；需要回退时先保存数据库备份和验收产物，并由人工确认数据损失范围。新写路径继续使用 `review_snapshots` 和 `review_change_events`，规则判断、AI建议、风险、整改和输出分别写入独立表。
+截至 2026-07-26，代码 migration head 为 `0012_chunk_embeddings`。`0010` 增加 risk-v2.1 维度；`0011` 增加 run 的标准结构计数、task 的原始文本/上下文/结构状态，并创建追加式 `ai_assessment_suggestions`；`0012` 启用 pgvector 并创建 `document_chunk_embeddings`。`0012` 已在 `esg_agent_test` 升级验证，main/demo 数据库在独立批准前仍保持 `0011_ai_suggestions`。三个 migration 均不回填或删除历史业务记录。`0011 downgrade()` 会删除全部 AI suggestion、task 结构字段和 run 结构计数，因此验收环境禁止 downgrade；`0012 downgrade()` 会删除全部影子向量，虽可重建，执行前仍需确认。新写路径继续使用 `review_snapshots` 和 `review_change_events`，规则判断、AI建议、风险、整改和输出分别写入独立表。
 
 demo 在线重置不新增业务表：同一事务内先删除 `audit_events`，再删除 `reports` 根记录并依赖外键 cascade 清理报告、run、assessment、复核、整改和输出数据。该路径只允许 `esg_agent_demo`；`esg_agent` 不提供清理入口。
 

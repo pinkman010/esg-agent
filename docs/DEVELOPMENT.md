@@ -82,6 +82,22 @@ DeepSeek 相关环境变量：
 
 外部模型默认关闭。只有分析请求显式传入 `confirm_llm=true` 才允许调用；失败 suggestion 追加保留并降级，不能覆盖规则 assessment、人工 snapshot、适用性或正式输出门禁。
 
+SiliconFlow BGE-M3 离线影子 RAG 环境变量：
+
+- `EMBEDDING_ENABLED=false`：默认关闭；
+- `EMBEDDING_PROVIDER=siliconflow`；
+- `EMBEDDING_API_BASE=https://api.siliconflow.cn/v1`；
+- `EMBEDDING_API_KEY`：只保存在本机 `backend/.env` 或当前 shell，禁止提交；
+- `EMBEDDING_MODEL=BAAI/bge-m3`；
+- `EMBEDDING_DIM=1024`；
+- `EMBEDDING_BATCH_SIZE=16`；
+- `EMBEDDING_MAX_INPUT_TOKENS=8192`；
+- `EMBEDDING_MAX_INPUT_CHARS=6000`；
+- `EMBEDDING_TIMEOUT_SECONDS=60`；
+- `EMBEDDING_MAX_RETRIES=2`。
+
+`EMBEDDING_ENABLED=true` 只表示允许 embedding client 发起调用，仍需执行当次人工批准。DeepSeek 影子生成另需 `--confirm-llm` 和单独批准；两个授权不能互相替代。
+
 测试默认使用独立 PostgreSQL 数据库，避免清空开发库：
 
 - `TEST_DATABASE_URL` 未设置时默认指向测试库名 `esg_agent_test`。
@@ -190,7 +206,7 @@ uv run --no-sync uvicorn src.main:app --reload --port 8000
 
 ## 7. 企业产品闭环验收
 
-当前代码 Alembic head：`0011_ai_suggestions`。`0003` 至 `0008` 覆盖报告 metadata、分析阶段、风险快照、人工复核快照、整改任务和版本化输出；`0009` 增加 active run 唯一索引；`0010` 增加 risk-v2.1 维度；`0011` 增加标准结构计数、task 上下文和追加式 AI suggestion。启动后端前必须执行 `uv run --no-sync alembic upgrade head`。
+当前代码 Alembic head：`0012_chunk_embeddings`。`0003` 至 `0008` 覆盖报告 metadata、分析阶段、风险快照、人工复核快照、整改任务和版本化输出；`0009` 增加 active run 唯一索引；`0010` 增加 risk-v2.1 维度；`0011` 增加标准结构计数、task 上下文和追加式 AI suggestion；`0012` 启用 pgvector 并增加只读影子向量派生表。main/demo 数据库升级 `0012` 前必须单独确认目标数据库，启动使用代码 head 的后端前执行 `uv run --no-sync alembic upgrade head`。
 
 核心产品 API：
 
@@ -429,7 +445,80 @@ pnpm generate:api
 
 生成前需要后端在 `http://localhost:8000` 提供 `/openapi.json`。
 
-## 11. 开发日志
+## 11. SiliconFlow BGE-M3 离线影子 RAG
+
+当前阶段只处理显式指定报告的 `document_chunks`。结果只进入 `tmp/embedding/`，不接入 `retrieve_evidence()`、`SingleReportWorkflow`、正式 API 或前端，不改变 assessment、risk、AI suggestion、人工 snapshot 和 export。
+
+先在测试库验证 migration：
+
+```powershell
+cd backend
+$env:APP_ENV="test"
+$env:DATABASE_URL="postgresql+psycopg://esg_agent:esg_agent@localhost:5432/esg_agent_test"
+uv run --no-sync python -c "from sqlalchemy.engine import make_url; from src.config.settings import get_settings; print(make_url(get_settings().database_url).database)"
+uv run --no-sync alembic upgrade head
+uv run --no-sync alembic current
+```
+
+输出数据库名必须为 `esg_agent_test`，head 必须为 `0012_chunk_embeddings`。main/demo migration 需要分别批准，不能用测试库通过替代环境确认。
+
+真实 SiliconFlow 调用前，由用户在本机环境配置 `EMBEDDING_API_KEY` 并明确批准。命令不得打印密钥：
+
+```powershell
+cd backend
+$env:EMBEDDING_ENABLED="true"
+uv run --no-sync python -m src.tools.embed_document_chunks `
+  --report-id report-xxx `
+  --limit 128
+uv run --no-sync python -m src.tools.shadow_vector_retrieval `
+  --report-id report-xxx `
+  --query "温室气体排放范围一和范围二披露" `
+  --top-k 10 `
+  --output tmp/embedding/ghg_scope_search.csv
+```
+
+批量召回评估使用人工复核工作簿的 `correct_pdf_pages` 作为 gold pages，以 regeneration CSV 的 candidate/source pages 作为规则召回对照：
+
+```powershell
+cd backend
+uv run --no-sync python -m src.tools.evaluate_shadow_retrieval `
+  --report-id report-xxx `
+  --requirements data/manifests/gri_requirement_checklist_v3.json `
+  --baseline data/review_inputs/envision_2024/baselines/current_577_review_regenerated.csv `
+  --manual-review-workbook data/review_inputs/envision_2024/manual/envision_2024_577_manual_review_second_review_Pro_20260719.xlsx `
+  --top-k 10 `
+  --output-prefix tmp/embedding/envision_shadow_retrieval
+```
+
+输出包括：
+
+- `envision_shadow_retrieval_cases.csv`：499 个独立 assessment 的逐项召回明细；
+- `envision_shadow_retrieval_summary.json`：`hit@k`、`recall@k`、MRR 和规则/向量命中对照；
+- 没有人工 `correct_pdf_pages` 的 requirement 保留在明细中，但不进入召回指标分母。
+
+构造 context pack 不调用 DeepSeek：
+
+```powershell
+cd backend
+uv run --no-sync python -m src.tools.build_shadow_rag_contexts `
+  --report-id report-xxx `
+  --retrieval-cases tmp/embedding/envision_shadow_retrieval_cases.csv `
+  --output tmp/embedding/envision_shadow_rag_contexts.jsonl
+```
+
+可选生成评估属于独立停止点。取得 DeepSeek 真实调用批准且本机已经配置 `OPENAI_COMPATIBLE_API_KEY` 后，才允许显式传入：
+
+```powershell
+cd backend
+uv run --no-sync python -m src.tools.evaluate_shadow_rag `
+  --contexts tmp/embedding/envision_shadow_rag_contexts.jsonl `
+  --confirm-llm `
+  --output-prefix tmp/embedding/envision_shadow_rag
+```
+
+影子输出使用 `shadow_*` 字段和 `shadow-chunk:<chunk_id>`，不构成最终合规结论。真实 SiliconFlow 和真实 DeepSeek 调用需要分别批准。
+
+## 12. 开发日志
 
 ### 2026-07-26
 

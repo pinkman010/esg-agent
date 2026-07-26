@@ -39,7 +39,7 @@ ESG-Agent 第一版面向企业 ESG 团队，提供单报告 GRI 核查闭环。
 | --- | --- |
 | 仓库 | Monorepo：`backend`、`frontend`、`docs` |
 | 后端 | Python 3.11、FastAPI、Pydantic v2 |
-| 数据库 | PostgreSQL、SQLAlchemy 2.0、Alembic，预留 pgvector |
+| 数据库 | PostgreSQL、SQLAlchemy 2.0、Alembic、pgvector |
 | 前端 | Next.js App Router、TypeScript |
 | UI | Tailwind CSS、shadcn/ui、lucide icons |
 | 数据请求 | TanStack Query |
@@ -310,7 +310,8 @@ report profile 只提供当前报告的候选证据路由。通用逻辑依赖�
 - `review_snapshots`：人工结果快照；
 - `review_change_events`：字段级变更；
 - `improvement_actions`：整改任务；
-- `export_versions`：草稿和正式输出版本。
+- `export_versions`：草稿和正式输出版本；
+- `document_chunk_embeddings`：可重建的影子向量派生数据。
 
 `reports` 扩展企业、年度、语言、metadata confirmation 和报告状态；`analysis_runs` 扩展引擎版本、风险规则版本和部分失败统计。具体字段和迁移顺序以 `docs/product/data-model-impact.md` 为准。
 
@@ -319,6 +320,8 @@ report profile 只提供当前报告的候选证据路由。通用逻辑依赖�
 `0010_risk_v2_dimensions` 为 `assessment_risks` 增加 nullable `evidence_status`、`applicability_status`，并为 `review_snapshots` 增加 nullable `reviewed_applicability_status`。迁移不回填 risk-v1 历史行，不删除旧列；新 risk-v2.1 快照由服务写入明确维度值。
 
 `0011_ai_suggestions` 为 `analysis_runs` 增加标准单元、独立判断、上下文和方法待确认四类范围计数字段，为 `disclosure_tasks` 增加原始文本、父级上下文和结构状态，并新增追加式 `ai_assessment_suggestions`。当前 v3 内部计数为 `577/499/78/0`。AI suggestion 记录模型、Prompt 版本、输入哈希、建议 verdict、中文依据、缺失项、证据引用、guardrail、usage、失败和原始响应；外键删除只随所属 report/run 级联，不提供覆盖规则 assessment 或人工 snapshot 的写路径。
+
+`0012_chunk_embeddings` 启用 pgvector 并新增 `document_chunk_embeddings`。该表按 `(chunk_id, provider, model)` 保存 nullable `vector(1024)`，只用于显式指定报告的离线影子召回。失败记录不保存零向量。第一阶段不创建近似索引，不读取或回写 `document_chunks` 的旧 embedding 状态字段。
 
 替代接口或新表实际启用后，旧接口和旧表进入两个连续阶段验收周期的兼容窗口。每个周期必须有自动回归覆盖；连续两轮通过且历史数据映射一致后，才允许在后续独立迁移中清理。审批日期和仅完成代码定义不计入兼容周期。
 
@@ -346,6 +349,8 @@ PDF 继续采用分级路由：pypdf/pdfplumber 为默认主链路；扫描关�
 证据工作台通过 `GET /api/reports/{report_id}/pages/{page_number}/image` 按页渲染原始 PDF 的 PNG 预览。该预览只读、按需生成并允许私有缓存；原始 PDF 仍通过文件接口保留，不覆盖、不转换为新的事实来源。
 
 DeepSeek 使用 OpenAI-compatible 薄适配层。`confirm_llm=false` 时 AI 阶段记录为 skipped 且不实例化外部调用；`confirm_llm=true` 仍只对结构独立、具有直接证据并进入高/中复核优先级的条目调用。AI 建议只追加保存，不能设置适用性、风险优先级、人工复核状态或正式输出状态；模型失败只使 AI 阶段部分失败，不使确定性分析 run 失败。
+
+SiliconFlow `BAAI/bge-m3` 第一阶段属于离线影子 RAG。`EMBEDDING_ENABLED=false` 为默认值；真实调用还需执行当次人工批准。工具只向量化显式 `report_id` 下的 `document_chunks`，使用精确余弦排序，并把单条召回、批量指标、context pack 和可选生成评估写入 `tmp/embedding/`。它不接入 `retrieve_evidence()`、`SingleReportWorkflow`、正式 API 或前端，不写 `evidence_items`、`ai_assessment_suggestions`、assessment、risk、review snapshot 和 export。
 
 硬性原则：
 
@@ -439,7 +444,7 @@ pnpm build
 
 ## 18. 当前实现与验收状态
 
-截至 2026-07-25，Envision 2024 中文报告 MVP 后端基线 v1.1 已冻结。代码迁移 head 为 `0011_ai_suggestions`；结构 manifest 为 `gri-requirement-checklist-v3`；产品方法版本为 `envision-method-v1.1`；结果裁决版本为 `envision-result-v1.1`；复核优先级规则为 `risk-v2.1`。报告上传与 metadata 确认、577 项范围、规则分析、AI 辅助阶段、active run 门禁、后台任务恢复、双队列、追加式复核、三栏工作台、整改任务和版本化输出均已有实现。
+截至 2026-07-26，Envision 2024 中文报告 MVP 后端业务基线 v1.1 已冻结。代码迁移 head 为 `0012_chunk_embeddings`，main/demo 数据库在取得独立升级批准前仍保持 `0011_ai_suggestions`；结构 manifest 为 `gri-requirement-checklist-v3`；产品方法版本为 `envision-method-v1.1`；结果裁决版本为 `envision-result-v1.1`；复核优先级规则为 `risk-v2.1`。`0012` 只增加影子派生表，不改变报告上传、metadata、577 项范围、规则分析、AI 辅助阶段、active run 门禁、后台任务恢复、双队列、追加式复核、三栏工作台、整改任务或版本化输出。
 
 v3 技术结构为 `577/499/78/0`：577 个范围单元均处于 `assessed` 或 `context_incorporated` 终态；6 条历史复合提取问题已按版本化方法裁决转为独立判断，16 条历史结果差异已写入最终裁决资产，当前 pending 为 0。Envision v3 gate 的 global fallback、新增 false disclosed 和新增 wrong source page 均为 0，audit 为 0 error、0 warning。后端 651 项测试、前端 28 个测试文件 103 项测试、typecheck 和 production build 全部通过。
 
@@ -464,3 +469,16 @@ v3 技术结构为 `577/499/78/0`：577 个范围单元均处于 `assessed` 或 
 `POST /api/demo/reset` 仅作为维护接口保留，不由普通前端流程调用。在线重置必须校验 `APP_ENV=demo`、配置数据库名、`SELECT current_database()` 的实际库名、上传/派生目录边界、精确确认口令和不存在 active run。数据库先在一个事务内追加重置审计并删除 report 根业务数据，再清理 `uploads/derived`；运行时目录包含 reparse point 时拒绝清理。数据库已清空而文件清理失败时返回结构化部分失败，禁止伪装成全部成功。
 
 后端启动不会自动清空 demo；离线 `reset_demo_environment` 继续作为服务停止后的故障恢复路径。外部模型、OCR 和 VLM 继续默认关闭。
+
+## 20. 离线影子 RAG 与后续接入边界
+
+第一阶段质量评估以 Envision 人工复核工作簿的 `correct_pdf_pages` 作为 gold pages，系统 regeneration CSV 的 candidate/source pages 只作为现有规则召回对照。没有人工正确页的 requirement 保留在明细中，但不进入 `hit@k`、`recall@k` 和 MRR 分母。该口径衡量“能否找回人工确认页面”，不能替代对披露充分性和企业适用性的人工判断。
+
+shadow context 使用 `shadow-chunk:<chunk_id>`，与正式 `evidence_id` 隔离。可选 DeepSeek 生成使用独立 `shadow-rag-v1` prompt，只能引用当前 context 中的 shadow evidence；越界引用、页码不一致、无证据 disclosed 和 partial 无缺失项均进入影子 guardrail。生成结果只写本地诊断文件。
+
+后续分为两个独立阶段：
+
+1. Phase 2 只允许影子 RAG 候选进入正式 AI suggestion 输入，仍不能覆盖规则 assessment。进入条件包括 `recall@5` 不低于规则基线、存在人工确认的 vector-only 新证据、影子生成抽查完成，且 false disclosed、wrong source page、invalid citation 均为 0。
+2. Phase 3 才评估向量候选能否晋升为正式 evidence 并影响 assessment。该阶段需要独立解除后端冻结，重新设计证据准入、审计、降级、risk-v2.1、review、export 和历史 run 重放，并通过 Envision 全量及独立报告泛化门禁。
+
+当前 migration 和环境开关不能自动启用 Phase 2 或 Phase 3。
