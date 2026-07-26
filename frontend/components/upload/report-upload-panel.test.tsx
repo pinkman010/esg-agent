@@ -55,6 +55,7 @@ describe("ReportUploadPanel", () => {
 
     renderWithQuery(<ReportUploadPanel />);
 
+    expect(screen.queryByText(/577/)).not.toBeInTheDocument();
     const file = new File(["pdf"], "report.pdf", { type: "application/pdf" });
     fireEvent.change(screen.getByLabelText("PDF 报告文件"), { target: { files: [file] } });
     fireEvent.click(screen.getByRole("button", { name: "上传 PDF" }));

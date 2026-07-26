@@ -49,7 +49,7 @@ export function ReportUploadPanel() {
   const isPending = uploadMutation.isPending || reuploadMutation.isPending;
 
   return (
-    <section className="min-w-0 rounded-lg border border-border bg-white p-5 shadow-sm">
+    <section className="min-w-0 rounded-xl border border-border bg-white p-5 shadow-sm">
       <div className="flex items-start justify-between gap-4 border-b border-border pb-4">
         <div>
           <h2 className="text-base font-semibold tracking-normal">上传 ESG 报告</h2>
@@ -63,7 +63,7 @@ export function ReportUploadPanel() {
             id="pdf-report"
             aria-label="PDF 报告文件"
             accept="application/pdf,.pdf"
-            className="block w-full min-w-0 max-w-full rounded-md border border-border bg-white px-3 py-2 text-sm file:mr-2 file:rounded-md file:border-0 file:bg-muted file:px-3 file:py-2 file:text-sm file:font-medium"
+            className="block w-full min-w-0 max-w-full rounded-lg border border-dashed border-border bg-muted/30 px-3 py-3 text-sm file:mr-2 file:rounded-md file:border-0 file:bg-white file:px-3 file:py-2 file:text-sm file:font-medium"
             type="file"
             onChange={(event) => {
               setSelectedFile(event.currentTarget.files?.[0] ?? null);
@@ -72,6 +72,7 @@ export function ReportUploadPanel() {
               reuploadMutation.reset();
             }}
           />
+          {selectedFile && <p className="text-xs text-muted-foreground">已选择：{selectedFile.name}</p>}
           <button
             className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-accent px-4 text-sm font-medium text-accent-foreground disabled:cursor-not-allowed disabled:opacity-50"
             disabled={!selectedFile || isPending}
@@ -82,21 +83,21 @@ export function ReportUploadPanel() {
             上传 PDF
           </button>
           {uploadMutation.error && (
-            <div className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+            <div className={`flex items-start gap-2 rounded-lg border p-3 text-sm ${duplicateReport ? "border-amber-200 bg-amber-50 text-amber-900" : "border-red-200 bg-red-50 text-red-700"}`}>
               <AlertCircle aria-hidden="true" className="mt-0.5 h-4 w-4" />
               {duplicateReport ? (
                 <div className="space-y-2">
                   <p>报告已存在</p>
                   <div className="flex flex-wrap gap-2">
                     <button
-                      className="rounded-md border border-red-300 bg-white px-3 py-1.5 font-medium text-red-700"
+                      className="rounded-md border border-amber-300 bg-white px-3 py-1.5 font-medium text-amber-900"
                       type="button"
                       onClick={() => router.push(`/reports/${duplicateReport.report_id}/dashboard`)}
                     >
                       查看已有结果
                     </button>
                     <button
-                      className="rounded-md border border-red-300 bg-white px-3 py-1.5 font-medium text-red-700"
+                      className="rounded-md border border-amber-300 bg-white px-3 py-1.5 font-medium text-amber-900"
                       disabled={isPending || !selectedFile}
                       type="button"
                       onClick={() => {

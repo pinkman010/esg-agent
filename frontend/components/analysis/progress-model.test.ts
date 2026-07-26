@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { analysisStages, calculateAnalysisProgress, isAnalysisProgressStalled } from "./progress-model";
+import { analysisStages, analysisStageWeights, calculateAnalysisProgress, isAnalysisProgressStalled } from "./progress-model";
 
 const completed = (stage_code: string) => ({
   stage_code,
@@ -23,6 +23,7 @@ describe("calculateAnalysisProgress", () => {
       "ai_assistance",
       "result_summary",
     ]);
+    expect(Object.values(analysisStageWeights).reduce((sum, weight) => sum + weight, 0)).toBe(100);
   });
 
   it("uses review-priority wording for the classification stage", () => {

@@ -7,8 +7,8 @@ import { ReportMetadataConfirmation } from "./report-metadata-confirmation";
 const router = vi.hoisted(() => ({ push: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
 
-function jsonResponse(body: unknown) {
-  return new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json" } });
+function jsonResponse(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 }
 
 function reportWithStatus(status: string) {
@@ -58,6 +58,7 @@ describe("ReportMetadataConfirmation", () => {
     renderWithQuery(<ReportMetadataConfirmation reportId="report-1" />);
 
     expect(await screen.findByLabelText("企业名称")).toHaveValue("远景能源有限公司");
+    expect(screen.queryByText(/577/)).not.toBeInTheDocument();
     expect(screen.getByRole("checkbox", { name: "启用 AI 辅助分析" })).not.toBeChecked();
     fireEvent.change(screen.getByLabelText("企业名称"), { target: { value: "测试公司" } });
     fireEvent.click(screen.getByRole("button", { name: "确认报告信息" }));
@@ -102,6 +103,28 @@ describe("ReportMetadataConfirmation", () => {
 
     expect(await screen.findByText("分析启动失败，请检查服务配置后重试。")).toBeInTheDocument();
     expect(screen.queryByText("secret upstream details")).not.toBeInTheDocument();
+  });
+
+  it("opens the active run when the backend rejects a concurrent start", async () => {
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce(jsonResponse(reportWithStatus("ready_for_analysis")))
+      .mockResolvedValueOnce(jsonResponse({
+        detail: {
+          code: "analysis_already_running",
+          message: "该报告已有运行中的分析",
+          run_id: "run-active",
+        },
+      }, 409)));
+
+    renderWithQuery(<ReportMetadataConfirmation reportId="report-1" />);
+    fireEvent.click(await screen.findByRole("button", { name: "启动分析" }));
+
+    expect(await screen.findByText("该报告正在分析")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "查看分析进度" })).toHaveAttribute(
+      "href",
+      "/reports/report-1/progress?runId=run-active",
+    );
+    expect(screen.queryByText("分析启动失败，请检查服务配置后重试。")).not.toBeInTheDocument();
   });
 
   it.each(["analysis_completed", "partially_completed"])(

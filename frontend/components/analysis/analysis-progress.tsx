@@ -48,6 +48,10 @@ export function AnalysisProgress({ reportId, runId }: { reportId: string; runId:
   const byCode = new Map((stagesQuery.data ?? []).map((stage) => [stage.stage_code, stage]));
   const progress = calculateAnalysisProgress(run?.status, stagesQuery.data ?? []);
   const isStalled = isAnalysisProgressStalled(run?.status, stagesQuery.data ?? []);
+  const completedStageCount = analysisStages.filter(([code]) => {
+    const status = byCode.get(code)?.status;
+    return status === "completed" || status === "partially_failed" || status === "skipped";
+  }).length;
   const currentStageLabel = analysisStages.find(([code]) => code === progress.currentStageCode)?.[1] ?? null;
   const report = reportQuery.data;
   const reportTitle = report?.company_name
@@ -73,15 +77,19 @@ export function AnalysisProgress({ reportId, runId }: { reportId: string; runId:
   }
 
   return (
-    <section className="mx-auto w-full max-w-4xl px-6 py-6">
+    <section className="mx-auto w-full max-w-4xl px-5 py-6 lg:px-7">
       <div className="border-b border-border pb-5">
-        <p className="text-sm font-medium">{reportTitle}</p>
+        <p className="text-sm font-semibold text-emerald-700">{reportTitle}</p>
         {report?.company_name && <p className="mt-1 text-xs text-muted-foreground">{report.original_filename}</p>}
-        <h1 className="mt-1 text-xl font-semibold">GRI 核查进度</h1>
+        <h1 className="mt-2 text-2xl font-semibold">GRI 核查进度</h1>
         <p className="mt-2 text-sm text-muted-foreground">分析在后台继续运行，可以离开此页面后再返回。</p>
       </div>
       <div className="py-6">
-        <p className="text-sm font-semibold">{statusMessage}</p>
+        <div className="rounded-xl border border-border bg-white p-5 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-base font-semibold">{statusMessage}</p>
+            <p className="text-sm text-muted-foreground">已完成 {completedStageCount}/{analysisStages.length} 阶段</p>
+          </div>
         {resultAvailable && run && (
           <p className="mt-2 text-sm text-muted-foreground">
             {run.confirm_llm
@@ -100,7 +108,8 @@ export function AnalysisProgress({ reportId, runId }: { reportId: string; runId:
             <div className="h-full bg-accent" style={{ width: `${progress.percent}%` }} />
           </div>
         )}
-        <div className="mt-5 divide-y divide-border border-y border-border">
+        </div>
+        <div className="mt-5 divide-y divide-border rounded-xl border border-border bg-white px-5 shadow-sm">
           {analysisStages.map(([code, label]) => {
             const stage = byCode.get(code);
             const status = stage?.status ?? "pending";

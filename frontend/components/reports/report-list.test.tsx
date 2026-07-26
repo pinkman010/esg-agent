@@ -44,7 +44,11 @@ describe("ReportList", () => {
 
     expect(await screen.findByText("测试公司")).toBeInTheDocument();
     expect(screen.getByText("2024 年")).toBeInTheDocument();
-    expect(screen.getByText("待启动分析")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /待启动分析/ })).toHaveAttribute(
+      "href",
+      "/reports/report-1/confirm",
+    );
+    expect(screen.queryByText("report-1")).not.toBeInTheDocument();
   });
 
   it("uses review-priority wording for the completed review status", async () => {
@@ -70,6 +74,52 @@ describe("ReportList", () => {
 
     renderWithQuery(<ReportList />);
 
-    expect(await screen.findByText("高优先级复核已完成")).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: /高优先级复核已完成/ })).toHaveAttribute(
+      "href",
+      "/reports/report-2/dashboard",
+    );
+  });
+
+  it("opens the active run for an analyzing report", async () => {
+    vi.stubGlobal("fetch", vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("/api/reports?")) {
+        return Promise.resolve(jsonResponse({
+          items: [{
+            report_id: "report-running",
+            original_filename: "远景能源 2024 ESG 报告.pdf",
+            file_hash: "hash-running",
+            page_count: 78,
+            company_name: "远景能源有限公司",
+            report_year: 2024,
+            language: "zh-CN",
+            status: "analyzing",
+            metadata_detected: {},
+            metadata_confirmed_at: "2026-07-11T00:00:00Z",
+            created_at: "2026-07-11T00:00:00Z",
+            updated_at: "2026-07-11T00:00:00Z",
+          }],
+          page: 1,
+          page_size: 50,
+          total: 1,
+        }));
+      }
+      if (url.endsWith("/api/runs")) {
+        return Promise.resolve(jsonResponse([{
+          run_id: "run-active",
+          report_id: "report-running",
+          status: "running",
+          confirm_llm: false,
+        }]));
+      }
+      throw new Error(`unexpected request: ${url}`);
+    }));
+
+    renderWithQuery(<ReportList />);
+
+    expect(await screen.findByRole("link", { name: /查看分析进度/ })).toHaveAttribute(
+      "href",
+      "/reports/report-running/progress?runId=run-active",
+    );
   });
 });

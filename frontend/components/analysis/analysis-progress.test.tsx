@@ -90,6 +90,7 @@ describe("AnalysisProgress", () => {
     expect(screen.getByText("Envision Energy 2024-zh.pdf")).toBeInTheDocument();
     expect(screen.getByText("分析进度 25%")).toBeInTheDocument();
     expect(screen.getByText("当前阶段：GRI requirement 匹配")).toBeInTheDocument();
+    expect(screen.getByText("已完成 3/8 阶段")).toBeInTheDocument();
     expect(screen.queryByText(report.report_id)).not.toBeInTheDocument();
     expect(screen.queryByText(/577/)).not.toBeInTheDocument();
   });
