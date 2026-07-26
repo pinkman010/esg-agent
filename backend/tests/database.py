@@ -35,3 +35,4 @@ def reset_database(engine) -> None:
     Base.metadata.drop_all(engine)
     with engine.begin() as connection:
         connection.execute(text("DROP TABLE IF EXISTS alembic_version"))
+        connection.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))

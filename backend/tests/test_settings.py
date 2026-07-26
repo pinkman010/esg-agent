@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import pytest
+from pydantic import ValidationError
 
 from src.config.settings import Settings
 
@@ -57,6 +58,37 @@ def test_llm_configuration_summary_never_exposes_api_key():
     assert summary["api_key_present"] is True
     assert secret not in str(summary)
     assert "api_key" not in summary
+
+
+def test_embedding_settings_default_to_disabled_shadow_mode():
+    settings = Settings(_env_file=None)
+
+    assert settings.embedding_enabled is False
+    assert settings.embedding_provider == "siliconflow"
+    assert settings.embedding_api_base == "https://api.siliconflow.cn/v1"
+    assert settings.embedding_api_key == ""
+    assert settings.embedding_model == "BAAI/bge-m3"
+    assert settings.embedding_dim == 1024
+    assert settings.embedding_batch_size == 16
+    assert settings.embedding_max_input_tokens == 8192
+    assert settings.embedding_max_input_chars == 6000
+    assert settings.embedding_timeout_seconds == 60
+    assert settings.embedding_max_retries == 2
+    assert settings.embedding_retry_delay_seconds == 2
+
+
+def test_embedding_api_base_must_be_https():
+    with pytest.raises(ValidationError, match="EMBEDDING_API_BASE must be an HTTPS URL"):
+        Settings(_env_file=None, embedding_api_base="http://api.siliconflow.cn/v1")
+
+
+def test_embedding_configuration_summary_hides_api_key():
+    settings = Settings(_env_file=None, embedding_api_key="secret-key")
+
+    summary = settings.embedding_configuration_summary()
+
+    assert summary["api_key_present"] is True
+    assert "secret-key" not in str(summary)
 
 
 def test_demo_runtime_paths_resolve_from_project_root(monkeypatch):

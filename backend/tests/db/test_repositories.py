@@ -10,6 +10,7 @@ from src.db.base import Base
 from src.db.models import AIAssessmentSuggestionRecord, DisclosureTaskRecord, DocumentChunkRecord, DocumentPageRecord, RecommendationRecord
 from src.db.repositories import Repository
 from src.domain.ai_models import AIAssessmentSuggestion
+from src.domain.embedding_models import ChunkEmbedding
 from src.domain.enums import (
     AISuggestionStatus,
     ApplicabilityStatus,
@@ -66,6 +67,194 @@ def test_required_tables_are_declared():
             "review_decisions",
             "audit_events",
         }.issubset(table_names)
+    finally:
+        session.close()
+        reset_database(engine)
+        engine.dispose()
+
+
+def test_chunk_embedding_table_is_declared():
+    engine, session = make_session()
+    try:
+        table_names = set(inspect(engine).get_table_names())
+        assert "document_chunk_embeddings" in table_names
+
+        columns = {
+            column["name"]
+            for column in inspect(engine).get_columns("document_chunk_embeddings")
+        }
+        assert {
+            "chunk_id",
+            "provider",
+            "model",
+            "embedding_dim",
+            "embedding",
+            "input_hash",
+            "status",
+            "error_code",
+            "error_message",
+            "usage",
+            "latency_ms",
+            "retry_count",
+            "created_at",
+            "updated_at",
+        }.issubset(columns)
+        check_names = {
+            constraint["name"]
+            for constraint in inspect(engine).get_check_constraints(
+                "document_chunk_embeddings"
+            )
+        }
+        assert {
+            "ck_chunk_embeddings_dim_1024",
+            "ck_chunk_embeddings_status",
+            "ck_chunk_embeddings_status_vector",
+            "ck_chunk_embeddings_latency_ms",
+            "ck_chunk_embeddings_retry_count",
+        }.issubset(check_names)
+    finally:
+        session.close()
+        reset_database(engine)
+        engine.dispose()
+
+
+def test_repository_upserts_chunk_embedding_and_lists_pending_chunks():
+    engine, session = make_session()
+    try:
+        repo = Repository(session)
+        repo.create_report(
+            Report(
+                report_id="report-emb",
+                original_filename="report.pdf",
+                stored_path="x",
+                file_hash="hash-emb",
+            )
+        )
+        repo.save_pages_and_chunks(
+            pages=[],
+            chunks=[
+                DocumentChunk(
+                    chunk_id="chunk-emb-1",
+                    report_id="report-emb",
+                    text="温室气体排放数据",
+                    source_page=1,
+                    source_method=EvidenceSourceMethod.PDFPLUMBER,
+                    source_file_hash="hash-emb",
+                )
+            ],
+        )
+
+        pending_before = repo.list_chunks_missing_embeddings(
+            provider="siliconflow",
+            model="BAAI/bge-m3",
+            report_id="report-emb",
+            limit=10,
+        )
+        assert [chunk.chunk_id for chunk in pending_before] == ["chunk-emb-1"]
+
+        repo.upsert_chunk_embedding(
+            ChunkEmbedding(
+                chunk_id="chunk-emb-1",
+                provider="siliconflow",
+                model="BAAI/bge-m3",
+                embedding_dim=1024,
+                embedding=[0.1] * 1024,
+                input_hash="a" * 64,
+                status="succeeded",
+                usage={"total_tokens": 12},
+                latency_ms=30,
+                retry_count=0,
+            )
+        )
+
+        pending_after = repo.list_chunks_missing_embeddings(
+            provider="siliconflow",
+            model="BAAI/bge-m3",
+            report_id="report-emb",
+            limit=10,
+        )
+        assert pending_after == []
+    finally:
+        session.close()
+        reset_database(engine)
+        engine.dispose()
+
+
+def test_repository_searches_chunk_embeddings_within_report_by_cosine_distance():
+    engine, session = make_session()
+    try:
+        repo = Repository(session)
+        for report_id, file_hash in (
+            ("report-search", "hash-search"),
+            ("report-other", "hash-other"),
+        ):
+            repo.create_report(
+                Report(
+                    report_id=report_id,
+                    original_filename=f"{report_id}.pdf",
+                    stored_path="x",
+                    file_hash=file_hash,
+                )
+            )
+        repo.save_pages_and_chunks(
+            pages=[],
+            chunks=[
+                DocumentChunk(
+                    chunk_id="chunk-close",
+                    report_id="report-search",
+                    text="温室气体排放",
+                    source_page=1,
+                    source_method=EvidenceSourceMethod.PDFPLUMBER,
+                    source_file_hash="hash-search",
+                ),
+                DocumentChunk(
+                    chunk_id="chunk-far",
+                    report_id="report-search",
+                    text="员工培训",
+                    source_page=2,
+                    source_method=EvidenceSourceMethod.PDFPLUMBER,
+                    source_file_hash="hash-search",
+                ),
+                DocumentChunk(
+                    chunk_id="chunk-other-report",
+                    report_id="report-other",
+                    text="温室气体排放",
+                    source_page=1,
+                    source_method=EvidenceSourceMethod.PDFPLUMBER,
+                    source_file_hash="hash-other",
+                ),
+            ],
+        )
+        for chunk_id, vector, input_hash in (
+            ("chunk-close", [1.0] + [0.0] * 1023, "a" * 64),
+            ("chunk-far", [0.0, 1.0] + [0.0] * 1022, "b" * 64),
+            ("chunk-other-report", [1.0] + [0.0] * 1023, "c" * 64),
+        ):
+            repo.upsert_chunk_embedding(
+                ChunkEmbedding(
+                    chunk_id=chunk_id,
+                    provider="siliconflow",
+                    model="BAAI/bge-m3",
+                    embedding=[*vector],
+                    input_hash=input_hash,
+                    status="succeeded",
+                )
+            )
+
+        results = repo.search_chunk_embeddings(
+            provider="siliconflow",
+            model="BAAI/bge-m3",
+            query_embedding=[1.0] + [0.0] * 1023,
+            report_id="report-search",
+            limit=2,
+        )
+
+        assert [item.chunk_id for item in results] == [
+            "chunk-close",
+            "chunk-far",
+        ]
+        assert results[0].score > results[1].score
+        assert {item.report_id for item in results} == {"report-search"}
     finally:
         session.close()
         reset_database(engine)

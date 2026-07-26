@@ -33,6 +33,18 @@ class Settings(BaseSettings):
     llm_max_concurrency: int = Field(default=8, ge=1, le=16)
     llm_max_calls_per_run: int = Field(default=200, ge=1, le=1000)
     llm_prompt_version: str = "deepseek-gri-assist-v1.2"
+    embedding_enabled: bool = False
+    embedding_provider: Literal["siliconflow"] = "siliconflow"
+    embedding_api_base: str = "https://api.siliconflow.cn/v1"
+    embedding_api_key: str = ""
+    embedding_model: str = "BAAI/bge-m3"
+    embedding_dim: int = Field(default=1024, ge=1, le=8192)
+    embedding_batch_size: int = Field(default=16, ge=1, le=128)
+    embedding_max_input_tokens: int = Field(default=8192, ge=1, le=32768)
+    embedding_max_input_chars: int = Field(default=6000, ge=256, le=24000)
+    embedding_timeout_seconds: int = Field(default=60, ge=1, le=600)
+    embedding_max_retries: int = Field(default=2, ge=0, le=5)
+    embedding_retry_delay_seconds: float = Field(default=2, ge=0, le=60)
 
     @field_validator("upload_dir", "derived_dir")
     @classmethod
@@ -48,6 +60,15 @@ class Settings(BaseSettings):
         parsed = urlparse(normalized)
         if parsed.scheme != "https" or not parsed.netloc:
             raise ValueError("OPENAI_COMPATIBLE_API_BASE must be an HTTPS URL")
+        return normalized
+
+    @field_validator("embedding_api_base")
+    @classmethod
+    def validate_embedding_api_base(cls, value: str) -> str:
+        normalized = value.strip().rstrip("/")
+        parsed = urlparse(normalized)
+        if parsed.scheme != "https" or not parsed.netloc:
+            raise ValueError("EMBEDDING_API_BASE must be an HTTPS URL")
         return normalized
 
     @model_validator(mode="after")
@@ -77,6 +98,21 @@ class Settings(BaseSettings):
             "max_concurrency": self.llm_max_concurrency,
             "max_calls_per_run": self.llm_max_calls_per_run,
             "prompt_version": self.llm_prompt_version,
+        }
+
+    def embedding_configuration_summary(self) -> dict[str, object]:
+        return {
+            "enabled": self.embedding_enabled,
+            "provider": self.embedding_provider,
+            "api_base": self.embedding_api_base,
+            "api_key_present": bool(self.embedding_api_key.strip()),
+            "model": self.embedding_model,
+            "dim": self.embedding_dim,
+            "batch_size": self.embedding_batch_size,
+            "max_input_tokens": self.embedding_max_input_tokens,
+            "max_input_chars": self.embedding_max_input_chars,
+            "timeout_seconds": self.embedding_timeout_seconds,
+            "max_retries": self.embedding_max_retries,
         }
 
     model_config = SettingsConfigDict(

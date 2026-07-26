@@ -1,6 +1,6 @@
 from uuid import uuid4
 
-from sqlalchemy import delete, func, select, text
+from sqlalchemy import delete, func, or_, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
@@ -9,6 +9,7 @@ from src.db.models import (
     AnalysisRunRecord,
     AnalysisStageEventRecord,
     DisclosureTaskRecord,
+    DocumentChunkEmbeddingRecord,
     DocumentChunkRecord,
     DocumentPageRecord,
     AssessmentRecord,
@@ -24,6 +25,7 @@ from src.db.models import (
     ReviewChangeEventRecord,
 )
 from src.domain.ai_models import AIAssessmentSuggestion
+from src.domain.embedding_models import ChunkEmbedding, ChunkEmbeddingSearchResult
 from src.domain.enums import AISuggestionStatus, ActionPriority, ActionStatus, ApplicabilityStatus, AssessmentVerdict, EvidenceSourceMethod, EvidenceStatus, PageQualityFlag, ReportStatus, ReviewOperation, ReviewStatus, RiskLevel, RunStatus
 from src.domain.models import AnalysisRun, AnalysisStageEvent, AssessmentRisk, DisclosureAssessment, DisclosureTask, DocumentChunk, EvidenceItem, ExportVersion, ImprovementAction, PageExtraction, Recommendation, Report, ReviewChangeEvent, ReviewDecision, ReviewSnapshot
 
@@ -871,6 +873,109 @@ class Repository:
             )
         self.session.commit()
 
+    def list_chunks_missing_embeddings(
+        self,
+        *,
+        provider: str,
+        model: str,
+        limit: int,
+        report_id: str,
+    ) -> list[DocumentChunk]:
+        records = self.session.scalars(
+            select(DocumentChunkRecord)
+            .outerjoin(
+                DocumentChunkEmbeddingRecord,
+                (DocumentChunkEmbeddingRecord.chunk_id == DocumentChunkRecord.chunk_id)
+                & (DocumentChunkEmbeddingRecord.provider == provider)
+                & (DocumentChunkEmbeddingRecord.model == model),
+            )
+            .where(
+                DocumentChunkRecord.report_id == report_id,
+                or_(
+                    DocumentChunkEmbeddingRecord.chunk_id.is_(None),
+                    DocumentChunkEmbeddingRecord.status != "succeeded",
+                ),
+            )
+            .order_by(
+                DocumentChunkRecord.source_page,
+                DocumentChunkRecord.chunk_id,
+            )
+            .limit(limit)
+        ).all()
+        return [self._chunk_from_record(record) for record in records]
+
+    def upsert_chunk_embedding(self, embedding: ChunkEmbedding) -> ChunkEmbedding:
+        record = self.session.get(
+            DocumentChunkEmbeddingRecord,
+            {
+                "chunk_id": embedding.chunk_id,
+                "provider": embedding.provider,
+                "model": embedding.model,
+            },
+        )
+        if record is None:
+            record = DocumentChunkEmbeddingRecord(
+                chunk_id=embedding.chunk_id,
+                provider=embedding.provider,
+                model=embedding.model,
+            )
+            self.session.add(record)
+        record.embedding_dim = embedding.embedding_dim
+        record.embedding = embedding.embedding
+        record.input_hash = embedding.input_hash
+        record.status = embedding.status
+        record.error_code = embedding.error_code
+        record.error_message = embedding.error_message
+        record.usage = embedding.usage
+        record.latency_ms = embedding.latency_ms
+        record.retry_count = embedding.retry_count
+        self.session.commit()
+        self.session.refresh(record)
+        return self._chunk_embedding_from_record(record)
+
+    def search_chunk_embeddings(
+        self,
+        *,
+        provider: str,
+        model: str,
+        query_embedding: list[float],
+        report_id: str,
+        limit: int,
+    ) -> list[ChunkEmbeddingSearchResult]:
+        distance = DocumentChunkEmbeddingRecord.embedding.cosine_distance(
+            query_embedding
+        )
+        rows = self.session.execute(
+            select(
+                DocumentChunkRecord,
+                (1.0 - distance).label("score"),
+            )
+            .join(
+                DocumentChunkEmbeddingRecord,
+                DocumentChunkEmbeddingRecord.chunk_id
+                == DocumentChunkRecord.chunk_id,
+            )
+            .where(
+                DocumentChunkEmbeddingRecord.provider == provider,
+                DocumentChunkEmbeddingRecord.model == model,
+                DocumentChunkEmbeddingRecord.status == "succeeded",
+                DocumentChunkRecord.report_id == report_id,
+            )
+            .order_by(distance.asc(), DocumentChunkRecord.chunk_id)
+            .limit(limit)
+        ).all()
+        return [
+            ChunkEmbeddingSearchResult(
+                chunk_id=chunk.chunk_id,
+                report_id=chunk.report_id,
+                text=chunk.text,
+                source_page=chunk.source_page,
+                source_file_hash=chunk.source_file_hash,
+                score=float(score),
+            )
+            for chunk, score in rows
+        ]
+
     def save_disclosure_task(self, task: DisclosureTask) -> DisclosureTask:
         self.session.add(
             DisclosureTaskRecord(
@@ -1168,6 +1273,41 @@ class Repository:
             missing_items=record.missing_items,
             model_called=record.model_called,
             review_status=ReviewStatus(record.review_status),
+        )
+
+    def _chunk_from_record(self, record: DocumentChunkRecord) -> DocumentChunk:
+        return DocumentChunk(
+            chunk_id=record.chunk_id,
+            report_id=record.report_id,
+            text=record.text,
+            source_page=record.source_page,
+            source_method=EvidenceSourceMethod(record.source_method),
+            source_file_hash=record.source_file_hash,
+            bbox=record.bbox,
+            quality_flags=[PageQualityFlag(flag) for flag in record.quality_flags],
+            embedding_status=record.embedding_status,
+            embedding_model=record.embedding_model,
+            embedding_dim=record.embedding_dim,
+            metadata=record.chunk_metadata,
+        )
+
+    def _chunk_embedding_from_record(
+        self,
+        record: DocumentChunkEmbeddingRecord,
+    ) -> ChunkEmbedding:
+        return ChunkEmbedding(
+            chunk_id=record.chunk_id,
+            provider=record.provider,
+            model=record.model,
+            embedding_dim=record.embedding_dim,
+            embedding=list(record.embedding) if record.embedding is not None else None,
+            input_hash=record.input_hash,
+            status=record.status,
+            error_code=record.error_code,
+            error_message=record.error_message,
+            usage=record.usage,
+            latency_ms=record.latency_ms,
+            retry_count=record.retry_count,
         )
 
     def _evidence_from_record(self, record: EvidenceItemRecord) -> EvidenceItem:

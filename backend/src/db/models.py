@@ -1,5 +1,6 @@
 from datetime import date, datetime
 
+from pgvector.sqlalchemy import Vector
 from sqlalchemy import Boolean, CheckConstraint, Date, DateTime, Float, ForeignKey, Index, Integer, String, Text, func, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -107,6 +108,65 @@ class DocumentChunkRecord(Base):
     embedding_dim: Mapped[int | None] = mapped_column(Integer)
     embedding_updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     chunk_metadata: Mapped[dict] = mapped_column("metadata", JSONB, default=dict, nullable=False)
+
+
+class DocumentChunkEmbeddingRecord(Base):
+    __tablename__ = "document_chunk_embeddings"
+
+    chunk_id: Mapped[str] = mapped_column(
+        ForeignKey("document_chunks.chunk_id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    provider: Mapped[str] = mapped_column(String(64), primary_key=True)
+    model: Mapped[str] = mapped_column(String(128), primary_key=True)
+    embedding_dim: Mapped[int] = mapped_column(Integer, nullable=False)
+    embedding: Mapped[list[float] | None] = mapped_column(Vector(1024), nullable=True)
+    input_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False)
+    error_code: Mapped[str | None] = mapped_column(String(64))
+    error_message: Mapped[str | None] = mapped_column(Text)
+    usage: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
+    latency_ms: Mapped[int | None] = mapped_column(Integer)
+    retry_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+
+    __table_args__ = (
+        CheckConstraint(
+            "embedding_dim = 1024",
+            name="ck_chunk_embeddings_dim_1024",
+        ),
+        CheckConstraint(
+            "status IN ('succeeded', 'failed')",
+            name="ck_chunk_embeddings_status",
+        ),
+        CheckConstraint(
+            "(status = 'succeeded' AND embedding IS NOT NULL) OR "
+            "(status = 'failed' AND embedding IS NULL)",
+            name="ck_chunk_embeddings_status_vector",
+        ),
+        CheckConstraint(
+            "latency_ms IS NULL OR latency_ms >= 0",
+            name="ck_chunk_embeddings_latency_ms",
+        ),
+        CheckConstraint(
+            "retry_count >= 0",
+            name="ck_chunk_embeddings_retry_count",
+        ),
+        Index(
+            "ix_chunk_embeddings_provider_model",
+            "provider",
+            "model",
+        ),
+        Index("ix_chunk_embeddings_status", "status"),
+    )
 
 
 class StandardRequirementRecord(Base):
