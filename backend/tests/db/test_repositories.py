@@ -180,6 +180,62 @@ def test_repository_upserts_chunk_embedding_and_lists_pending_chunks():
         engine.dispose()
 
 
+def test_repository_lists_document_chunks_for_one_report_in_stable_order():
+    engine, session = make_session()
+    try:
+        repo = Repository(session)
+        for report_id in ("report-one", "report-two"):
+            repo.create_report(
+                Report(
+                    report_id=report_id,
+                    original_filename=f"{report_id}.pdf",
+                    stored_path="x",
+                    file_hash=f"hash-{report_id}",
+                )
+            )
+        repo.save_pages_and_chunks(
+            pages=[],
+            chunks=[
+                DocumentChunk(
+                    chunk_id="chunk-one-b",
+                    report_id="report-one",
+                    text="第二页 B",
+                    source_page=2,
+                    source_method=EvidenceSourceMethod.PDFPLUMBER,
+                    source_file_hash="hash-report-one",
+                ),
+                DocumentChunk(
+                    chunk_id="chunk-two",
+                    report_id="report-two",
+                    text="其他报告",
+                    source_page=1,
+                    source_method=EvidenceSourceMethod.PDFPLUMBER,
+                    source_file_hash="hash-report-two",
+                ),
+                DocumentChunk(
+                    chunk_id="chunk-one-a",
+                    report_id="report-one",
+                    text="第二页 A",
+                    source_page=2,
+                    source_method=EvidenceSourceMethod.PDFPLUMBER,
+                    source_file_hash="hash-report-one",
+                ),
+            ],
+        )
+
+        chunks = repo.list_document_chunks(report_id="report-one")
+
+        assert [chunk.chunk_id for chunk in chunks] == [
+            "chunk-one-a",
+            "chunk-one-b",
+        ]
+        assert {chunk.report_id for chunk in chunks} == {"report-one"}
+    finally:
+        session.close()
+        reset_database(engine)
+        engine.dispose()
+
+
 def test_repository_searches_chunk_embeddings_within_report_by_cosine_distance():
     engine, session = make_session()
     try:

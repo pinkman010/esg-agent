@@ -1881,6 +1881,22 @@ Expected: 禁用测试通过、`git diff --check` 无输出、没有新增密钥
 
 以下内容只登记方向，不属于本计划当前实施范围，不随 `EMBEDDING_ENABLED` 自动启用。
 
+### Phase 1.5：离线混合影子上下文（已实现）
+
+基于 Envision 人工页码基线，规则召回与向量召回采用 RRF 2：1 融合：
+
+- 向量 Top 10 作为内部候选池；
+- 规则页从指定报告的 `document_chunks` 只读补齐正文；
+- 最终影子 RAG context 截取 Top 5；
+- 输出融合来源、双路排名、融合分数和未解析规则页；
+- 默认纯向量模式继续保留；
+- 不调用外部服务，不写数据库，不进入正式分析链路。
+
+实现和验证细节见：
+
+- `docs/plan/hybrid-shadow-context-design.md`
+- `docs/plan/hybrid-shadow-context-implementation-plan.md`
+
 ### Phase 2: 影子 RAG 进入正式 AI suggestion
 
 目标：在 assessment 已由现有规则生成后，把规则证据与向量候选组成混合上下文，提升 AI 建议的证据覆盖与解释质量。AI suggestion 仍然是辅助层，不覆盖规则 assessment。
@@ -1895,7 +1911,7 @@ Expected: 禁用测试通过、`git diff --check` 无输出、没有新增密钥
 
 需要独立计划评估的改动：
 
-- 混合检索的去重、重排、证据 ID 正式化和来源追踪；
+- 把已验证的离线混合检索接入正式 suggestion 输入，并完成证据 ID 正式化和来源追踪；
 - `ai_suggestion_input_hash`、prompt 版本及模型版本；
 - 外部模型失败时保持当前规则结果和人工流程可用；
 - AI suggestion API、审计字段、前端标签和用户解释；

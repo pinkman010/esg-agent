@@ -251,7 +251,7 @@ API 只通过 repository/service 组装该视图，避免前端合并历史。
 
 ## 8. 当前实施状态
 
-截至 2026-07-26，代码 migration head 为 `0012_chunk_embeddings`。`0010` 增加 risk-v2.1 维度；`0011` 增加 run 的标准结构计数、task 的原始文本/上下文/结构状态，并创建追加式 `ai_assessment_suggestions`；`0012` 启用 pgvector 并创建 `document_chunk_embeddings`。`0012` 已在 `esg_agent_test` 升级验证，main/demo 数据库在独立批准前仍保持 `0011_ai_suggestions`。三个 migration 均不回填或删除历史业务记录。`0011 downgrade()` 会删除全部 AI suggestion、task 结构字段和 run 结构计数，因此验收环境禁止 downgrade；`0012 downgrade()` 会删除全部影子向量，虽可重建，执行前仍需确认。新写路径继续使用 `review_snapshots` 和 `review_change_events`，规则判断、AI建议、风险、整改和输出分别写入独立表。
+截至 2026-07-26，代码、`esg_agent_test`、main 和 demo 的 migration head 均为 `0012_chunk_embeddings`。`0010` 增加 risk-v2.1 维度；`0011` 增加 run 的标准结构计数、task 的原始文本/上下文/结构状态，并创建追加式 `ai_assessment_suggestions`；`0012` 启用 pgvector 并创建 `document_chunk_embeddings`。三个 migration 均不回填或删除历史业务记录。`0011 downgrade()` 会删除全部 AI suggestion、task 结构字段和 run 结构计数，因此验收环境禁止 downgrade；`0012 downgrade()` 会删除全部影子向量，虽可重建，执行前仍需确认。新写路径继续使用 `review_snapshots` 和 `review_change_events`，规则判断、AI建议、风险、整改和输出分别写入独立表。
 
 demo 在线重置不新增业务表：同一事务内先删除 `audit_events`，再删除 `reports` 根记录并依赖外键 cascade 清理报告、run、assessment、复核、整改和输出数据。该路径只允许 `esg_agent_demo`；`esg_agent` 不提供清理入口。
 

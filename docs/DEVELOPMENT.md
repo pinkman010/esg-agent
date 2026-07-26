@@ -206,7 +206,7 @@ uv run --no-sync uvicorn src.main:app --reload --port 8000
 
 ## 7. 企业产品闭环验收
 
-当前代码 Alembic head：`0012_chunk_embeddings`。`0003` 至 `0008` 覆盖报告 metadata、分析阶段、风险快照、人工复核快照、整改任务和版本化输出；`0009` 增加 active run 唯一索引；`0010` 增加 risk-v2.1 维度；`0011` 增加标准结构计数、task 上下文和追加式 AI suggestion；`0012` 启用 pgvector 并增加只读影子向量派生表。main/demo 数据库升级 `0012` 前必须单独确认目标数据库，启动使用代码 head 的后端前执行 `uv run --no-sync alembic upgrade head`。
+当前代码 Alembic head：`0012_chunk_embeddings`。`0003` 至 `0008` 覆盖报告 metadata、分析阶段、风险快照、人工复核快照、整改任务和版本化输出；`0009` 增加 active run 唯一索引；`0010` 增加 risk-v2.1 维度；`0011` 增加标准结构计数、task 上下文和追加式 AI suggestion；`0012` 启用 pgvector 并增加只读影子向量派生表。main/demo 数据库均已在独立授权后升级到 `0012`；后续新增 migration 仍须单独确认目标数据库，并在启动使用新代码 head 的后端前执行 `uv run --no-sync alembic upgrade head`。
 
 核心产品 API：
 
@@ -308,7 +308,7 @@ uv run --no-sync python -c "from sqlalchemy.engine import make_url; from src.con
 - Codex 内置浏览器控制在本机发生两次桌面应用闪退。自动页面截图改用独立无头 Edge；人工验收使用普通浏览器，不再启用 Codex 内置浏览器。
 - 外部模型和 OCR/VLM 默认关闭。DeepSeek 只在 `confirm_llm=true` 且用户明确批准后启用；OCR/VLM 本轮未启用。
 
-当前自动门禁（2026-07-26）：后端 651 项测试通过；前端 28 个测试文件、103 项测试、typecheck 和 production build 通过；Envision v3 内部结构为 `577/499/78/0`，global fallback、新增 false disclosed 和新增 wrong source page 均为 0，audit 为 0 error、0 warning。16 条历史结果差异全部进入最终裁决资产，其中 13 条与规则一致、3 条需要最终人工覆盖、0 条 pending。Goldwind 100 条历史人工 gold 为 recall 96.08%、false disclosed 0、wrong source page 0、unknown leakage 2，作为低优先级泛化证据，不阻塞 Envision 主线验收。main 与 demo 数据库 head 均为 `0011_ai_suggestions`。
+当前自动门禁（2026-07-26）：后端 686 项测试通过；前端 28 个测试文件、103 项测试、typecheck 和 production build 通过；Envision v3 内部结构为 `577/499/78/0`，global fallback、新增 false disclosed 和新增 wrong source page 均为 0，audit 为 0 error、0 warning。16 条历史结果差异全部进入最终裁决资产，其中 13 条与规则一致、3 条需要最终人工覆盖、0 条 pending。Goldwind 100 条历史人工 gold 为 recall 96.08%、false disclosed 0、wrong source page 0、unknown leakage 2，作为低优先级泛化证据，不阻塞 Envision 主线验收。main 与 demo 数据库 head 均为 `0012_chunk_embeddings`。
 
 DeepSeek 225 条真实评估固定使用 Envision 报告 `report-14864b1a3ef64512b0e5d3676a120bc1` 和 run `run-526bd97aef5d4b9baa14618b719081c9`。最终指标：一致 162/224（72.32%），适用性例外 1，累计定向补跑 18 次；guardrail 后 false disclosed、证据 ID 越界、可比错页、schema 失败和模型失败均为 0。该结果保留为 AI 辅助工程基线，不构成 GRI 专家认证或最终合规结论。本轮 v1.1 冻结没有修改 DeepSeek 模型、Prompt、调用范围或 guardrail。
 
@@ -506,6 +506,24 @@ uv run --no-sync python -m src.tools.build_shadow_rag_contexts `
   --output tmp/embedding/envision_shadow_rag_contexts.jsonl
 ```
 
+默认命令保持纯向量上下文。已完成人工页码基线对照时，可以生成离线混合上下文：
+
+```powershell
+cd backend
+uv run --no-sync python -m src.tools.build_shadow_rag_contexts `
+  --report-id report-xxx `
+  --retrieval-cases tmp/embedding/envision_shadow_retrieval_cases.csv `
+  --retrieval-mode hybrid_rrf `
+  --vector-pool-k 10 `
+  --context-k 5 `
+  --rrf-rule-weight 2 `
+  --rrf-vector-weight 1 `
+  --rrf-constant 60 `
+  --output tmp/embedding/envision_hybrid_shadow_rag_contexts.jsonl
+```
+
+混合模式从当前数据库只读加载指定报告的 `document_chunks`，用 RRF 融合 `rule_pages` 和向量候选。Top 10 是内部向量候选池，实际写入每个 context 的候选最多为 Top 5。该命令不调用 SiliconFlow 或 DeepSeek，不写数据库；无法在数据库中解析的规则页写入 `unresolved_rule_pages`，不会伪造正文。
+
 可选生成评估属于独立停止点。取得 DeepSeek 真实调用批准且本机已经配置 `OPENAI_COMPATIBLE_API_KEY` 后，才允许显式传入：
 
 ```powershell
@@ -522,6 +540,7 @@ uv run --no-sync python -m src.tools.evaluate_shadow_rag `
 
 ### 2026-07-26
 
+- 完成离线混合影子上下文：规则召回与 BGE-M3 向量 Top 10 按 RRF 2：1 融合，最终输出 Top 5；规则页通过只读 `document_chunks` 查询补齐正文，不接入正式 evidence、assessment、risk、AI suggestion、review snapshot、export、API 或前端。
 - 完成报告中心前端演示体验优化：首页、报告总览、八阶段进度、完整 577 项核查、三栏复核、整改任务和版本化输出形成连续主路径。
 - 普通产品页面继续统一使用 577 项口径；499 个独立判断项和 78 个上下文项只在技术审计中使用。完整核查支持真实总数、首尾分页和独立项复核跳转，全局搜索与组合筛选保留为非阻断后续项。
 - Demo 验收保存 1 条追加式人工 snapshot，高优先级进度由 0/9 更新为 1/9；创建 1 条关联 `GRI 2-5-a` 的整改任务，并生成记录实际复核范围的新草稿。

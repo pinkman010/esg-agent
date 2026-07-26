@@ -904,6 +904,21 @@ class Repository:
         ).all()
         return [self._chunk_from_record(record) for record in records]
 
+    def list_document_chunks(
+        self,
+        *,
+        report_id: str,
+    ) -> list[DocumentChunk]:
+        records = self.session.scalars(
+            select(DocumentChunkRecord)
+            .where(DocumentChunkRecord.report_id == report_id)
+            .order_by(
+                DocumentChunkRecord.source_page,
+                DocumentChunkRecord.chunk_id,
+            )
+        ).all()
+        return [self._chunk_from_record(record) for record in records]
+
     def upsert_chunk_embedding(self, embedding: ChunkEmbedding) -> ChunkEmbedding:
         record = self.session.get(
             DocumentChunkEmbeddingRecord,
