@@ -405,7 +405,7 @@ pnpm generate:api
 
 - 企业 ESG 产品闭环阶段 0-8 自动门禁完成，进入人工产品验收停止点。
 - 新增 `0003` 至 `0008` migrations，覆盖 report metadata、分析阶段、风险、复核快照、整改任务和版本化输出。
-- API 端到端测试覆盖上传、确认、577 计数、七阶段进度、高优先级与适用性复核、整改、草稿和正式输出；后端全量 555 项测试通过。
+- API 端到端测试覆盖当时的上传、确认、577 计数、分析阶段进度、高优先级与适用性复核、整改、草稿和正式输出；后端全量 555 项测试通过。
 - 前端普通入口收敛为首页和 ESG 报告，核心业务文案中文化；17 项测试、typecheck 和 production build 通过。
 - Envision 577 零回归；Goldwind 100 条人工 gold recall 为 96.08%，无 false disclosed 和 wrong source page，保留 2 条 unknown leakage。
 - 旧 `review_decisions` 两个兼容周期数据映射通过，但仍有调用者，清理延期。

@@ -174,7 +174,7 @@ stateDiagram-v2
 
 阶段状态：`pending / running / completed / partially_failed / failed`。每阶段保存完成数量、总数量、开始时间、结束时间和业务错误摘要。
 
-普通进度页按阶段工作量加权：文件检查 5%、PDF 解析 10%、报告结构识别 5%、GRI requirement 匹配 10%、证据与结论生成 60%、风险分级 5%、结果汇总 5%。阶段内按 `completed_units / total_units` 计算，成功终态强制为 100%，失败终态保留最后真实百分比；不使用定时伪增长或随机增量。running run 的最新有效 stage event 超过 120 秒未更新时，前端提示后台任务可能中断，但不修改数据库状态。上传和 metadata 确认阶段不展示 577 条计数；577 条 eligible requirement 继续作为后端完整性和回归门禁，不作为首次上传时的前端识别结果。
+普通进度页按八个阶段的工作量加权：文件检查 5%、PDF 解析 10%、报告结构识别 5%、GRI requirement 匹配 10%、证据与结论生成 55%、复核优先级计算 5%、AI 辅助分析 5%、结果汇总 5%。阶段内按 `completed_units / total_units` 计算，成功终态强制为 100%，失败终态保留最后真实百分比；不使用定时伪增长或随机增量。running run 的最新有效 stage event 超过 120 秒未更新时，前端提示后台任务可能中断，但不修改数据库状态。上传和 metadata 确认阶段不展示 577 条计数；577 条 eligible requirement 继续作为后端完整性和回归门禁，不作为首次上传时的前端识别结果。
 
 ### 6.3 Requirement 复核状态
 
