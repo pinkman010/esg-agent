@@ -8,6 +8,10 @@
 
 本次工具在 PostgreSQL `REPEATABLE READ READ ONLY` 事务内运行，18 张非影子表的前后行数完全一致。正式 API、service、workflow 和前端没有接入 Phase 1.5 字段。
 
+### 1.1 发布状态
+
+Phase 1.5 实现基线已于 2026-07-27 以提交 `0b294f9` 推送至 `origin/main`。自动验收运行发生在该提交创建之前，因此下文继续保留运行时父提交、未提交工作区摘要和关键实现文件 SHA256；发布提交与运行时溯源属于两个独立层次。
+
 ## 2. 基线与参数
 
 | 项目 | 值 |
@@ -51,7 +55,7 @@
 | `backend/src/tools/build_shadow_rag_contexts.py` | `a85c3a6d13a824ab1256c5be129b53009ca868585605fef1f01b8329debe3017` |
 | `backend/src/tools/evaluate_shadow_retrieval.py` | `b5cbad5d21ced8951cc04741acfedcec78640f87eaf23d4a1ba832d0a8977143` |
 
-本报告对应未提交工作区。Git HEAD 只表示父提交；复现时还必须核对工作区状态摘要和上述实现文件指纹。
+本报告的原始自动验收运行对应未提交工作区。运行时 Git HEAD 只表示父提交；复现该次运行时还必须核对工作区状态摘要和上述实现文件指纹。发布状态以第 1.1 节记录的 Phase 1.5 实现基线提交为准。
 
 ## 4. 三路召回结果
 

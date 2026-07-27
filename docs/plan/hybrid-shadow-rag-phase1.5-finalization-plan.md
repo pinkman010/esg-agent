@@ -8,7 +8,7 @@
 
 **技术栈：** Python 3.11、pytest、SQLAlchemy 2.0、PostgreSQL、现有 `evaluate_shadow_retrieval`、`build_shadow_rag_contexts`、`resolve_shadow_output` 和 Envision v3 regeneration gate。
 
-**执行状态（2026-07-27）：** Task 1–10 已执行，本地提交已完成，未执行 `git push`。最终事实以 `docs/product/rag-phase1.5-acceptance-report.md` 为准。
+**执行状态（2026-07-27）：** Task 1–10 已执行；Phase 1.5 实现基线提交 `0b294f9` 已推送至 `origin/main`。最终事实以 `docs/product/rag-phase1.5-acceptance-report.md` 为准。
 
 ---
 
