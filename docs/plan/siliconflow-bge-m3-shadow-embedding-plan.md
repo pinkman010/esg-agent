@@ -1881,7 +1881,7 @@ Expected: 禁用测试通过、`git diff --check` 无输出、没有新增密钥
 
 以下内容只登记方向，不属于本计划当前实施范围，不随 `EMBEDDING_ENABLED` 自动启用。
 
-### Phase 1.5：离线混合影子上下文（已实现）
+### Phase 1.5：离线混合影子上下文（自动工程验收完成）
 
 基于 Envision 人工页码基线，规则召回与向量召回采用 RRF 2：1 融合：
 
@@ -1892,22 +1892,28 @@ Expected: 禁用测试通过、`git diff --check` 无输出、没有新增密钥
 - 默认纯向量模式继续保留；
 - 不调用外部服务，不写数据库，不进入正式分析链路。
 
+2026-07-27 封版结果：
+
+- 499 个 requirement、499 个 context 和 499 个唯一 context hash；
+- 同页重复、未解析规则页、越界页、非法 shadow evidence ID、非法 RRF evidence 字段和两次重建 hash 差异均为 0；
+- 119 条有工程 gold 样本中，混合 Hit@5 为 0.882353、Recall@5 为 0.793277、MRR 为 0.816667，均高于规则基线；
+- `hybrid_gain=11`、`hybrid_loss=0`；
+- 18 张非影子表前后计数一致；
+- Phase 1.5 focused 57 项、后端全量 709 项测试和 Envision `577/499/78/0` 门禁通过；
+- 没有新增 ESG 专家判断，没有调用外部模型。
+
 实现和验证细节见：
 
 - `docs/plan/hybrid-shadow-context-design.md`
 - `docs/plan/hybrid-shadow-context-implementation-plan.md`
+- `docs/plan/hybrid-shadow-rag-phase1.5-finalization-plan.md`
+- `docs/product/rag-phase1.5-acceptance-report.md`
 
-### Phase 2: 影子 RAG 进入正式 AI suggestion
+### Phase 2：影子 RAG 进入正式 AI suggestion（可选增强，未启动）
 
 目标：在 assessment 已由现有规则生成后，把规则证据与向量候选组成混合上下文，提升 AI 建议的证据覆盖与解释质量。AI suggestion 仍然是辅助层，不覆盖规则 assessment。
 
-进入条件：
-
-- Envision 影子召回 `recall@5` 不低于当前规则召回基线；
-- 存在经过抽样确认的 `vector_only` 有效新证据；
-- 至少 20–50 条影子生成结果完成人工抽查；
-- false disclosed、wrong source page 和 invalid citation 均为 0；
-- 费用、时延、失败降级和 prompt 版本已记录。
+Phase 1.5 已形成足够的离线工程基线，当前产品闭环不依赖 Phase 2，因此不为解冻后端而启动该阶段。只有出现明确的 AI suggestion 证据覆盖需求，并取得独立计划批准后才重新评估。
 
 需要独立计划评估的改动：
 
@@ -1919,13 +1925,12 @@ Expected: 禁用测试通过、`git diff --check` 无输出、没有新增密钥
 
 Phase 2 不允许直接修改 `assessment.verdict`、risk 或正式输出门禁。
 
-### Phase 3: RAG 参与 assessment
+### Phase 3：RAG 参与 assessment（关闭）
 
-目标：评估向量候选能否进入正式证据路由并影响 assessment。该阶段会解除部分后端冻结，影响范围显著，必须另写计划并重新验收。
+该阶段当前关闭。向量候选不得进入正式证据路由或影响 assessment。
 
-前置条件：
+只有取得独立高质量 gold 或 ESG 专家条件后，才允许重新决策。重新评估至少需要：
 
-- Phase 2 已形成稳定、可追溯的混合证据；
 - Envision 全量人工基线与最终裁决可重放；
 - 有独立 holdout 或新增报告验证，避免只对 Envision 过拟合；
 - 明确披露结论、证据质量、复核优先级三层职责；
@@ -1940,7 +1945,7 @@ Phase 2 不允许直接修改 `assessment.verdict`、risk 或正式输出门禁�
 - Envision 577、人工裁决、Goldwind/新报告泛化、前端说明和 API 契约；
 - 数据迁移、历史 run 可重放与版本隔离。
 
-未满足上述条件时，Phase 3 保持关闭。
+现有 Phase 1.5 指标、migration 或环境开关均不能自动解冻 Phase 3。
 
 ## 15. 风险与取舍
 

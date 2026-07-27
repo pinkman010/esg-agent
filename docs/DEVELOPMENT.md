@@ -28,7 +28,7 @@
 第一版需要：
 
 - PostgreSQL。
-- pgvector 预留，第一版不生成真实 embedding。
+- pgvector 只服务离线影子 embedding；正式分析链路不读取向量结果。
 - Tesseract。
 - OCRmyPDF。
 - Ghostscript，供 OCRmyPDF 真实执行 OCR 时调用。
@@ -308,7 +308,7 @@ uv run --no-sync python -c "from sqlalchemy.engine import make_url; from src.con
 - Codex 内置浏览器控制在本机发生两次桌面应用闪退。自动页面截图改用独立无头 Edge；人工验收使用普通浏览器，不再启用 Codex 内置浏览器。
 - 外部模型和 OCR/VLM 默认关闭。DeepSeek 只在 `confirm_llm=true` 且用户明确批准后启用；OCR/VLM 本轮未启用。
 
-当前自动门禁（2026-07-26）：后端 686 项测试通过；前端 28 个测试文件、103 项测试、typecheck 和 production build 通过；Envision v3 内部结构为 `577/499/78/0`，global fallback、新增 false disclosed 和新增 wrong source page 均为 0，audit 为 0 error、0 warning。16 条历史结果差异全部进入最终裁决资产，其中 13 条与规则一致、3 条需要最终人工覆盖、0 条 pending。Goldwind 100 条历史人工 gold 为 recall 96.08%、false disclosed 0、wrong source page 0、unknown leakage 2，作为低优先级泛化证据，不阻塞 Envision 主线验收。main 与 demo 数据库 head 均为 `0012_chunk_embeddings`。
+当前自动门禁（2026-07-27）：后端 709 项测试通过；前端 28 个测试文件、103 项测试、typecheck 和 production build 通过；Envision v3 内部结构为 `577/499/78/0`，global fallback、新增 false disclosed 和新增 wrong source page 均为 0，audit 为 0 error、0 warning。16 条历史结果差异全部进入最终裁决资产，其中 13 条与规则一致、3 条需要最终人工覆盖、0 条 pending。Goldwind 100 条历史人工 gold 为 recall 96.08%、false disclosed 0、wrong source page 0、unknown leakage 2，作为低优先级泛化证据，不阻塞 Envision 主线验收。main 与 demo 数据库 head 均为 `0012_chunk_embeddings`。
 
 DeepSeek 225 条真实评估固定使用 Envision 报告 `report-14864b1a3ef64512b0e5d3676a120bc1` 和 run `run-526bd97aef5d4b9baa14618b719081c9`。最终指标：一致 162/224（72.32%），适用性例外 1，累计定向补跑 18 次；guardrail 后 false disclosed、证据 ID 越界、可比错页、schema 失败和模型失败均为 0。该结果保留为 AI 辅助工程基线，不构成 GRI 专家认证或最终合规结论。本轮 v1.1 冻结没有修改 DeepSeek 模型、Prompt、调用范围或 guardrail。
 
@@ -524,6 +524,54 @@ uv run --no-sync python -m src.tools.build_shadow_rag_contexts `
 
 混合模式从当前数据库只读加载指定报告的 `document_chunks`，用 RRF 融合 `rule_pages` 和向量候选。Top 10 是内部向量候选池，实际写入每个 context 的候选最多为 Top 5。该命令不调用 SiliconFlow 或 DeepSeek，不写数据库；无法在数据库中解析的规则页写入 `unresolved_rule_pages`，不会伪造正文。
 
+Phase 1.5 封版命令不调用外部服务，并强制 `EMBEDDING_ENABLED=false`。执行前必须确认实际数据库为 `esg_agent_demo`：
+
+```powershell
+cd backend
+$env:APP_ENV="demo"
+$env:DATABASE_URL="postgresql+psycopg://esg_agent:esg_agent@localhost:5432/esg_agent_demo"
+$env:UPLOAD_DIR="backend/data/runtime/demo/uploads"
+$env:DERIVED_DIR="backend/data/runtime/demo/derived"
+$env:EMBEDDING_ENABLED="false"
+$phase15GitHead = git rev-parse HEAD
+uv run --no-sync python -m src.tools.finalize_shadow_rag_phase1 `
+  --report-id report-15401bb4334e40d4a0885730f2635b22 `
+  --retrieval-cases ../tmp/embedding/envision_demo_bge_m3_shadow_retrieval_cases.csv `
+  --context-output tmp/embedding/envision_phase1_5_contexts.jsonl `
+  --output-prefix tmp/embedding/envision_phase1_5_acceptance `
+  --report-total-pages 78 `
+  --git-head $phase15GitHead
+```
+
+命令先校验 `APP_ENV=demo`、配置数据库名为 `esg_agent_demo`、运行时 Git HEAD 与 `--git-head` 完全一致，再在 `REPEATABLE READ READ ONLY` 事务内确认实际连接库为 `esg_agent_demo`，读取报告 chunk 和非影子表计数并连续构建两次 context。输入 manifest 同时记录工作区脏状态、Git 状态摘要和四个关键实现文件的 SHA256。输出固定为：
+
+- `tmp/embedding/envision_phase1_5_contexts.jsonl`
+- `tmp/embedding/envision_phase1_5_acceptance_cases.csv`
+- `tmp/embedding/envision_phase1_5_acceptance_summary.json`
+- `tmp/embedding/envision_phase1_5_input_manifest.json`
+- `tmp/embedding/envision_phase1_5_formal_state.json`
+- `tmp/embedding/envision_phase1_5_acceptance_report.md`
+
+目标数据库、embedding 开关、Git HEAD、输入文件、report chunk、499 条 requirement 集合、119 条 gold 覆盖、落盘 JSONL 结构审计、两次 hash、正式表计数或相对质量门禁任一不合格时，命令以非零状态停止。历史 `correct_pdf_pages` 只作为工程 gold；无 gold requirement 不进入召回指标分母。
+
+Phase 1.5 focused 验证：
+
+```powershell
+cd backend
+uv run --no-sync pytest `
+  tests/tools/test_shadow_context_acceptance.py `
+  tests/tools/test_finalize_shadow_rag_phase1.py `
+  tests/tools/test_shadow_retrieval.py `
+  tests/tools/test_shadow_rag.py `
+  tests/db/test_repositories.py `
+  -q
+uv run --no-sync ruff check `
+  src/tools/shadow_context_acceptance.py `
+  src/tools/finalize_shadow_rag_phase1.py `
+  tests/tools/test_shadow_context_acceptance.py `
+  tests/tools/test_finalize_shadow_rag_phase1.py
+```
+
 可选生成评估属于独立停止点。取得 DeepSeek 真实调用批准且本机已经配置 `OPENAI_COMPATIBLE_API_KEY` 后，才允许显式传入：
 
 ```powershell
@@ -537,6 +585,12 @@ uv run --no-sync python -m src.tools.evaluate_shadow_rag `
 影子输出使用 `shadow_*` 字段和 `shadow-chunk:<chunk_id>`，不构成最终合规结论。真实 SiliconFlow 和真实 DeepSeek 调用需要分别批准。
 
 ## 12. 开发日志
+
+### 2026-07-27
+
+- 完成混合影子 RAG Phase 1.5 自动工程验收：499 个 context、499 个唯一 hash、0 个重复页、0 个未解析规则页和 0 个确定性差异；119 条有 gold 样本中，混合 Hit@5、Recall@5 和 MRR 均高于规则基线，gain 11、loss 0。
+- 封版工具使用 PostgreSQL `REPEATABLE READ READ ONLY`，18 张非影子表前后计数一致；Phase 1.5 focused 57 项、后端全量 709 项测试和 Envision `577/499/78/0` 门禁通过。
+- Phase 2 保持可选且未启动，Phase 3 关闭；本阶段没有新增 ESG 专家判断，不调用外部服务，不接入正式分析链路。
 
 ### 2026-07-26
 

@@ -6,7 +6,9 @@
 
 Envision 2024 中文报告 MVP 后端基线 v1.1 已冻结。产品统一对外表达为“完成 577 项 GRI 核查”；内部结构为 577 个标准单元、499 个独立判断项、78 个上下文项、0 个方法待确认项。规则 assessment、DeepSeek suggestion 和人工 snapshot 分层保存，16 条历史判断差异已写入最终裁决资产，当前待裁决数为 0。
 
-当前门禁：后端 686 项测试通过；前端 28 个测试文件、103 项测试、typecheck 和 production build 通过；Envision v3 回归的新增 false disclosed、wrong source page 和 global fallback 均为 0。Goldwind 100 条历史 gate 保留为次级泛化证据，不阻塞 Envision 主线。
+当前门禁：后端 709 项测试通过；前端 28 个测试文件、103 项测试、typecheck 和 production build 通过；Envision v3 回归的新增 false disclosed、wrong source page 和 global fallback 均为 0。Goldwind 100 条历史 gate 保留为次级泛化证据，不阻塞 Envision 主线。
+
+混合影子 RAG Phase 1.5 已完成自动工程验收。499 个独立判断项均生成确定性的规则、向量和混合 Top 5 对比；在其中 119 条具有历史工程 gold 的样本中，混合 Hit@5、Recall@5 和 MRR 均高于规则基线，正式业务表和 Envision 冻结门禁保持不变。该能力继续只用于离线诊断，不进入正式 evidence、assessment、risk、AI suggestion、API 或前端，也不构成 ESG 专家判断。Phase 2 为可选增强且未启动，Phase 3 保持关闭。
 
 该基线属于本地产品与工程验收，不构成 GRI 专家认证、外部鉴证或企业部署承诺。企业条件适用性仍可能需要企业确认。
 
@@ -31,6 +33,7 @@ esg-agent/
 - 资产与证据边界：`docs/ASSETS.md`
 - API 契约：`docs/product/api-contract.md`
 - MVP 验收：`docs/product/mvp-acceptance-report.md`
+- RAG Phase 1.5 验收：`docs/product/rag-phase1.5-acceptance-report.md`
 - 实施计划：`docs/plan/`
 
 ## 第一版范围
@@ -75,7 +78,7 @@ pnpm install
 pnpm dev
 ```
 
-前端默认访问 `http://localhost:3000`，后端 OpenAPI 默认访问 `http://localhost:8000/docs`。数据库 head 为 `0011_ai_suggestions`。
+前端默认访问 `http://localhost:3000`，后端 OpenAPI 默认访问 `http://localhost:8000/docs`。数据库 head 为 `0012_chunk_embeddings`。
 
 ## 验证命令
 

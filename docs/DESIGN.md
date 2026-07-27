@@ -472,13 +472,19 @@ v3 技术结构为 `577/499/78/0`：577 个范围单元均处于 `assessed` 或 
 
 ## 20. 离线影子 RAG 与后续接入边界
 
-第一阶段质量评估以 Envision 人工复核工作簿的 `correct_pdf_pages` 作为 gold pages，系统 regeneration CSV 的 candidate/source pages 只作为现有规则召回对照。没有人工正确页的 requirement 保留在明细中，但不进入 `hit@k`、`recall@k` 和 MRR 分母。该口径衡量“能否找回人工确认页面”，不能替代对披露充分性和企业适用性的人工判断。
+Phase 1.5 质量评估以 Envision 既有人工复核工作簿的 `correct_pdf_pages` 作为工程 gold，系统 regeneration CSV 的 candidate/source pages 只作为现有规则召回对照。没有历史正确页的 requirement 保留在明细中，但不进入 `hit@k`、`recall@k` 和 MRR 分母。该口径衡量“能否找回历史确认页面”，不代表本轮新增了 ESG 专家判断，也不能替代对披露充分性和企业适用性的人工判断。
 
 shadow context 使用 `shadow-chunk:<chunk_id>`，与正式 `evidence_id` 隔离。可选 DeepSeek 生成使用独立 `shadow-rag-v1` prompt，只能引用当前 context 中的 shadow evidence；越界引用、页码不一致、无证据 disclosed 和 partial 无缺失项均进入影子 guardrail。生成结果只写本地诊断文件。
 
-后续分为两个独立阶段：
+Phase 1.5 固定使用向量候选池 Top 10、最终 context Top 5、规则与向量 RRF 权重 2：1、常数 60。封版工具只允许 `APP_ENV=demo`、配置库名与实际连接库均为 `esg_agent_demo`、`EMBEDDING_ENABLED=false`；它在 `REPEATABLE READ READ ONLY` 事务中读取指定报告 chunk 和全部非影子表计数，同一输入连续构建两次，再从落盘 JSONL 反序列化后验证 requirement、页级去重、页码范围、精确 shadow evidence ID、provider、model、RRF 参数、逐 evidence 来源/rank/融合分数和 context hash。119 条 gold 覆盖也是硬门槛，避免空 gold 或样本漂移产生误通过。验收结果只写 `tmp/embedding/`，长期结论记录在 `docs/product/rag-phase1.5-acceptance-report.md`。
 
-1. Phase 2 只允许影子 RAG 候选进入正式 AI suggestion 输入，仍不能覆盖规则 assessment。进入条件包括 `recall@5` 不低于规则基线、存在人工确认的 vector-only 新证据、影子生成抽查完成，且 false disclosed、wrong source page、invalid citation 均为 0。
-2. Phase 3 才评估向量候选能否晋升为正式 evidence 并影响 assessment。该阶段需要独立解除后端冻结，重新设计证据准入、审计、降级、risk-v2.1、review、export 和历史 run 重放，并通过 Envision 全量及独立报告泛化门禁。
+封版追溯记录使用运行时 `git rev-parse HEAD` 校验 CLI 输入，显式记录工作区是否有未提交变更、`git status --porcelain` 的 SHA256，以及封版编排、结构审计、context 构建和召回评估四个实现文件的 SHA256。未提交工作区可以执行工程验收，但报告必须明确该状态，不能仅凭 Git HEAD 声称代码可重现。
+
+2026-07-27 工程基线为 499 个 context、499 个唯一 requirement、499 个唯一 hash、0 个重复页 context、0 个未解析规则页 context、0 个越界页和 0 个确定性 hash 差异。119 条有 gold 样本中，混合 Hit@5 为 0.882353、Recall@5 为 0.793277、MRR 为 0.816667，均高于规则基线的 0.789916、0.714146 和 0.742297；gain 11、loss 0。18 张非影子表前后计数一致，Envision `577/499/78/0` 门禁零回归。
+
+后续边界：
+
+1. Phase 2 为可选 AI suggestion 增强，当前未启动。启动前需要独立计划和解除相应后端冻结；混合候选仍不能覆盖规则 assessment。
+2. Phase 3 保持关闭。只有取得独立高质量 gold 或专家条件后才重新决策；届时必须重新设计证据准入、审计、降级、risk-v2.1、review、export 和历史 run 重放，并通过 Envision 全量及独立报告泛化门禁。
 
 当前 migration 和环境开关不能自动启用 Phase 2 或 Phase 3。
