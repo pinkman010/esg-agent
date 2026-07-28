@@ -12,17 +12,43 @@
 
 ## 1. 执行状态与默认范围
 
-**执行状态（2026-07-28）：** Task 1–3 已一次性执行；Task 7 已完成文档、前端和冻结边界验证。Task 4–6 未执行，后端未解冻，真实模型调用为 0。
+**执行状态（2026-07-28）：** Task 1–3 已执行；Task 7 已完成文档、后端、前端、Phase 1.5 封版和 Envision v3 收尾复验。Task 4–6 未执行，后端未解冻，真实模型调用为 0。
 
 | Task | 状态 | 授权 |
 | --- | --- | --- |
 | Task 1：文档基线纠偏 | 已完成 | 默认范围 A |
 | Task 2：产品验收与风险清单 | 已完成 | 默认范围 A |
-| Task 3：前端派生展示 | 已完成 | 需单独批准范围 B |
+| Task 3：前端派生展示 | 已完成（含低复核优先级文案修复） | 需单独批准范围 B |
 | Task 4：离线观测工具 | 未执行 | 需单独批准范围 C |
 | Task 5：正式状态语义 | 未执行 | 需解除冻结并批准范围 D |
 | Task 6：显式候选边界测试 | 未执行 | 需单独批准范围 C 或 D |
-| Task 7：最终门禁 | 已完成（文档与前端范围） | 随实际范围执行 |
+| Task 7：最终门禁 | 已完成（收尾复验） | 随实际范围执行 |
+
+收尾基线：
+
+```text
+Git commit：570a996d42143e8ffde1bfc6b2693f4c3c3ad2d0
+真实模型调用：无
+后端是否解冻：否
+前端是否变更：是，仅修改既有 API 数据的展示分类与中文文案
+RAG 是否进入正式链路：否
+Task 4–6：未执行
+```
+
+收尾门禁：
+
+```text
+Phase 1.5：499 context，119 条工程 gold，gain 11，loss 0，18 张正式表计数不变
+后端：709 tests pass
+Ruff：src 与 tests pass
+前端：28 test files / 105 tests / typecheck / production build pass
+Envision v3：577/499/78/0
+global fallback / new false disclosed / new wrong source page：0 / 0 / 0
+final adjudication pending：0
+audit：0 error / 0 warning
+```
+
+完整事实见 `docs/product/phase1.5-closeout-report.md`。
 
 默认批准范围只包含：
 
@@ -265,7 +291,7 @@ call_budget_exhausted
 - Modify: `docs/DESIGN.md`
 - Modify: `docs/DEVELOPMENT.md`
 
-- [ ] **Step 1：更新 DESIGN 当前门禁数字**
+- [x] **Step 1：更新 DESIGN 当前门禁数字**
 
 在 `docs/DESIGN.md` 的“当前实现与验收状态”中，把当前状态段落的：
 
@@ -281,7 +307,7 @@ call_budget_exhausted
 
 不得修改 `docs/DEVELOPMENT.md` 历史日期段落中的 651、626、627 等数字。
 
-- [ ] **Step 2：在 DEVELOPMENT 当前状态中记录 LLM 决策**
+- [x] **Step 2：在 DEVELOPMENT 当前状态中记录 LLM 决策**
 
 在最新开发日志中增加：
 
@@ -291,7 +317,7 @@ call_budget_exhausted
 - `assess_explicit_candidates()` 只允许离线评估工具和测试使用，不进入默认产品工作流。
 ```
 
-- [ ] **Step 3：检查当前状态与历史日志没有混写**
+- [x] **Step 3：检查当前状态与历史日志没有混写**
 
 Run:
 
@@ -307,7 +333,7 @@ Expected:
 - 651、627、626 只出现在对应历史日志；
 - 新增 LLM 决策只描述当前边界。
 
-- [ ] **Step 4：提交文档纠偏**
+- [x] **Step 4：提交文档纠偏**
 
 ```powershell
 git add docs/DESIGN.md docs/DEVELOPMENT.md
@@ -325,7 +351,7 @@ git commit -m "docs: align frozen LLM assistance baseline"
 - Create: `docs/product/llm-assistance-acceptance.md`
 - Modify: `README.md`
 
-- [ ] **Step 1：创建产品验收说明**
+- [x] **Step 1：创建产品验收说明**
 
 创建 `docs/product/llm-assistance-acceptance.md`，固定包含以下内容：
 
@@ -376,7 +402,7 @@ git commit -m "docs: align frozen LLM assistance baseline"
 - `needs_human_review` 只作为后续可选语义调整。
 ```
 
-- [ ] **Step 2：在 README 增加入口**
+- [x] **Step 2：在 README 增加入口**
 
 在“核心文档”中增加：
 
@@ -384,7 +410,7 @@ git commit -m "docs: align frozen LLM assistance baseline"
 - LLM 辅助建议层验收：`docs/product/llm-assistance-acceptance.md`
 ```
 
-- [ ] **Step 3：检查边界措辞**
+- [x] **Step 3：检查边界措辞**
 
 Run:
 
@@ -395,14 +421,14 @@ rg -n "最终合规结论|confirm_llm|规则 assessment|人工 snapshot|assess_e
 
 Expected: 六类边界均有明确说明，不出现“AI 自动确认合规”“模型结论覆盖规则”等表述。
 
-- [ ] **Step 4：提交验收说明**
+- [x] **Step 4：提交验收说明**
 
 ```powershell
 git add README.md docs/product/llm-assistance-acceptance.md
 git commit -m "docs: add LLM assistance acceptance boundary"
 ```
 
-- [ ] **Step 5：停止并请求范围确认**
+- [x] **Step 5：停止并请求范围确认**
 
 完成 Task 1–2 后停止。未取得新批准时，不执行 Task 3–6。
 
@@ -421,7 +447,7 @@ git commit -m "docs: add LLM assistance acceptance boundary"
 - Modify: `frontend/components/review/ai-suggestion-panel.tsx`
 - Modify: `frontend/components/review/review-editor.test.tsx`
 
-- [ ] **Step 1：写前端派生状态失败测试**
+- [x] **Step 1：写前端派生状态失败测试**
 
 在 `frontend/lib/ai-presentation.test.ts` 的 import 中增加 `aiPresentationState`，并追加：
 
@@ -443,7 +469,7 @@ it("separates guardrail review from technical failure without changing API statu
 });
 ```
 
-- [ ] **Step 2：运行测试确认失败**
+- [x] **Step 2：运行测试确认失败**
 
 Run:
 
@@ -454,7 +480,7 @@ pnpm test -- --run lib/ai-presentation.test.ts
 
 Expected: FAIL，`aiPresentationState` 尚不存在。
 
-- [ ] **Step 3：实现纯前端派生状态**
+- [x] **Step 3：实现纯前端派生状态**
 
 在 `frontend/lib/ai-presentation.ts` 增加：
 
@@ -489,7 +515,7 @@ export function aiPresentationState(
 }
 ```
 
-- [ ] **Step 4：调整面板文案但保持操作禁用**
+- [x] **Step 4：调整面板文案但保持操作禁用**
 
 `frontend/components/review/ai-suggestion-panel.tsx` 使用派生状态显示：
 
@@ -509,7 +535,7 @@ const usable = isUsableAISuggestion(suggestion);
 
 只有 `status=succeeded` 才显示采纳、载入修改和拒绝按钮。不得让 `needs_human_review` 进入 `usable`。
 
-- [ ] **Step 5：运行前端相关测试**
+- [x] **Step 5：运行前端相关测试**
 
 Run:
 
@@ -523,7 +549,7 @@ pnpm test -- --run `
 
 Expected: PASS。
 
-- [ ] **Step 6：运行完整前端门禁**
+- [x] **Step 6：运行完整前端门禁**
 
 ```powershell
 cd frontend
@@ -539,7 +565,7 @@ Expected:
 - typecheck 通过；
 - production build 通过。
 
-- [ ] **Step 7：提交前端展示调整**
+- [x] **Step 7：提交前端展示调整**
 
 ```powershell
 git add `
@@ -1176,7 +1202,7 @@ git commit -m "test: lock explicit AI evaluation boundary"
 
 **授权级别：** 按实际执行范围决定。
 
-- [ ] **Step 1：确认没有真实外部调用**
+- [x] **Step 1：确认没有真实外部调用**
 
 Run:
 
@@ -1192,7 +1218,7 @@ Expected:
 - 产品验收文档不包含 raw response；
 - 测试继续使用 mock completion factory。
 
-- [ ] **Step 2：运行仓库卫生检查**
+- [x] **Step 2：运行仓库卫生检查**
 
 ```powershell
 git diff --check
@@ -1207,7 +1233,7 @@ Expected:
 - `git diff --check` 无错误；
 - 新文档没有本机绝对路径。
 
-- [ ] **Step 3：按范围运行门禁**
+- [x] **Step 3：按范围运行门禁**
 
 只执行 Task 1–2：
 
@@ -1244,7 +1270,7 @@ pnpm typecheck
 pnpm build
 ```
 
-- [ ] **Step 4：执行 Envision v3 regression**
+- [x] **Step 4：执行 Envision v3 regression**
 
 只要执行 Task 4、5 或 6，必须显式绑定测试库运行：
 
@@ -1279,7 +1305,7 @@ audit_errors=0
 audit_warnings=0
 ```
 
-- [ ] **Step 5：确认正式层级未改变**
+- [x] **Step 5：确认正式层级未改变**
 
 Run:
 
@@ -1292,7 +1318,7 @@ rg -n "latest_ai_suggestion|system_verdict|reviewed_verdict|effective_verdict" `
 
 人工复核和导出必须继续使用既有 effective verdict 规则。不得出现 AI suggestion 直接写入 assessment、risk 或 export verdict 的新路径。
 
-- [ ] **Step 6：记录实际执行范围**
+- [x] **Step 6：记录实际执行范围**
 
 在本计划顶部的 Task 状态表中逐项勾选实际完成的 Task，并写入：
 

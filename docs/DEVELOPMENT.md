@@ -308,7 +308,7 @@ uv run --no-sync python -c "from sqlalchemy.engine import make_url; from src.con
 - Codex 内置浏览器控制在本机发生两次桌面应用闪退。自动页面截图改用独立无头 Edge；人工验收使用普通浏览器，不再启用 Codex 内置浏览器。
 - 外部模型和 OCR/VLM 默认关闭。DeepSeek 只在 `confirm_llm=true` 且用户明确批准后启用；OCR/VLM 本轮未启用。
 
-当前自动门禁（2026-07-27）：后端 709 项测试通过；前端 28 个测试文件、103 项测试、typecheck 和 production build 通过；Envision v3 内部结构为 `577/499/78/0`，global fallback、新增 false disclosed 和新增 wrong source page 均为 0，audit 为 0 error、0 warning。16 条历史结果差异全部进入最终裁决资产，其中 13 条与规则一致、3 条需要最终人工覆盖、0 条 pending。Goldwind 100 条历史人工 gold 为 recall 96.08%、false disclosed 0、wrong source page 0、unknown leakage 2，作为低优先级泛化证据，不阻塞 Envision 主线验收。main 与 demo 数据库 head 均为 `0012_chunk_embeddings`。
+当前自动门禁（2026-07-28）：后端 709 项测试通过；前端 28 个测试文件、105 项测试、typecheck 和 production build 通过；Envision v3 内部结构为 `577/499/78/0`，global fallback、新增 false disclosed 和新增 wrong source page 均为 0，audit 为 0 error、0 warning。16 条历史结果差异全部进入最终裁决资产，其中 13 条与规则一致、3 条需要最终人工覆盖、0 条 pending。Goldwind 100 条历史人工 gold 为 recall 96.08%、false disclosed 0、wrong source page 0、unknown leakage 2，作为低优先级泛化证据，不阻塞 Envision 主线验收。main 与 demo 数据库 head 均为 `0012_chunk_embeddings`。
 
 DeepSeek 225 条真实评估固定使用 Envision 报告 `report-14864b1a3ef64512b0e5d3676a120bc1` 和 run `run-526bd97aef5d4b9baa14618b719081c9`。最终指标：一致 162/224（72.32%），适用性例外 1，累计定向补跑 18 次；guardrail 后 false disclosed、证据 ID 越界、可比错页、schema 失败和模型失败均为 0。该结果保留为 AI 辅助工程基线，不构成 GRI 专家认证或最终合规结论。本轮 v1.1 冻结没有修改 DeepSeek 模型、Prompt、调用范围或 guardrail。
 
@@ -592,6 +592,9 @@ uv run --no-sync python -m src.tools.evaluate_shadow_rag `
 - `confirm_llm=false` 只记录 run 级授权状态和 AI stage skipped，不写 499 条逐项 skipped suggestion。
 - `assess_explicit_candidates()` 只允许离线评估工具和测试使用，不进入默认产品工作流。
 - 完成不解冻后端的 LLM 展示收口：前端从既有 `status` 与 `guardrail_codes` 派生“需人工独立判断”和“技术调用未完成”，不新增 API 状态，被 guardrail 拦截的 suggestion 继续不可采纳；前端 28 个测试文件、105 项测试、typecheck 和 production build 通过。
+- 修正 `low_review_priority` 的跳过原因展示，避免把低复核优先级误写为安全校验；真实演示数据浏览器复验无 AI 操作按钮，控制台无错误。
+- 在提交 `570a996` 上重新执行 Phase 1.5 封版、后端全量测试、Ruff、前端完整门禁和 Envision v3 回归；499 个影子 context、119 条工程 gold 覆盖、18 张正式表计数不变，`577/499/78/0`、新增 false disclosed、wrong source page、global fallback、audit error 和 audit warning 均为 0。真实外部模型调用为 0，后端继续冻结。
+- Phase 1.5 收尾事实集中记录在 `docs/product/phase1.5-closeout-report.md`；Task 4–6 继续延期，不因收尾自动解冻。
 
 ### 2026-07-27
 
