@@ -601,6 +601,7 @@ uv run --no-sync python -m src.tools.evaluate_shadow_rag `
 - 冻结内关闭产品巡检 OBS-006：复核工作台复用 dashboard 的 run_id 和现有 run.confirm_llm，把无 suggestion 细分为 AI 未启用、已启用但单项无建议、读取中和状态不可用；suggestion 状态和三层优先级不变。前端 28 个测试文件/111 项测试、typecheck、production build 及浏览器只读核验通过。
 - 巡检剩余优先缺口为单 export 文件下载及 manifest 绝对路径；完整核查全局搜索和整改截止日期更新列为后端解冻后事项。问题证据、优先级和进入条件见 `docs/product/phase1.5-product-observation-backlog.md`。
 - 冻结边界复核确认：现有 API 没有 export 单文件下载端点，assessment 全局查询参数不含 requirement/关键词/结论/复核状态，UpdateActionRequest 不含 due_date；上述剩余项不在前端绕过，等待单独批准后端解冻。
+- 在提交 `c3528b1` 上完成交付前普通 Chrome 最终只读验收：首页、键盘导航、报告实例识别、总览、577 项首末分页、三栏复核、AI 未启用空态、PDF 第 77/78 页查看、整改任务和正式输出前置门禁均通过，console error/warning 为 0。`esg_agent_demo` 的 18 张正式表前后计数完全一致，没有业务写入或外部模型调用；结果见 `docs/product/phase1.5-product-observation-backlog.md`。
 
 ### 2026-07-27
 

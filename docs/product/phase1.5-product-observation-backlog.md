@@ -216,3 +216,47 @@ DeepSeek 模型、Prompt、参数和候选筛选继续冻结。只有获得独�
 | OBS-007 | `UpdateActionRequest` 只有 `status`、`owner_name` 和 `completion_note` | 更新截止日期需要扩展后端 schema、repository 更新字段、审计 payload 和相关测试 |
 
 因此，本轮冻结内实现到 OBS-003、OBS-005 和 OBS-006 为止。下一次代码开发应先单独批准后端解冻范围，再为对应纵向功能执行完整 gates。
+
+## 9. 交付前 Chrome 最终自动验收
+
+2026-07-28 在提交 `c3528b1` 上，使用普通 Chrome 对 `APP_ENV=demo`、`esg_agent_demo` 和现有 Envision 报告执行交付前只读验收。
+
+目标对象：
+
+```text
+report_id：report-15401bb4334e40d4a0885730f2635b22
+run_id：run-92bf75b11eb042dab6cb689311634fe1
+confirm_llm：false
+```
+
+验收结果：
+
+- 首页显示 577 项核查范围、高/中/低优先级 9/54/436 和适用性待确认 309；
+- 使用键盘 Enter 成功从首页进入报告总览；
+- 报告列表显示 5 个实例，每个实例具有唯一短 report ID、创建时间、语言和页数；
+- 报告总览显示高优先级已复核 1/9、未解决 8、分析不完整 0，并明确本次未启用 AI；
+- 完整核查首屏显示 50 项、共 577 项和 12 页，末页显示第 551–577 项；
+- 三栏复核保持规则、AI、人工分层，目标高优先级项目及 8 项待复核队列正常加载；
+- AI 空态显示“本次分析未启用 AI 辅助，规则结果仍有效”；
+- PDF 第 77 页证据正常加载，放大控件可操作，并可翻到第 78 页；
+- 当前报告的 1 项整改任务正常加载，没有执行保存；
+- 输出页显示 2 份历史草稿，正式输出因 8 项高优先级未完成而提前禁用，草稿按钮保持可用；
+- Chrome 全程 console error/warning 为 0。
+
+验收前后 `esg_agent_demo` 的 18 张正式表计数完全一致。关键计数均保持：
+
+```text
+reports：5
+analysis_runs：5
+analysis_stage_events：2781
+assessments：2723
+ai_assessment_suggestions：736
+review_snapshots：4
+improvement_actions：2
+export_versions：5
+audit_events：28
+```
+
+本轮只在 Chrome 本地保存复核人显示名称，没有保存人工快照、更新整改任务、生成输出、上传报告或调用外部模型。文件上传主流程已有历史普通 Chrome 验收和自动测试覆盖；单 export 文件下载仍由 OBS-001/OBS-002 阻塞。
+
+工程与产品自动验收已达到当前冻结范围的交付条件。下一环节交给用户进行操作体验、信息层级和业务表达的主观确认；该确认不替代 ESG 专业判断。
