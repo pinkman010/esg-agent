@@ -586,6 +586,13 @@ uv run --no-sync python -m src.tools.evaluate_shadow_rag `
 
 ## 12. 开发日志
 
+### 2026-07-28
+
+- LLM 辅助层继续保持 `confirm_llm` 显式授权、规则/AI/人工三层隔离和追加式 suggestion；当前不修改 DeepSeek 模型、Prompt、候选筛选、数据库、API、导出或 RAG 接入。
+- `confirm_llm=false` 只记录 run 级授权状态和 AI stage skipped，不写 499 条逐项 skipped suggestion。
+- `assess_explicit_candidates()` 只允许离线评估工具和测试使用，不进入默认产品工作流。
+- 完成不解冻后端的 LLM 展示收口：前端从既有 `status` 与 `guardrail_codes` 派生“需人工独立判断”和“技术调用未完成”，不新增 API 状态，被 guardrail 拦截的 suggestion 继续不可采纳；前端 28 个测试文件、105 项测试、typecheck 和 production build 通过。
+
 ### 2026-07-27
 
 - 完成混合影子 RAG Phase 1.5 自动工程验收：499 个 context、499 个唯一 hash、0 个重复页、0 个未解析规则页和 0 个确定性差异；119 条有 gold 样本中，混合 Hit@5、Recall@5 和 MRR 均高于规则基线，gain 11、loss 0。
