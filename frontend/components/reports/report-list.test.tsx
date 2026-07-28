@@ -44,11 +44,43 @@ describe("ReportList", () => {
 
     expect(await screen.findByText("测试公司")).toBeInTheDocument();
     expect(screen.getByText("2024 年")).toBeInTheDocument();
+    expect(screen.getByText(/创建于 2026/)).toBeInTheDocument();
+    expect(screen.getByText("zh-CN")).toBeInTheDocument();
+    expect(screen.getByText("78 页")).toBeInTheDocument();
+    expect(screen.getByText("ID report-1")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /待启动分析/ })).toHaveAttribute(
       "href",
       "/reports/report-1/confirm",
     );
-    expect(screen.queryByText("report-1")).not.toBeInTheDocument();
+  });
+
+  it("keeps report instances identifiable when optional metadata is missing", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse({
+      items: [{
+        report_id: "report-1234567890abcdef",
+        original_filename: "测试公司 ESG 报告.pdf",
+        file_hash: "hash-1",
+        page_count: null,
+        company_name: "测试公司",
+        report_year: 2024,
+        language: null,
+        status: "ready_for_analysis",
+        metadata_detected: {},
+        metadata_confirmed_at: null,
+        created_at: null,
+        updated_at: null,
+      }],
+      page: 1,
+      page_size: 50,
+      total: 1,
+    })));
+
+    renderWithQuery(<ReportList />);
+
+    expect(await screen.findByText("创建时间待记录")).toBeInTheDocument();
+    expect(screen.getByText("语言待确认")).toBeInTheDocument();
+    expect(screen.getByText("页数待确认")).toBeInTheDocument();
+    expect(screen.getByText("ID 12345678")).toBeInTheDocument();
   });
 
   it("uses review-priority wording for the completed review status", async () => {

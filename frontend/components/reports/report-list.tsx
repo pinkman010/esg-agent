@@ -23,6 +23,18 @@ const statusLabels: Record<string, string> = {
   archived: "已归档",
 };
 
+function reportCreatedLabel(createdAt: string | null | undefined): string {
+  if (!createdAt) return "创建时间待记录";
+  const createdDate = new Date(createdAt);
+  if (Number.isNaN(createdDate.getTime())) return "创建时间待记录";
+  return `创建于 ${createdDate.toLocaleString("zh-CN", { hour12: false })}`;
+}
+
+function shortReportId(reportId: string): string {
+  const idBody = reportId.replace(/^report-/, "");
+  return idBody.length > 8 ? idBody.slice(0, 8) : reportId;
+}
+
 function reportDestination(report: ReportResponse, activeRunId: string | null): { href: string; label: string } {
   const base = `/reports/${encodeURIComponent(report.report_id)}`;
   if (["uploaded", "metadata_detected", "awaiting_confirmation", "ready_for_analysis", "analysis_failed", "archived"].includes(report.status)) {
@@ -69,6 +81,12 @@ export function ReportList() {
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold">{report.company_name || report.original_filename}</p>
               <p className="mt-1 truncate text-xs text-muted-foreground">{report.original_filename}</p>
+              <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                <span>{reportCreatedLabel(report.created_at)}</span>
+                <span>{report.language || "语言待确认"}</span>
+                <span>{report.page_count ? `${report.page_count} 页` : "页数待确认"}</span>
+                <span className="font-mono" title={report.report_id}>ID {shortReportId(report.report_id)}</span>
+              </div>
             </div>
             <div className="text-sm text-muted-foreground">{report.report_year ? `${report.report_year} 年` : "年度待确认"}</div>
             <Link
