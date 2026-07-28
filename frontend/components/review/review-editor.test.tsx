@@ -72,7 +72,7 @@ function okResponse() {
 
 function renderEditor() {
   return renderWithQuery(
-    <ReviewEditor detail={detail} reviewerName="张三" onEvidencePage={() => undefined} />,
+    <ReviewEditor detail={detail} aiAvailability="enabled" reviewerName="张三" onEvidencePage={() => undefined} />,
   );
 }
 
@@ -189,6 +189,7 @@ describe("ReviewEditor", () => {
             error_code: "ai_response_guardrail_failed",
           },
         }}
+        aiAvailability="enabled"
         reviewerName="张三"
         onEvidencePage={() => undefined}
       />,

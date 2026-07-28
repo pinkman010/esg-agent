@@ -30,25 +30,54 @@ function suggestion(
   };
 }
 
-function renderPanel(value: AIAssessmentSuggestion | null) {
+function renderPanel(
+  value: AIAssessmentSuggestion | null,
+  availability: "enabled" | "disabled" | "loading" | "unavailable" = "unavailable",
+) {
   const callbacks = {
     onEvidencePage: vi.fn(),
     onAccept: vi.fn(),
     onEdit: vi.fn(),
     onReject: vi.fn(),
   };
-  render(<AISuggestionPanel suggestion={value} busy={false} {...callbacks} />);
+  render(
+    <AISuggestionPanel
+      suggestion={value}
+      availability={availability}
+      busy={false}
+      {...callbacks}
+    />,
+  );
   return callbacks;
 }
 
 describe("AISuggestionPanel", () => {
-  it("shows a neutral empty state when no suggestion exists", () => {
-    renderPanel(null);
+  it("explains that AI was not enabled for the run", () => {
+    renderPanel(null, "disabled");
 
     expect(
-      screen.getByText("本次分析未启用 AI，或该项未进入 AI 候选范围"),
+      screen.getByText("本次分析未启用 AI 辅助，规则结果仍有效。"),
     ).toBeInTheDocument();
     expect(screen.getByText(/AI 建议仅供人工复核参考/)).toBeInTheDocument();
+  });
+
+  it("explains that an item has no suggestion in an AI-enabled run", () => {
+    renderPanel(null, "enabled");
+
+    expect(
+      screen.getByText("本次已启用 AI 辅助，该项未进入候选范围或未生成逐项建议。"),
+    ).toBeInTheDocument();
+  });
+
+  it("shows explicit loading and unavailable AI states", () => {
+    renderPanel(null, "loading");
+
+    expect(screen.getByText("正在读取本次 AI 辅助状态...")).toBeInTheDocument();
+
+    renderPanel(null, "unavailable");
+    expect(
+      screen.getByText("暂无法确认本次 AI 辅助状态，规则结果仍有效。"),
+    ).toBeInTheDocument();
   });
 
   it("shows a successful advisory suggestion and connects all actions", () => {

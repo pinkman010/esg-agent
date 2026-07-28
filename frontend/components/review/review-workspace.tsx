@@ -3,8 +3,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
-import { getAssessmentDetail } from "@/lib/api";
+import { getAssessmentDetail, getReportDashboard, getRun } from "@/lib/api";
 import { PdfEvidenceViewer } from "@/components/evidence/pdf-evidence-viewer";
+import type { AIAvailability } from "./ai-suggestion-panel";
 import { AssessmentDetail } from "./assessment-detail";
 import { RiskQueue } from "./risk-queue";
 
@@ -13,7 +14,23 @@ export function ReviewWorkspace({ reportId, reviewerName, initialAssessmentId }:
   const [mobilePane, setMobilePane] = useState<"queue" | "detail" | "evidence">(initialAssessmentId ? "detail" : "queue");
   const [assessmentId, setAssessmentId] = useState<string | null>(initialAssessmentId || null);
   const [selectedPdfPage, setSelectedPdfPage] = useState<number | null>(null);
+  const dashboard = useQuery({
+    queryKey: ["report-dashboard", reportId],
+    queryFn: () => getReportDashboard(reportId),
+  });
+  const run = useQuery({
+    queryKey: ["run", dashboard.data?.run_id],
+    queryFn: () => getRun(dashboard.data?.run_id ?? ""),
+    enabled: Boolean(dashboard.data?.run_id),
+  });
   const detail = useQuery({ queryKey: ["assessment-detail", reportId, assessmentId], queryFn: () => getAssessmentDetail(reportId, assessmentId ?? ""), enabled: assessmentId !== null });
+  const aiAvailability: AIAvailability = dashboard.isLoading || run.isLoading
+    ? "loading"
+    : dashboard.isError || run.isError || !dashboard.data?.run_id || !run.data
+      ? "unavailable"
+      : run.data.confirm_llm
+        ? "enabled"
+        : "disabled";
 
   let detailContent = <p className="p-6 text-sm text-muted-foreground">从左侧选择一个 requirement 开始复核。</p>;
   if (detail.isLoading) {
@@ -21,7 +38,7 @@ export function ReviewWorkspace({ reportId, reviewerName, initialAssessmentId }:
   } else if (detail.isError) {
     detailContent = <p role="alert" className="p-6 text-sm text-red-600">核查详情加载失败，请重新选择或稍后重试。</p>;
   } else if (detail.data) {
-    detailContent = <AssessmentDetail reportId={reportId} detail={detail.data} reviewerName={reviewerName} onEvidencePage={setSelectedPdfPage} />;
+    detailContent = <AssessmentDetail reportId={reportId} detail={detail.data} aiAvailability={aiAvailability} reviewerName={reviewerName} onEvidencePage={setSelectedPdfPage} />;
   }
 
   function selectAssessment(nextAssessmentId: string) {

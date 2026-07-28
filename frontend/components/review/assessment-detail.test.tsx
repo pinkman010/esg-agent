@@ -72,7 +72,7 @@ describe("AssessmentDetail", () => {
 
     render(
       <QueryClientProvider client={queryClient}>
-        <AssessmentDetail reportId="report-1" detail={reviewed} reviewerName="张三" onEvidencePage={() => undefined} />
+        <AssessmentDetail reportId="report-1" detail={reviewed} aiAvailability="enabled" reviewerName="张三" onEvidencePage={() => undefined} />
       </QueryClientProvider>,
     );
 
@@ -98,7 +98,7 @@ describe("AssessmentDetail", () => {
     const second = detail("assessment-2", "GRI 2-6-a");
     const view = render(
       <QueryClientProvider client={queryClient}>
-        <AssessmentDetail reportId="report-1" detail={first} reviewerName="张三" onEvidencePage={() => undefined} />
+        <AssessmentDetail reportId="report-1" detail={first} aiAvailability="enabled" reviewerName="张三" onEvidencePage={() => undefined} />
       </QueryClientProvider>,
     );
 
@@ -107,7 +107,7 @@ describe("AssessmentDetail", () => {
 
     view.rerender(
       <QueryClientProvider client={queryClient}>
-        <AssessmentDetail reportId="report-1" detail={second} reviewerName="张三" onEvidencePage={() => undefined} />
+        <AssessmentDetail reportId="report-1" detail={second} aiAvailability="enabled" reviewerName="张三" onEvidencePage={() => undefined} />
       </QueryClientProvider>,
     );
 

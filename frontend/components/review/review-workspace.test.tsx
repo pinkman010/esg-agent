@@ -17,6 +17,12 @@ describe("ReviewWorkspace", () => {
       if (url.includes("/assessments/a-direct")) {
         return Promise.resolve(response({ assessment_id: "a-direct", requirement_id: "GRI 2-22-a", requirement_text: "requirement", source_requirement_text: "source", effective_requirement_text: "effective", context_requirement_ids: [], structure_status: "verified", system_verdict: "disclosed", reviewed_verdict: null, effective_verdict: "disclosed", review_status: "pending_review", risk_level: "low", review_priority: "low", evidence_status: "valid_direct", applicability_status: "applicable", risk_reason_codes: [], rationale: "Evidence found.", rationale_display: "已找到直接证据。", missing_items: [], missing_items_display: [], evidence_items: [{ evidence_id: "e-direct", source_pdf_page: 13, source_report_page: 11, page_label: "PDF 第 13 页", evidence_preview: "evidence", source_method: "text", quality_flags: [], bbox: null }], latest_snapshot_id: null, latest_ai_suggestion: null }));
       }
+      if (url.endsWith("/api/reports/report-1/dashboard")) {
+        return Promise.resolve(response({ run_id: "run-1" }));
+      }
+      if (url.endsWith("/api/runs/run-1")) {
+        return Promise.resolve(response({ run_id: "run-1", report_id: "report-1", confirm_llm: false }));
+      }
       return Promise.resolve(response({ items: [], page: 1, page_size: 50, total: 0 }));
     });
     vi.stubGlobal("fetch", fetchMock);
@@ -24,6 +30,7 @@ describe("ReviewWorkspace", () => {
     renderWithQuery(<ReviewWorkspace reportId="report-1" reviewerName="张三" initialAssessmentId="a-direct" />);
 
     expect(await screen.findByRole("heading", { name: "GRI 2-22-a" })).toBeInTheDocument();
+    expect(await screen.findByText("本次分析未启用 AI 辅助，规则结果仍有效。")).toBeInTheDocument();
     expect(screen.getByTitle("PDF 证据")).toHaveAttribute("src", expect.stringContaining("/pages/13/image"));
     expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("/assessments/a-direct"), expect.anything());
   });

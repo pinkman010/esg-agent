@@ -12,12 +12,15 @@ import type { AIAssessmentSuggestion } from "@/lib/types";
 
 type Props = {
   suggestion: AIAssessmentSuggestion | null | undefined;
+  availability: AIAvailability;
   onEvidencePage: (page: number) => void;
   onAccept: () => void;
   onEdit: () => void;
   onReject: () => void;
   busy: boolean;
 };
+
+export type AIAvailability = "enabled" | "disabled" | "loading" | "unavailable";
 
 const presentationLabels: Record<AIPresentationState, string> = {
   not_available: "本次分析未启用 AI，或该项未进入 AI 候选范围",
@@ -27,8 +30,16 @@ const presentationLabels: Record<AIPresentationState, string> = {
   technical_failed: "AI 辅助未完成，规则结果仍有效",
 };
 
+const emptyStateLabels: Record<AIAvailability, string> = {
+  enabled: "本次已启用 AI 辅助，该项未进入候选范围或未生成逐项建议。",
+  disabled: "本次分析未启用 AI 辅助，规则结果仍有效。",
+  loading: "正在读取本次 AI 辅助状态...",
+  unavailable: "暂无法确认本次 AI 辅助状态，规则结果仍有效。",
+};
+
 export function AISuggestionPanel({
   suggestion,
+  availability,
   onEvidencePage,
   onAccept,
   onEdit,
@@ -48,7 +59,7 @@ export function AISuggestionPanel({
 
       {!suggestion && (
         <p className="mt-3 text-sm text-muted-foreground">
-          {presentationLabels[presentationState]}
+          {emptyStateLabels[availability]}
         </p>
       )}
 

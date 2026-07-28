@@ -12,7 +12,7 @@ import type {
   AssessmentVerdict,
   ReviewSnapshotRequest,
 } from "@/lib/types";
-import { AISuggestionPanel } from "./ai-suggestion-panel";
+import { AISuggestionPanel, type AIAvailability } from "./ai-suggestion-panel";
 import {
   buildAcceptAIPayload,
   buildManualModifyPayload,
@@ -23,6 +23,7 @@ import {
 
 type Props = {
   detail: AssessmentDetailResponse;
+  aiAvailability: AIAvailability;
   reviewerName: string;
   onEvidencePage: (page: number) => void;
 };
@@ -37,7 +38,7 @@ function apiErrorMessage(error: unknown): string {
   return "复核保存失败，请重试。";
 }
 
-export function ReviewEditor({ detail, reviewerName, onEvidencePage }: Props) {
+export function ReviewEditor({ detail, aiAvailability, reviewerName, onEvidencePage }: Props) {
   const [draft, setDraft] = useState(() => draftFromDetail(detail));
   const [saved, setSaved] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -94,6 +95,7 @@ export function ReviewEditor({ detail, reviewerName, onEvidencePage }: Props) {
     <div className="space-y-5 border-t border-border pt-4">
       <AISuggestionPanel
         suggestion={suggestion}
+        availability={aiAvailability}
         onEvidencePage={onEvidencePage}
         busy={mutation.isPending}
         onAccept={() => suggestion && submit(() => buildAcceptAIPayload(detail, suggestion, reviewerName))}

@@ -598,7 +598,8 @@ uv run --no-sync python -m src.tools.evaluate_shadow_rag `
 - 在提交 `5e251de` 上完成只读实际产品巡检：首页、报告列表、总览、完整核查、三栏复核、整改任务和输出版本均可加载，浏览器控制台 0 错误，关键业务表计数前后不变；run 使用 `confirm_llm=false`，AI stage skipped，真实外部调用为 0。
 - 冻结内关闭产品巡检 OBS-003：报告列表使用现有 ReportResponse 字段显示创建时间、语言、页数和短 report ID；5 份同企业同年度报告可区分，原状态和跳转不变，前端 28 个测试文件/106 项测试、typecheck、production build 及浏览器只读核验通过。
 - 冻结内关闭产品巡检 OBS-005：输出页复用 dashboard 执行正式输出预检，加载中、读取失败、分析不完整或高优先级未完成时禁用正式按钮并展示原因；草稿不受影响，后端继续执行最终门禁。前端 28 个测试文件/109 项测试、typecheck、production build 及浏览器只读核验通过。
-- 巡检剩余优先缺口为单 export 文件下载及 manifest 绝对路径；全局搜索、AI 空态细分和整改截止日期更新列为后续项。问题证据、优先级和进入条件见 `docs/product/phase1.5-product-observation-backlog.md`。
+- 冻结内关闭产品巡检 OBS-006：复核工作台复用 dashboard 的 run_id 和现有 run.confirm_llm，把无 suggestion 细分为 AI 未启用、已启用但单项无建议、读取中和状态不可用；suggestion 状态和三层优先级不变。前端 28 个测试文件/111 项测试、typecheck、production build 及浏览器只读核验通过。
+- 巡检剩余优先缺口为单 export 文件下载及 manifest 绝对路径；完整核查全局搜索和整改截止日期更新列为后端解冻后事项。问题证据、优先级和进入条件见 `docs/product/phase1.5-product-observation-backlog.md`。
 
 ### 2026-07-27
 

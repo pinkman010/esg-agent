@@ -6,16 +6,18 @@ import {
   verdictLabels,
 } from "@/lib/business-labels";
 import type { AssessmentDetailResponse } from "@/lib/types";
+import type { AIAvailability } from "./ai-suggestion-panel";
 import { ReviewEditor } from "./review-editor";
 
 type Props = {
   reportId: string;
   detail: AssessmentDetailResponse;
+  aiAvailability: AIAvailability;
   reviewerName: string;
   onEvidencePage: (page: number) => void;
 };
 
-export function AssessmentDetail({ reportId, detail, reviewerName, onEvidencePage }: Props) {
+export function AssessmentDetail({ reportId, detail, aiAvailability, reviewerName, onEvidencePage }: Props) {
   const systemRationaleDisplay = detail.system_rationale_display ?? detail.rationale_display;
   const systemMissingItemsDisplay = detail.system_missing_items_display ?? detail.missing_items_display;
 
@@ -94,6 +96,7 @@ export function AssessmentDetail({ reportId, detail, reviewerName, onEvidencePag
       <ReviewEditor
         key={`review-${detail.assessment_id}`}
         detail={detail}
+        aiAvailability={aiAvailability}
         reviewerName={reviewerName}
         onEvidencePage={onEvidencePage}
       />
