@@ -1,5 +1,22 @@
 import type { AIAssessmentSuggestion } from "./types";
 
+export type AIPresentationState =
+  | "not_available"
+  | "succeeded"
+  | "needs_human_review"
+  | "skipped"
+  | "technical_failed";
+
+const reviewGuardrails = new Set([
+  "evidence_page_cardinality_mismatch",
+  "duplicate_evidence_reference",
+  "evidence_reference_out_of_scope",
+  "evidence_page_mismatch",
+  "disclosed_without_substantive_evidence",
+  "verdict_upgrade_requires_human_review",
+  "partial_without_missing_items",
+]);
+
 const statusLabels: Record<AIAssessmentSuggestion["status"], string> = {
   succeeded: "AI 建议已生成",
   failed: "AI 辅助未完成",
@@ -26,6 +43,18 @@ export function aiStatusLabel(status: AIAssessmentSuggestion["status"]): string 
 
 export function aiGuardrailLabel(code: string): string {
   return guardrailLabels[code] ?? "AI 建议触发安全校验，需要人工判断。";
+}
+
+export function aiPresentationState(
+  suggestion: AIAssessmentSuggestion | null | undefined,
+): AIPresentationState {
+  if (!suggestion) return "not_available";
+  if (suggestion.status === "succeeded") return "succeeded";
+  if (suggestion.status === "skipped") return "skipped";
+  if ((suggestion.guardrail_codes ?? []).some((code) => reviewGuardrails.has(code))) {
+    return "needs_human_review";
+  }
+  return "technical_failed";
 }
 
 export function formatAIConfidence(confidence: number | null | undefined): string {

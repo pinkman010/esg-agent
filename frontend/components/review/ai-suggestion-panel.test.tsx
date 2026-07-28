@@ -45,7 +45,9 @@ describe("AISuggestionPanel", () => {
   it("shows a neutral empty state when no suggestion exists", () => {
     renderPanel(null);
 
-    expect(screen.getByText("本次分析未启用或该项无 AI 建议")).toBeInTheDocument();
+    expect(
+      screen.getByText("本次分析未启用 AI，或该项未进入 AI 候选范围"),
+    ).toBeInTheDocument();
     expect(screen.getByText(/AI 建议仅供人工复核参考/)).toBeInTheDocument();
   });
 
@@ -70,14 +72,16 @@ describe("AISuggestionPanel", () => {
     expect(callbacks.onReject).toHaveBeenCalledOnce();
   });
 
-  it("shows safe failure and guardrail messages without actionable or internal data", () => {
+  it("shows guardrail review without actionable or internal data", () => {
     renderPanel(suggestion({
       status: "failed",
       guardrail_codes: ["verdict_upgrade_requires_human_review"],
       error_message: "secret upstream exception",
     }));
 
-    expect(screen.getByText("AI 辅助未完成，规则结果仍有效")).toBeInTheDocument();
+    expect(
+      screen.getByText("AI 建议触发安全校验，需人工独立判断"),
+    ).toBeInTheDocument();
     expect(screen.getByText(/不能直接升级规则结论/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "采纳 AI 建议" })).not.toBeInTheDocument();
     expect(screen.queryByText("secret upstream exception")).not.toBeInTheDocument();
@@ -93,7 +97,7 @@ describe("AISuggestionPanel", () => {
       guardrail_codes: ["call_budget_exhausted"],
     }));
 
-    expect(screen.getByText("AI 辅助已跳过")).toBeInTheDocument();
+    expect(screen.getByText("该项未调用 AI")).toBeInTheDocument();
     expect(screen.getByText("本次 AI 调用已达到数量上限。")).toBeInTheDocument();
     expect(screen.queryByText("AI 辅助未完成，规则结果仍有效")).not.toBeInTheDocument();
   });

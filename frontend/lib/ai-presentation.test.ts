@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   aiGuardrailLabel,
+  aiPresentationState,
   aiStatusLabel,
   formatAIConfidence,
   isUsableAISuggestion,
@@ -52,5 +53,27 @@ describe("AI presentation", () => {
     expect(isUsableAISuggestion(suggestion({ status: "failed" }))).toBe(false);
     expect(isUsableAISuggestion(suggestion({ suggested_verdict: null }))).toBe(false);
     expect(isUsableAISuggestion(null)).toBe(false);
+  });
+
+  it("separates guardrail review from technical failure without changing API status", () => {
+    expect(
+      aiPresentationState(
+        suggestion({
+          status: "failed",
+          guardrail_codes: ["verdict_upgrade_requires_human_review"],
+          error_code: "ai_response_guardrail_failed",
+        }),
+      ),
+    ).toBe("needs_human_review");
+
+    expect(
+      aiPresentationState(
+        suggestion({
+          status: "failed",
+          guardrail_codes: ["llm_connection_error"],
+          error_code: "llm_connection_error",
+        }),
+      ),
+    ).toBe("technical_failed");
   });
 });

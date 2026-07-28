@@ -2,9 +2,10 @@ import { Check, PencilLine, Sparkles, X } from "lucide-react";
 
 import {
   aiGuardrailLabel,
-  aiStatusLabel,
+  aiPresentationState,
   formatAIConfidence,
   isUsableAISuggestion,
+  type AIPresentationState,
 } from "@/lib/ai-presentation";
 import { verdictLabels } from "@/lib/business-labels";
 import type { AIAssessmentSuggestion } from "@/lib/types";
@@ -18,6 +19,14 @@ type Props = {
   busy: boolean;
 };
 
+const presentationLabels: Record<AIPresentationState, string> = {
+  not_available: "本次分析未启用 AI，或该项未进入 AI 候选范围",
+  succeeded: "AI 建议已生成",
+  needs_human_review: "AI 建议触发安全校验，需人工独立判断",
+  skipped: "该项未调用 AI",
+  technical_failed: "AI 辅助未完成，规则结果仍有效",
+};
+
 export function AISuggestionPanel({
   suggestion,
   onEvidencePage,
@@ -27,6 +36,7 @@ export function AISuggestionPanel({
   busy,
 }: Props) {
   const usable = isUsableAISuggestion(suggestion);
+  const presentationState = aiPresentationState(suggestion);
 
   return (
     <section className="rounded-xl border border-sky-200 bg-sky-50/40 p-4">
@@ -37,16 +47,14 @@ export function AISuggestionPanel({
       </div>
 
       {!suggestion && (
-        <p className="mt-3 text-sm text-muted-foreground">本次分析未启用或该项无 AI 建议</p>
+        <p className="mt-3 text-sm text-muted-foreground">
+          {presentationLabels[presentationState]}
+        </p>
       )}
 
       {suggestion && (
         <div className="mt-3 space-y-3 text-sm">
-          <p className="font-medium">{aiStatusLabel(suggestion.status)}</p>
-
-          {suggestion.status === "failed" && (
-            <p className="text-amber-800">AI 辅助未完成，规则结果仍有效</p>
-          )}
+          <p className="font-medium">{presentationLabels[presentationState]}</p>
 
           {(suggestion.guardrail_codes ?? []).length > 0 && (
             <ul className="space-y-1 text-amber-800">

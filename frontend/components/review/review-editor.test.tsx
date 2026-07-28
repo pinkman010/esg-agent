@@ -177,6 +177,36 @@ describe("ReviewEditor", () => {
     });
   });
 
+  it("shows guarded AI output as requiring independent review without AI actions", () => {
+    renderWithQuery(
+      <ReviewEditor
+        detail={{
+          ...detail,
+          latest_ai_suggestion: {
+            ...suggestion,
+            status: "failed",
+            guardrail_codes: ["verdict_upgrade_requires_human_review"],
+            error_code: "ai_response_guardrail_failed",
+          },
+        }}
+        reviewerName="张三"
+        onEvidencePage={() => undefined}
+      />,
+    );
+
+    expect(
+      screen.getByText("AI 建议触发安全校验，需人工独立判断"),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/不能直接升级规则结论/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "采纳 AI 建议" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "载入 AI 建议并修改" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "拒绝 AI 建议并保留规则结论" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("does not send an invalid evidence page list", async () => {
     const fetchMock = vi.fn().mockResolvedValue(okResponse());
     vi.stubGlobal("fetch", fetchMock);
