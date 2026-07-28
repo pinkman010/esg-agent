@@ -204,3 +204,15 @@ DeepSeek 模型、Prompt、参数和候选筛选继续冻结。只有获得独�
 ## 7. 当前决策
 
 当前继续保持后端冻结。OBS-003、OBS-005 和 OBS-006 已关闭；正式输出的前端预检只减少已知无效请求，后端门禁继续作为最终依据。剩余 OBS-001/OBS-002、OBS-004 和 OBS-007 均需要后端契约或语义扩展，当前不执行。
+
+## 8. 剩余项冻结边界复核
+
+2026-07-28 对现有 OpenAPI、前端生成类型和后端路由再次核对：
+
+| 问题 | 现有契约 | 冻结内结论 |
+| --- | --- | --- |
+| OBS-001 / OBS-002 | 只有 export 版本列表和生成接口；没有按 export/file 下载端点，`file_manifest` 仍是通用对象数组 | 下载能力和 manifest 脱敏必须一起设计后端文件标识、授权和响应头，不能只加前端链接 |
+| OBS-004 | assessment 列表只支持 `page`、`page_size`、`risk_level`、`review_priority`、`applicability_status` | requirement ID、关键词、结论和复核状态的全局查询需要新增后端参数；前端拉取全部分页会扩大请求量并复制查询语义 |
+| OBS-007 | `UpdateActionRequest` 只有 `status`、`owner_name` 和 `completion_note` | 更新截止日期需要扩展后端 schema、repository 更新字段、审计 payload 和相关测试 |
+
+因此，本轮冻结内实现到 OBS-003、OBS-005 和 OBS-006 为止。下一次代码开发应先单独批准后端解冻范围，再为对应纵向功能执行完整 gates。
