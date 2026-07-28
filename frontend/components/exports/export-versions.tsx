@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FileDown, FileCheck2 } from "lucide-react";
 import { useState } from "react";
-import { ApiError, generateExport, listExportVersions } from "@/lib/api";
+import { ApiError, generateExport, getReportDashboard, listExportVersions } from "@/lib/api";
 
 function exportGateMessage(error: unknown): string {
   if (error instanceof ApiError) {
@@ -24,6 +24,10 @@ export function ExportVersions({ reportId, createdBy }: { reportId: string; crea
   const client = useQueryClient();
   const [message, setMessage] = useState("");
   const query = useQuery({ queryKey: ["exports", reportId], queryFn: () => listExportVersions(reportId) });
+  const dashboardQuery = useQuery({
+    queryKey: ["report-dashboard", reportId],
+    queryFn: () => getReportDashboard(reportId),
+  });
   const mutation = useMutation({
     mutationFn: (draft: boolean) => generateExport(reportId, draft, createdBy),
     onMutate: () => setMessage(""),
@@ -32,6 +36,21 @@ export function ExportVersions({ reportId, createdBy }: { reportId: string; crea
       client.invalidateQueries({ queryKey: ["exports", reportId] });
     },
   });
+  const formalGate = dashboardQuery.isLoading
+    ? { blocked: true, message: "正在读取正式输出门禁..." }
+    : dashboardQuery.isError || !dashboardQuery.data
+      ? { blocked: true, message: "正式输出门禁读取失败，请刷新页面后重试。" }
+      : dashboardQuery.data.failed_requirement_count > 0
+        ? {
+            blocked: true,
+            message: `正式输出暂不可用：仍有 ${dashboardQuery.data.failed_requirement_count} 条分析失败或未生成结果。`,
+          }
+        : dashboardQuery.data.high_priority_unresolved > 0
+          ? {
+              blocked: true,
+              message: `正式输出暂不可用：仍有 ${dashboardQuery.data.high_priority_unresolved} 条高优先级项目未完成复核。`,
+            }
+          : { blocked: false, message: "当前预检通过；提交时仍由后端执行最终门禁校验。" };
   return (
     <div className="space-y-5">
       <section className="rounded-xl border border-amber-200 bg-amber-50 p-4">
@@ -40,10 +59,11 @@ export function ExportVersions({ reportId, createdBy }: { reportId: string; crea
           草稿会保留全部待确认范围；正式输出要求分析完整且高优先级项目全部完成复核。
           高优先级复核完成不代表全部 577 项均已人工确认。
         </p>
+        <p className="mt-2 text-sm font-medium text-amber-950">{formalGate.message}</p>
       </section>
       <div className="flex flex-wrap gap-2 rounded-xl border border-border bg-white p-4 shadow-sm">
         <button disabled={mutation.isPending} type="button" className="inline-flex h-10 items-center gap-2 rounded-md border border-border px-4 text-sm font-medium disabled:opacity-50" onClick={() => mutation.mutate(true)}><FileDown aria-hidden="true" className="h-4 w-4" />生成草稿</button>
-        <button disabled={mutation.isPending} type="button" className="inline-flex h-10 items-center gap-2 rounded-md bg-accent px-4 text-sm font-medium text-accent-foreground disabled:opacity-50" onClick={() => mutation.mutate(false)}><FileCheck2 aria-hidden="true" className="h-4 w-4" />生成正式输出</button>
+        <button disabled={mutation.isPending || formalGate.blocked} type="button" className="inline-flex h-10 items-center gap-2 rounded-md bg-accent px-4 text-sm font-medium text-accent-foreground disabled:opacity-50" onClick={() => mutation.mutate(false)}><FileCheck2 aria-hidden="true" className="h-4 w-4" />生成正式输出</button>
         {message && <span className="self-center text-sm text-emerald-700">{message}</span>}
         {mutation.isError && <span role="alert" className="self-center text-sm text-red-600">{exportGateMessage(mutation.error)}</span>}
       </div>
