@@ -60,11 +60,11 @@ esg-agent/
 
 - 后端：Python 3.11、FastAPI、Pydantic v2、PostgreSQL、SQLAlchemy 2.0、Alembic。
 - 前端：Next.js App Router、TypeScript、Tailwind CSS、TanStack Query、TanStack Table、Recharts。
-- PDF：pypdf、pdfplumber；OCR、Docling 和 VLM 仅作为显式授权后的降级能力。
+- PDF：pypdf、pdfplumber 为正式默认链路；OCRmyPDF/Tesseract 为实验性显式路由，Docling 和 VLM 仍为设计预留。
 - AI：DeepSeek OpenAI-compatible API；默认关闭，只生成追加式辅助建议。
 - 包管理：后端 uv，前端 pnpm。
 
-原始 PDF 不覆盖。OCR 默认关闭，仅在分析请求显式传入 `enable_ocr=true` 后运行；外部模型只有用户显式确认后才允许调用。
+原始 PDF 不覆盖。OCR 默认关闭，仅在分析请求显式传入 `enable_ocr=true` 且确有目标页时进入实验性路由。当前 v1.1 未完成 Ghostscript 依赖、OCR preflight、安全错误和真实扫描样本端到端验收，因此 OCR 不属于正式生产能力；延期与条件解冻边界见 `docs/plan/ocr-production-readiness-deferred-plan.md`。外部模型只有用户显式确认后才允许调用。
 
 ## 本地运行
 

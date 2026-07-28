@@ -45,7 +45,7 @@ ESG-Agent 第一版面向企业 ESG 团队，提供单报告 GRI 核查闭环。
 | 数据请求 | TanStack Query |
 | 表格 | TanStack Table |
 | 图表 | Recharts，通过业务组件封装 |
-| PDF | pypdf、pdfplumber、OCRmyPDF/Tesseract、Docling fallback、授权后 VLM 辅助 |
+| PDF | pypdf、pdfplumber 正式默认链路；实验性 OCRmyPDF/Tesseract；Docling/VLM 设计预留 |
 | 模型 | OpenAI-compatible 薄适配层，默认不调用 |
 | 测试 | pytest、Vitest、React Testing Library、typecheck、build |
 | 包管理 | 后端 uv，前端 pnpm |
@@ -344,7 +344,9 @@ API 前缀保持 `/api`。资源分组：
 
 ## 13. PDF 与外部模型边界
 
-PDF 继续采用分级路由：pypdf/pdfplumber 为默认主链路；扫描关键页可显式启用 OCR；复杂失败页允许 Docling fallback；VLM 只有用户显式确认后才允许调用。
+PDF 继续采用分级路由：pypdf/pdfplumber 为正式默认主链路；扫描关键页可通过请求参数进入实验性 OCR 路由；Docling fallback 和 VLM 仍为接口或字段预留，没有进入正式产品运行。VLM 只有用户显式确认后才允许调用。
+
+截至 2026-07-28，v1.1 保持后端冻结，OCR 不进入正式生产能力承诺。当前代码已支持显式 `enable_ocr`、指定页或低质量页选择、派生 PDF 和 `source_method=ocr` chunk，但本机缺少 Ghostscript，尚无 OCR preflight、安全错误分类、非阻断 capability 状态和真实扫描样本端到端验收。只有实际扫描报告造成关键证据缺失、产品验收明确要求扫描 PDF，或已经形成可复核扫描样本集时，才允许按 `docs/plan/ocr-production-readiness-deferred-plan.md` 条件解冻后端。
 
 证据工作台通过 `GET /api/reports/{report_id}/pages/{page_number}/image` 按页渲染原始 PDF 的 PNG 预览。该预览只读、按需生成并允许私有缓存；原始 PDF 仍通过文件接口保留，不覆盖、不转换为新的事实来源。
 
@@ -356,6 +358,7 @@ SiliconFlow `BAAI/bge-m3` 第一阶段属于离线影子 RAG。`EMBEDDING_ENABLE
 
 - 原始 PDF 不覆盖；
 - OCR 产物作为派生文件保存；
+- OCR 未完成依赖检查与真实样本验收前不进入正式生产能力；
 - 外部模型默认不调用；
 - AI `disclosed` 不允许直接升级规则的 `partial/unknown`，此类建议进入人工复核 guardrail；
 - VLM 输出不直接成为最终合规事实；
@@ -448,7 +451,7 @@ pnpm build
 
 v3 技术结构为 `577/499/78/0`：577 个范围单元均处于 `assessed` 或 `context_incorporated` 终态；6 条历史复合提取问题已按版本化方法裁决转为独立判断，16 条历史结果差异已写入最终裁决资产，当前 pending 为 0。Envision v3 gate 的 global fallback、新增 false disclosed 和新增 wrong source page 均为 0，audit 为 0 error、0 warning。后端 709 项测试、前端 28 个测试文件 105 项测试、typecheck 和 production build 全部通过。
 
-225 条真实 DeepSeek 评估继续作为 AI 辅助工程基线；模型和 Prompt 未因本轮冻结改变。本轮最终产品 run 使用 `confirm_llm=false`，OCR/VLM 均未启用。规则、AI 和人工三层权威关系保持独立。该冻结属于本地产品与工程基线，不构成 GRI 专家认证、外部鉴证或企业部署承诺；企业条件适用性仍可能需要企业确认。Goldwind 历史 100 条 gate 保留为低优先级泛化证据，不阻塞本轮冻结。
+225 条真实 DeepSeek 评估继续作为 AI 辅助工程基线；模型和 Prompt 未因本轮冻结改变。本轮最终产品 run 使用 `confirm_llm=false`，OCR/VLM 均未启用。2026-07-28 的 OCR 架构复核决定保持 v1.1 后端冻结，实验性 OCR 路由延期到出现真实扫描报告需求后再条件解冻。规则、AI 和人工三层权威关系保持独立。该冻结属于本地产品与工程基线，不构成 GRI 专家认证、外部鉴证或企业部署承诺；企业条件适用性仍可能需要企业确认。Goldwind 历史 100 条 gate 保留为低优先级泛化证据，不阻塞本轮冻结。
 
 通用 verdict 批量复核、独立 reopen API、report 级审计、单 export 下载和完整整改任务清单导出仍为后续项。旧 `review_decisions` 和旧 API 继续处于兼容窗口。
 

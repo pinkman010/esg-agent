@@ -25,15 +25,20 @@
 
 ## 3. 依赖服务
 
-第一版需要：
+第一版正式主链路需要：
 
 - PostgreSQL。
 - pgvector 只服务离线影子 embedding；正式分析链路不读取向量结果。
-- Tesseract。
-- OCRmyPDF。
-- Ghostscript，供 OCRmyPDF 真实执行 OCR 时调用。
 - Node.js。
 - Python 3.11。
+
+实验性 OCR 路由额外需要：
+
+- OCRmyPDF。
+- Tesseract，以及请求语言对应的语言包。
+- Ghostscript，供 OCRmyPDF 真实执行 OCR 时调用。
+
+缺少上述 OCR 依赖不会影响 `enable_ocr=false` 的正式默认链路。当前 v1.1 未将 OCR 作为生产能力验收，真实 OCR 启用前必须完成 `docs/plan/ocr-production-readiness-deferred-plan.md` 规定的依赖检查、错误审计和扫描样本验证。
 
 工具路径约定：
 
@@ -64,7 +69,7 @@
 
 OCR 相关环境变量：
 
-- `OCR_ENABLED=false`：默认关闭 OCR 自动路由。
+- `OCR_ENABLED=false`：当前为预留配置字段；正式请求仍以 `enable_ocr=false` 为默认值。该字段尚未作为全局强制门禁，未来解冻时必须先确定其保留、移除或双重开关语义。
 - `OCR_LANG=chi_sim+eng`：OCRmyPDF/Tesseract 语言。
 - `OCR_MAX_PAGES=5`：未显式指定页码时最多处理的低文本/扫描页数。
 - `TESSERACT_CMD`：Tesseract 命令或路径。
@@ -588,6 +593,9 @@ uv run --no-sync python -m src.tools.evaluate_shadow_rag `
 
 ### 2026-07-28
 
+- 完成 OCR 架构只读复核并决定保持 v1.1 后端冻结：pypdf/pdfplumber 继续作为正式默认链路；OCRmyPDF/Tesseract 路由保留为实验能力，Docling/PaddleOCR/VLM 和后台队列均不启动。当前可确认 OCRmyPDF 17.8.0 与 Tesseract `chi_sim/eng/osd` 可用，Ghostscript 不可用，真实扫描样本端到端验收仍未完成。
+- OCR 条件解冻触发点限定为真实扫描页造成关键证据缺失、产品验收明确要求扫描 PDF，或形成可复核扫描样本集。触发后一次性完成 preflight、结构化安全错误、失败审计、非阻断 capability 状态、真实样本评测和完整回归；当前延期边界见 `docs/plan/ocr-production-readiness-deferred-plan.md`。
+- 本轮只读审计收集到 709 项后端测试；OCR 目标测试 `tests/services/test_ocr.py`、`tests/api/test_reports_api.py`、`tests/workflows/test_single_report_workflow.py` 实测 49 项通过。收集数量只表示测试发现范围，不替代全量执行结果；v1.1 已冻结的 709 项全量通过记录继续以 2026-07-27 封版结果为准。
 - LLM 辅助层继续保持 `confirm_llm` 显式授权、规则/AI/人工三层隔离和追加式 suggestion；当前不修改 DeepSeek 模型、Prompt、候选筛选、数据库、API、导出或 RAG 接入。
 - `confirm_llm=false` 只记录 run 级授权状态和 AI stage skipped，不写 499 条逐项 skipped suggestion。
 - `assess_explicit_candidates()` 只允许离线评估工具和测试使用，不进入默认产品工作流。
@@ -652,7 +660,7 @@ uv run --no-sync python -m src.tools.evaluate_shadow_rag `
 - 接入显式 OCRmyPDF/Tesseract 路由：`enable_ocr=false` 时保持现有 `pypdf + pdfplumber` 主链路；`enable_ocr=true` 时支持 `ocr_pages` 指定页码，未指定时仅选择 `low_text_density` 或 `scanned` 页并受 `OCR_MAX_PAGES` 限制。
 - OCR 派生 PDF 写入运行时派生目录；OCR chunk 使用 `source_method=ocr`，默认携带 `needs_manual_review`，不覆盖原始 PDF。
 - 新增 OCR 配置项：`OCR_ENABLED`、`OCR_LANG`、`OCR_MAX_PAGES`、`TESSERACT_CMD`、`OCRMYPDF_CMD`；后端依赖加入 `ocrmypdf` 并更新锁文件。
-- 验证：`uv run pytest -q --basetemp=../tmp/pytest-ocr-main-final` 通过，结果为 179 passed；`uv run ocrmypdf --version` 返回 17.8.0；Tesseract 可见 `chi_sim`、`eng`、`osd` 语言包。
+- 当时验证：`uv run pytest -q --basetemp=../tmp/pytest-ocr-main-final` 通过，结果为 179 passed；该数字仅表示 2026-07-05 当时测试发现范围，不作为当前全量基线。`uv run ocrmypdf --version` 返回 17.8.0；Tesseract 可见 `chi_sim`、`eng`、`osd` 语言包。
 - 限制：Ghostscript 当前仍是本机外部前置条件；若 `gs`/`gswin64c` 不可用，真实 OCRmyPDF 执行会失败，单元测试只覆盖 mock 路径和默认关闭行为。
 - 生成 `tmp/review/current_600_review.csv` 时确认：当前 `GRIAdapter` 的独立核查过滤口径为 `assessment_mode=current_gap`、`requirement_type=requirement`、`is_mandatory=True`、`scoring_role=hard_score`，因此实际进入首轮证据核查的是 577 条 requirement，不是 checklist 总数 661 条。
 - checklist 剩余 84 条均为 `requirement_type=compilation_requirement`。这些条目不应作为独立 `disclosed` / `partially_disclosed` / `unknown` 任务处理，应映射到对应 leaf requirement 的充分性规则、`missing_items`、guardrail 或口径校验中。
