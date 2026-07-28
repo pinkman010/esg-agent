@@ -94,11 +94,14 @@ describe("AISuggestionPanel", () => {
     renderPanel(suggestion({
       status: "skipped",
       suggested_verdict: null,
-      guardrail_codes: ["call_budget_exhausted"],
+      guardrail_codes: ["low_review_priority"],
     }));
 
     expect(screen.getByText("该项未调用 AI")).toBeInTheDocument();
-    expect(screen.getByText("本次 AI 调用已达到数量上限。")).toBeInTheDocument();
+    expect(screen.getByText("该项复核优先级较低，本次未调用 AI。")).toBeInTheDocument();
+    expect(
+      screen.queryByText("AI 建议触发安全校验，需要人工判断。"),
+    ).not.toBeInTheDocument();
     expect(screen.queryByText("AI 辅助未完成，规则结果仍有效")).not.toBeInTheDocument();
   });
 });

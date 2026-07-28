@@ -34,6 +34,7 @@ const guardrailLabels: Record<string, string> = {
   partial_without_missing_items: "AI 的部分披露建议未说明缺失项，需要人工判断。",
   call_budget_exhausted: "本次 AI 调用已达到数量上限。",
   external_model_not_confirmed: "本次分析未授权调用外部模型。",
+  low_review_priority: "该项复核优先级较低，本次未调用 AI。",
   ai_service_unexpected_error: "AI 服务发生异常，规则结果仍然有效。",
 };
 
