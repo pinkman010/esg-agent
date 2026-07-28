@@ -595,6 +595,8 @@ uv run --no-sync python -m src.tools.evaluate_shadow_rag `
 - 修正 `low_review_priority` 的跳过原因展示，避免把低复核优先级误写为安全校验；真实演示数据浏览器复验无 AI 操作按钮，控制台无错误。
 - 在提交 `570a996` 上重新执行 Phase 1.5 封版、后端全量测试、Ruff、前端完整门禁和 Envision v3 回归；499 个影子 context、119 条工程 gold 覆盖、18 张正式表计数不变，`577/499/78/0`、新增 false disclosed、wrong source page、global fallback、audit error 和 audit warning 均为 0。真实外部模型调用为 0，后端继续冻结。
 - Phase 1.5 收尾事实集中记录在 `docs/product/phase1.5-closeout-report.md`；Task 4–6 继续延期，不因收尾自动解冻。
+- 在提交 `5e251de` 上完成只读实际产品巡检：首页、报告列表、总览、完整核查、三栏复核、整改任务和输出版本均可加载，浏览器控制台 0 错误，关键业务表计数前后不变；run 使用 `confirm_llm=false`，AI stage skipped，真实外部调用为 0。
+- 巡检确认当前优先缺口为单 export 文件下载及 manifest 绝对路径、重复报告实例识别；全局搜索、正式输出前置门禁、AI 空态细分和整改截止日期更新列为后续项。问题证据、优先级和进入条件见 `docs/product/phase1.5-product-observation-backlog.md`。
 
 ### 2026-07-27
 

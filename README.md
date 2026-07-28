@@ -36,6 +36,7 @@ esg-agent/
 - LLM 辅助建议层验收：`docs/product/llm-assistance-acceptance.md`
 - RAG Phase 1.5 验收：`docs/product/rag-phase1.5-acceptance-report.md`
 - Phase 1.5 收尾报告：`docs/product/phase1.5-closeout-report.md`
+- Phase 1.5 实际产品巡检与问题清单：`docs/product/phase1.5-product-observation-backlog.md`
 - 实施计划：`docs/plan/`
 
 ## 第一版范围

@@ -105,3 +105,5 @@
 5. 产品明确要求把 RAG context 接入 AI suggestion，并接受完整后端门禁重跑。
 
 在进入条件出现前，Phase 1.5 作为工程基线保留，不构成 GRI 认证、外部鉴证或最终合规结论。
+
+实际产品巡检、问题优先级和后续证据采集格式见 `docs/product/phase1.5-product-observation-backlog.md`。
