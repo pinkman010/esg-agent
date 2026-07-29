@@ -6,7 +6,9 @@
 
 Phase 1.7 已完成最终闭环与发布就绪验收，正式发布基线为 `v1.2`，对应提交 `876859f`，`main` 已与远端同步。产品统一对外表达为“完成 577 项 GRI 核查”；内部结构为 577 个标准单元、499 个独立判断项、78 个上下文项、0 个方法待确认项。规则 assessment、AI suggestion 和人工 snapshot 分层保存；部分失败和 retry 通过运行谱系形成完整、可审计的 577 项有效视图。
 
-当前门禁：后端 774 项测试和 Ruff 通过；前端 30 个测试文件、119 项测试、typecheck 和 production build 通过；Envision v3 回归的新增 false disclosed、wrong source page 和 global fallback 均为 0，audit 为 0 error、0 warning。Goldwind 52 页真实数字文本报告已完成独立上传、分析、复核、整改、草稿、下载和审计闭环，用作产品泛化工程证据。内置报告画像同时校验文件名、页数和源 PDF SHA-256，防止同名同页文件误用报告专属证据路由。
+v1.2.1 发布后缺陷修复已形成本地补丁候选：普通产品运行统一使用 demo 环境，health 可核对运行身份，复核人每次进入均为空，主流程开发字段名已产品化，审计接口版本错配会给出明确提示。`v1.2` 标签保持不动；补丁尚未合并、打标或推送。完整验收见 `docs/product/v1.2.1-post-release-remediation-acceptance.md`。
+
+当前门禁：后端 774 项测试和 Ruff 通过；前端 30 个测试文件、121 项测试、typecheck 和 production build 通过；Envision v3 回归的新增 false disclosed、wrong source page 和 global fallback 均为 0，audit 为 0 error、0 warning。Goldwind 52 页真实数字文本报告已完成独立上传、分析、复核、整改、草稿、下载和审计闭环，用作产品泛化工程证据。内置报告画像同时校验文件名、页数和源 PDF SHA-256，防止同名同页文件误用报告专属证据路由。
 
 混合影子 RAG Phase 1.5 已完成自动工程验收。499 个独立判断项均生成确定性的规则、向量和混合 Top 5 对比；在其中 119 条具有历史工程 gold 的样本中，混合 Hit@5、Recall@5 和 MRR 均高于规则基线，正式业务表和 Envision 冻结门禁保持不变。该能力继续只用于离线诊断，不进入正式 evidence、assessment、risk、AI suggestion、API 或前端，也不构成 ESG 专家判断。Phase 2 为可选增强且未启动，Phase 3 保持关闭。
 

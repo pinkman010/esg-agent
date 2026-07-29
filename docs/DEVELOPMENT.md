@@ -332,7 +332,7 @@ $openapi.paths.PSObject.Properties.Name -contains "/api/reports/{report_id}/audi
 - Codex 内置浏览器控制在本机发生两次桌面应用闪退。自动页面截图改用独立无头 Edge；人工验收使用普通浏览器，不再启用 Codex 内置浏览器。
 - 外部模型和 OCR/VLM 默认关闭。DeepSeek 只在 `confirm_llm=true` 且用户明确批准后启用；OCR/VLM 本轮未启用。
 
-当前自动门禁（2026-07-29）：后端 774 项测试和 Ruff 通过；前端 30 个测试文件、119 项测试、typecheck 和 production build 通过；Envision v3 内部结构为 `577/499/78/0`，global fallback、新增 false disclosed 和新增 wrong source page 均为 0，audit 为 0 error、0 warning。16 条历史结果差异全部进入最终裁决资产，0 条 pending。Goldwind 52 页真实报告产品 E2E 通过。代码和空测试数据库 head 均为 `0012_chunk_embeddings`。
+当前自动门禁（2026-07-29）：后端 774 项测试和 Ruff 通过；前端 30 个测试文件、121 项测试、typecheck 和 production build 通过；Envision v3 内部结构为 `577/499/78/0`，global fallback、新增 false disclosed 和新增 wrong source page 均为 0，audit 为 0 error、0 warning。16 条历史结果差异全部进入最终裁决资产，0 条 pending。Goldwind 52 页真实报告产品 E2E 通过。代码和空测试数据库 head 均为 `0012_chunk_embeddings`。
 
 DeepSeek 225 条真实评估固定使用 Envision 报告 `report-14864b1a3ef64512b0e5d3676a120bc1` 和 run `run-526bd97aef5d4b9baa14618b719081c9`。最终指标：一致 162/224（72.32%），适用性例外 1，累计定向补跑 18 次；guardrail 后 false disclosed、证据 ID 越界、可比错页、schema 失败和模型失败均为 0。该结果保留为 AI 辅助工程基线，不构成 GRI 专家认证或最终合规结论。本轮 v1.1 冻结没有修改 DeepSeek 模型、Prompt、调用范围或 guardrail。
 
@@ -612,6 +612,9 @@ uv run --no-sync python -m src.tools.evaluate_shadow_rag `
 
 ### 2026-07-29
 
+- v1.2.1 发布后缺陷修复候选完成：health 增加非敏感 `app_env`；普通产品服务固定连接 `esg_agent_demo` 和 demo runtime；报告审计路由版本错配改为明确提示；复核人不再从 localStorage 跨报告回填；主产品链路中的开发字段名统一转换为中文业务术语。
+- v1.2.1 门禁为后端 774 项、Ruff、前端 30 个测试文件 121 项、typecheck 和 production build 全部通过。Envision regeneration 保持 `577/499/78/0`，新增 false disclosed、wrong source page、global fallback、audit error 和 audit warning 均为 0；DeepSeek、SiliconFlow、OCR 和 VLM 调用均为 0。
+- Chrome 在当前 demo 服务上只读复验 Goldwind 首页和 metadata、8/8 阶段、复核人空值、完整范围中文术语及 12 条审计事件；console 与服务日志无 error、warning 或 404。demo 库没有待确认报告，因此 AI 授权说明由生产组件渲染测试和静态扫描验收，没有为截图新增或删除业务记录。完整结论见 `docs/product/v1.2.1-post-release-remediation-acceptance.md`。
 - Phase 1.7 经完整发布门禁复验后以 fast-forward 集成到 `main`，形成提交 `876859f`；annotated tag `v1.2` 与 `main` 原子推送到远端，未使用 force push。发布后本地只保留 `main`，已合并功能分支和临时 worktree 已清理。
 - 经批准执行 `docs/plan/phase1.7-final-closure-and-release-readiness-plan.md`，一次解冻完成运行谱系有效视图、577 项失败/未生成投影、报告审计、扫描 PDF 能力边界、通用 profile 解析、Goldwind 独立闭环和正式输出后纠正；没有新增 migration、表或外部服务依赖。
 - 有效视图从最新 run 沿 `parent_run_id` 合并同一报告结果，带循环、深度和跨报告防护。失败或未生成行不生成伪 verdict、evidence、risk、applicability 或人工状态；dashboard、scope、review、report status 和 formal export gate 使用同一有效语义。
