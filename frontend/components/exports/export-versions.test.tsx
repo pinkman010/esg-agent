@@ -26,6 +26,8 @@ function dashboardResponse(overrides: Record<string, unknown> = {}) {
     applicability_counts: {},
     applicability_undetermined_total: 309,
     failed_requirement_count: 0,
+    not_generated_requirement_count: 0,
+    analysis_incomplete_count: 0,
     ...overrides,
   };
 }
@@ -63,7 +65,9 @@ describe("ExportVersions", () => {
       const url = String(input);
       if (url.endsWith("/api/reports/report-1/dashboard")) {
         return Promise.resolve(jsonResponse(dashboardResponse({
-          failed_requirement_count: 2,
+          failed_requirement_count: 1,
+          not_generated_requirement_count: 1,
+          analysis_incomplete_count: 2,
           high_priority_unresolved: 5,
         })));
       }

@@ -55,14 +55,18 @@ export function ExportVersions({ reportId, createdBy }: { reportId: string; crea
       client.invalidateQueries({ queryKey: ["exports", reportId] });
     },
   });
+  const analysisIncomplete = dashboardQuery.data
+    ? dashboardQuery.data.analysis_incomplete_count
+      ?? dashboardQuery.data.failed_requirement_count
+    : 0;
   const formalGate = dashboardQuery.isLoading
     ? { blocked: true, message: "正在读取正式输出门禁..." }
     : dashboardQuery.isError || !dashboardQuery.data
       ? { blocked: true, message: "正式输出门禁读取失败，请刷新页面后重试。" }
-      : dashboardQuery.data.failed_requirement_count > 0
+      : analysisIncomplete > 0
         ? {
             blocked: true,
-            message: `正式输出暂不可用：仍有 ${dashboardQuery.data.failed_requirement_count} 条分析失败或未生成结果。`,
+            message: `正式输出暂不可用：仍有 ${analysisIncomplete} 条分析失败或未生成结果。`,
           }
         : dashboardQuery.data.high_priority_unresolved > 0
           ? {

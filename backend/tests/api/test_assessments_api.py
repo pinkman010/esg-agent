@@ -567,7 +567,9 @@ async def test_dashboard_counts_not_generated_scope_items_as_incomplete(
     dashboard = await api_client.get("/api/reports/report-v3-scope/dashboard")
 
     assert dashboard.status_code == 200
-    assert dashboard.json()["failed_requirement_count"] == 1
+    assert dashboard.json()["failed_requirement_count"] == 0
+    assert dashboard.json()["not_generated_requirement_count"] == 1
+    assert dashboard.json()["analysis_incomplete_count"] == 1
     assert dashboard.json()["high_priority_total"] == 26
     assert dashboard.json()["high_priority_unresolved"] == 26
 
@@ -678,6 +680,8 @@ async def test_partial_retry_exposes_complete_scope_and_parent_assessments(
     assert dashboard.json()["run_id"] == "run-partial-retry"
     assert dashboard.json()["verdict_counts"] == {"unknown": 498}
     assert dashboard.json()["failed_requirement_count"] == 1
+    assert dashboard.json()["not_generated_requirement_count"] == 0
+    assert dashboard.json()["analysis_incomplete_count"] == 1
     assert dashboard.json()["high_priority_total"] == 499
 
 

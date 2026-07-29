@@ -160,6 +160,8 @@ class ReportDashboardResponse(BaseModel):
     applicability_counts: dict[str, int]
     applicability_undetermined_total: int
     failed_requirement_count: int
+    not_generated_requirement_count: int | None = None
+    analysis_incomplete_count: int | None = None
 
 
 class BusinessEvidenceItem(BaseModel):

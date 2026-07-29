@@ -6,7 +6,9 @@ from typing import Any
 
 _WINDOWS_PATH = re.compile(r"(?i)\b[a-z]:\\[^\s]+")
 _POSIX_PATH = re.compile(
-    r"(?<![:\w])/(?:home|Users|tmp|var|opt|srv|etc)/[^\s]+"
+    r"(?<![:/\w])/"
+    r"(?!api(?:/|$)|openapi(?:/|$)|health(?:/|$))"
+    r"(?:[^/\s]+/)+[^\s]+"
 )
 _CONNECTION_URL = re.compile(
     r"(?i)\b(?:postgresql|postgres|mysql|mariadb|mongodb|redis)://[^\s]+"

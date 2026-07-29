@@ -560,6 +560,37 @@ async def test_versioned_export_rolls_back_database_and_files_when_audit_fails(
     assert {path.name for path in export_root.iterdir()} == existing_directories
 
 
+async def test_versioned_export_cleans_partial_files_when_rendering_fails(
+    api_session,
+    tmp_path,
+    monkeypatch,
+):
+    seed_export_data(api_session)
+    repo = Repository(api_session)
+    service = VersionedExportService(repo, tmp_path)
+
+    def fail_render(destination, *args, **kwargs):
+        (destination / "partial.tmp").write_text(
+            "incomplete",
+            encoding="utf-8",
+        )
+        raise RuntimeError("injected render failure")
+
+    monkeypatch.setattr(service, "_write_format", fail_render)
+
+    with pytest.raises(RuntimeError, match="injected render failure"):
+        service.generate(
+            "report-1",
+            is_draft=True,
+            formats=["assessment_xlsx"],
+            created_by="张三",
+        )
+
+    assert repo.list_export_versions("report-1") == []
+    export_root = tmp_path / "exports" / "report-1"
+    assert not export_root.exists() or list(export_root.iterdir()) == []
+
+
 def seed_risk_v2_1_export_scope(session):
     repo = Repository(session)
     repo.create_report(

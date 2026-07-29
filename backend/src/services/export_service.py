@@ -458,7 +458,6 @@ class VersionedExportService:
         version_number = 0 if is_draft else self.repository.next_formal_export_version(report_id)
         previous = None if is_draft else self.repository.latest_formal_export(report_id)
         destination = self.output_root / "exports" / report_id / export_id
-        destination.mkdir(parents=True, exist_ok=True)
         assessment_rows = assessment_rows_from_assessments(
             self.repository,
             assessments,
@@ -488,54 +487,59 @@ class VersionedExportService:
             actions,
             requirement_ids_by_assessment,
         )
-        manifest = [
-            self._write_format(
-                destination,
-                item,
-                rows,
-                report_id,
-                is_draft,
-                action_rows=action_rows,
-            )
-            for item in formats
-        ]
+        destination.mkdir(parents=True, exist_ok=True)
+        try:
+            manifest = [
+                self._write_format(
+                    destination,
+                    item,
+                    rows,
+                    report_id,
+                    is_draft,
+                    action_rows=action_rows,
+                )
+                for item in formats
+            ]
+        except Exception:
+            shutil.rmtree(destination, ignore_errors=True)
+            raise
         digest = sha256("".join(item["sha256"] for item in manifest).encode()).hexdigest()
         export_version = ExportVersion(
-                export_id=export_id,
-                report_id=report_id,
-                run_id=run.run_id,
-                version_number=version_number,
-                status="draft" if is_draft else "formal",
-                is_draft=is_draft,
-                file_hash=digest,
-                engine_version=run.engine_version,
-                risk_rule_version=run.risk_rule_version,
-                review_scope={
-                    "high_risk_total": high_priority_total,
-                    "high_risk_reviewed": len(reviewed_high),
-                    "high_priority_total": high_priority_total,
-                    "high_priority_reviewed": len(reviewed_high),
-                    "high_priority_unresolved": high_priority_unresolved,
-                    "medium_priority_total": len(medium_ids),
-                    "medium_priority_reviewed": len(reviewed_medium),
-                    "medium_priority_unresolved": len(medium_ids) - len(reviewed_medium),
-                    "applicability_undetermined_total": len(applicability_undetermined),
-                    "analysis_incomplete_total": analysis_incomplete_total,
-                    "eligible_requirement_total": eligible_total,
-                    "standard_unit_total": standard_unit_total,
-                    "human_reviewed_total": len(reviewed_ids.intersection(ids)),
-                    "review_scope_statement": review_scope_statement,
-                    "system_pending_count": (
-                        eligible_total - len(snapshots)
-                        if uses_complete_scope
-                        else len(assessments) - len(snapshots)
-                    ),
-                    "draft_label": is_draft,
-                },
-                file_manifest=manifest,
-                supersedes_export_id=previous.export_id if previous else None,
-                created_by=created_by,
-            )
+            export_id=export_id,
+            report_id=report_id,
+            run_id=run.run_id,
+            version_number=version_number,
+            status="draft" if is_draft else "formal",
+            is_draft=is_draft,
+            file_hash=digest,
+            engine_version=run.engine_version,
+            risk_rule_version=run.risk_rule_version,
+            review_scope={
+                "high_risk_total": high_priority_total,
+                "high_risk_reviewed": len(reviewed_high),
+                "high_priority_total": high_priority_total,
+                "high_priority_reviewed": len(reviewed_high),
+                "high_priority_unresolved": high_priority_unresolved,
+                "medium_priority_total": len(medium_ids),
+                "medium_priority_reviewed": len(reviewed_medium),
+                "medium_priority_unresolved": len(medium_ids) - len(reviewed_medium),
+                "applicability_undetermined_total": len(applicability_undetermined),
+                "analysis_incomplete_total": analysis_incomplete_total,
+                "eligible_requirement_total": eligible_total,
+                "standard_unit_total": standard_unit_total,
+                "human_reviewed_total": len(reviewed_ids.intersection(ids)),
+                "review_scope_statement": review_scope_statement,
+                "system_pending_count": (
+                    eligible_total - len(snapshots)
+                    if uses_complete_scope
+                    else len(assessments) - len(snapshots)
+                ),
+                "draft_label": is_draft,
+            },
+            file_manifest=manifest,
+            supersedes_export_id=previous.export_id if previous else None,
+            created_by=created_by,
+        )
         try:
             export = self.repository.save_export_version(
                 export_version,

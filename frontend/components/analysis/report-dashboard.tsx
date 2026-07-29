@@ -32,7 +32,9 @@ export function ReportDashboard({ reportId }: { reportId: string }) {
   }
   const data = query.data;
   const priorities = data.review_priority_counts ?? data.risk_counts;
-  const formalBlocked = data.failed_requirement_count > 0 || data.high_priority_unresolved > 0;
+  const analysisIncomplete = data.analysis_incomplete_count ?? data.failed_requirement_count;
+  const notGenerated = data.not_generated_requirement_count ?? 0;
+  const formalBlocked = analysisIncomplete > 0 || data.high_priority_unresolved > 0;
   const aiStatus = runQuery.isLoading
     ? "正在读取 AI 阶段状态"
     : runQuery.isError
@@ -90,9 +92,9 @@ export function ReportDashboard({ reportId }: { reportId: string }) {
         />
         <MetricCard
           label="分析不完整"
-          value={data.failed_requirement_count}
-          description={data.failed_requirement_count > 0 ? "阻止正式输出" : "当前没有失败项"}
-          tone={data.failed_requirement_count > 0 ? "danger" : "neutral"}
+          value={analysisIncomplete}
+          description={analysisIncomplete > 0 ? `失败 ${data.failed_requirement_count}，未生成 ${notGenerated}` : "当前分析完整"}
+          tone={analysisIncomplete > 0 ? "danger" : "neutral"}
           icon={<FileCheck2 aria-hidden="true" className="h-4 w-4" />}
         />
       </section>
@@ -151,8 +153,8 @@ export function ReportDashboard({ reportId }: { reportId: string }) {
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h2 className="text-base font-semibold">正式输出门禁</h2>
-            {data.failed_requirement_count > 0 ? (
-              <p className="mt-2 text-sm text-red-700">其中 {data.failed_requirement_count} 条分析失败或未生成结果，需重跑后才能正式输出。</p>
+            {analysisIncomplete > 0 ? (
+              <p className="mt-2 text-sm text-red-700">其中 {analysisIncomplete} 条分析失败或未生成结果，需重跑后才能正式输出。</p>
             ) : data.high_priority_unresolved > 0 ? (
               <p className="mt-2 text-sm text-amber-900">高优先级未解决 {data.high_priority_unresolved} 项</p>
             ) : (

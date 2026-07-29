@@ -137,7 +137,7 @@ def _item(assessment, risk, snapshot=None) -> dict:
 def _report_assessments(repo: Repository, report_id: str):
     latest_run = repo.latest_run_for_report(report_id)
     if latest_run is None:
-        return None, [], {}, {}, 0
+        return None, [], {}, {}, 0, 0
     if not _uses_frozen_independent_scope(repo, latest_run):
         assessments = repo.list_assessments_by_run(latest_run.run_id)
         assessments.sort(
@@ -153,6 +153,7 @@ def _report_assessments(repo: Repository, report_id: str):
             repo.latest_risks_for_assessments(ids),
             repo.latest_snapshots_for_assessments(ids),
             latest_run.failed_requirement_count,
+            0,
         )
 
     adapter = GRIAdapter(GRI_REQUIREMENTS_PATH)
@@ -183,10 +184,8 @@ def _report_assessments(repo: Repository, report_id: str):
         assessments,
         risks,
         snapshots,
-        (
-            len(effective_view.failed_requirement_ids)
-            + len(effective_view.not_generated_requirement_ids)
-        ),
+        len(effective_view.failed_requirement_ids),
+        len(effective_view.not_generated_requirement_ids),
     )
 
 
@@ -203,14 +202,21 @@ def dashboard(report_id: str, session: Session = Depends(get_db_session)) -> dic
     if repo.get_report(report_id) is None:
         raise HTTPException(status_code=404, detail="report not found")
     scope_service = RequirementScopeService(repo, GRIAdapter(GRI_REQUIREMENTS_PATH))
-    run, assessments, risks, snapshots, failed_count = _report_assessments(
-        repo,
-        report_id,
-    )
+    (
+        run,
+        assessments,
+        risks,
+        snapshots,
+        failed_count,
+        not_generated_count,
+    ) = _report_assessments(repo, report_id)
+    analysis_incomplete_count = failed_count + not_generated_count
     risk_counts = Counter((risks.get(item.assessment_id).risk_level.value if risks.get(item.assessment_id) else "high") for item in assessments)
     review_priority_counts = Counter(risk_counts)
-    if failed_count:
-        review_priority_counts[RiskLevel.HIGH.value] += failed_count
+    if analysis_incomplete_count:
+        review_priority_counts[RiskLevel.HIGH.value] += (
+            analysis_incomplete_count
+        )
     applicability_counts = Counter(
         risks[item.assessment_id].applicability_status.value
         for item in assessments
@@ -224,7 +230,7 @@ def dashboard(report_id: str, session: Session = Depends(get_db_session)) -> dic
         and snapshots[item.assessment_id].operation_type.value in {"approve", "modify", "legacy_import"}
         for item in high_items
     )
-    high_total = len(high_items) + failed_count
+    high_total = len(high_items) + analysis_incomplete_count
     return {
         "report_id": report_id,
         "run_id": run.run_id if run else None,
@@ -243,6 +249,8 @@ def dashboard(report_id: str, session: Session = Depends(get_db_session)) -> dic
             0,
         ),
         "failed_requirement_count": failed_count,
+        "not_generated_requirement_count": not_generated_count,
+        "analysis_incomplete_count": analysis_incomplete_count,
     }
 
 
@@ -315,7 +323,10 @@ def list_assessments(
             detail="risk_level and review_priority filters conflict",
         )
     effective_priority = review_priority or risk_level
-    _, assessments, risks, snapshots, _ = _report_assessments(repo, report_id)
+    _, assessments, risks, snapshots, _, _ = _report_assessments(
+        repo,
+        report_id,
+    )
     items = [_item(item, risks.get(item.assessment_id), snapshots.get(item.assessment_id)) for item in assessments]
     if effective_priority is not None:
         items = [
@@ -342,7 +353,10 @@ def review_queue(
     repo = Repository(session)
     if repo.get_report(report_id) is None:
         raise HTTPException(status_code=404, detail="report not found")
-    _, assessments, risks, snapshots, _ = _report_assessments(repo, report_id)
+    _, assessments, risks, snapshots, _, _ = _report_assessments(
+        repo,
+        report_id,
+    )
     items = [
         _item(item, risks.get(item.assessment_id), snapshots.get(item.assessment_id))
         for item in assessments
@@ -367,7 +381,10 @@ def applicability_queue(
     repo = Repository(session)
     if repo.get_report(report_id) is None:
         raise HTTPException(status_code=404, detail="report not found")
-    _, assessments, risks, snapshots, _ = _report_assessments(repo, report_id)
+    _, assessments, risks, snapshots, _, _ = _report_assessments(
+        repo,
+        report_id,
+    )
     items = [
         _item(item, risks.get(item.assessment_id), snapshots.get(item.assessment_id))
         for item in assessments

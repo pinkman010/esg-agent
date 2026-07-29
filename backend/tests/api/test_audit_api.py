@@ -69,7 +69,15 @@ async def test_legacy_audit_api_sanitizes_errors_and_event_payloads(
         "workflow_failed",
         {
             "stderr": "raw process output",
-            "message": "see /tmp/esg/run.log Authorization: Bearer token-value",
+            "message": (
+                "see /tmp/esg/run.log /root/private/report.pdf "
+                "/mnt/data/report.pdf /workspace/run/output.log "
+                "Authorization: Bearer token-value"
+            ),
+            "safe_routes": (
+                "https://example.com/api/reports/report-1 "
+                "/api/reports/report-1"
+            ),
         },
     )
 
@@ -83,8 +91,13 @@ async def test_legacy_audit_api_sanitizes_errors_and_event_payloads(
     assert "C:\\private" not in serialized
     assert "/home/alvin" not in serialized
     assert "/tmp/esg" not in serialized
+    assert "/root/private" not in serialized
+    assert "/mnt/data" not in serialized
+    assert "/workspace/run" not in serialized
     assert "secret-value" not in serialized
     assert "token-value" not in serialized
     assert "raw process output" not in serialized
+    assert "https://example.com/api/reports/report-1" in serialized
+    assert "/api/reports/report-1" in serialized
     assert "[path redacted]" in item["error_message"]
     assert "stderr" not in item["events"][0]["payload"]

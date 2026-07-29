@@ -1449,6 +1449,10 @@ export interface components {
             applicability_undetermined_total: number;
             /** Failed Requirement Count */
             failed_requirement_count: number;
+            /** Not Generated Requirement Count */
+            not_generated_requirement_count?: number | null;
+            /** Analysis Incomplete Count */
+            analysis_incomplete_count?: number | null;
         };
         /** ReportListResponse */
         ReportListResponse: {

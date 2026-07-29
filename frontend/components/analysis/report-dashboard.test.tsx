@@ -33,6 +33,8 @@ describe("ReportDashboard", () => {
             applicability_counts: { applicable: 156, undetermined: 343 },
             applicability_undetermined_total: 343,
             failed_requirement_count: 0,
+            not_generated_requirement_count: 0,
+            analysis_incomplete_count: 0,
           };
       return Promise.resolve(new Response(JSON.stringify(body), {
         status: 200,
@@ -79,12 +81,15 @@ describe("ReportDashboard", () => {
       high_priority_unresolved: 1,
       applicability_counts: { undetermined: 1, applicable: 1 },
       applicability_undetermined_total: 1,
-      failed_requirement_count: 1,
+      failed_requirement_count: 0,
+      not_generated_requirement_count: 1,
+      analysis_incomplete_count: 1,
     }), { status: 200, headers: { "content-type": "application/json" } })));
 
     renderWithQuery(<ReportDashboard reportId="report-1" />);
 
     expect(await screen.findByText("高优先级复核 1/2")).toBeInTheDocument();
+    expect(screen.getByText("失败 0，未生成 1")).toBeInTheDocument();
     expect(screen.getByText("其中 1 条分析失败或未生成结果，需重跑后才能正式输出。")).toBeInTheDocument();
   });
 });
