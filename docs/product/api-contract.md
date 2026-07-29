@@ -132,6 +132,7 @@ EvidenceItem 对普通界面只返回：`evidence_id`、`source_pdf_page`、`sou
   "effective_verdict": null,
   "review_priority": null,
   "review_status": null,
+  "applicability_status": null,
   "source_pdf_pages": []
 }
 ```
@@ -254,7 +255,7 @@ multipart 上传 PDF。查询参数 `duplicate_policy` 取值为 `reject | creat
 
 ### `GET /api/reports/{report_id}/scope-items`
 
-查询参数：`page`、`page_size`。返回分页 `RequirementScopeItem`，当前 v3 总数固定为 577。499 个独立判断项的 `unit_status=assessed`，可关联 assessment；78 个上下文项的 `unit_status=context_incorporated`，不生成伪 verdict。默认使用 GRI requirement 自然顺序，供完整核查页面和输出服务复用。
+查询参数：`page`、`page_size`、`query`、`unit_status`、`effective_verdict`、`review_priority`、`review_status`、`applicability_status`。返回分页 `RequirementScopeItem`，当前 v3 完整 run 总数固定为 577。搜索覆盖 requirement ID、GRI 主题、原始/有效 requirement 文本和结构关联 ID；组合过滤在分页前执行，`total` 为过滤后的数量。499 个独立判断项的 `unit_status=assessed`，可关联 assessment；78 个上下文项的 `unit_status=context_incorporated`，不生成伪 verdict、priority、review 或 applicability。默认使用 GRI requirement 自然顺序，供完整核查页面和输出服务复用。当前最新 run 缺少任一独立 assessment 时返回 409；部分失败项由 run/dashboard 和正式输出门禁披露，尚不在范围表中伪造失败行。
 
 ### `GET /api/reports/{report_id}/assessments`
 
@@ -342,7 +343,7 @@ multipart 上传 PDF。查询参数 `duplicate_policy` 取值为 `reject | creat
 
 ### `PATCH /api/actions/{action_id}`
 
-当前允许修改状态、负责人和完成说明。完成、取消、重开必须填写备注；截止日期修改为后续增强。
+当前允许修改状态、负责人、截止日期和完成说明。`due_date` 未提供时保持原值，显式传 `null` 时清空；为兼容旧客户端，`status=null` 按未提供处理并保持原状态。只有实际状态发生变化且进入完成、取消或重开语义时才要求完成说明。响应和审计记录实际变化字段。
 
 ## 8. 输出接口
 
@@ -352,7 +353,7 @@ multipart 上传 PDF。查询参数 `duplicate_policy` 取值为 `reject | creat
 
 ### `POST /api/reports/{report_id}/exports/draft`
 
-当前支持格式：`assessment_xlsx`、`management_pdf`、`print_html`。允许任意复核进度，输出带草稿标识。`actions_xlsx` 的完整整改任务字段导出尚未完成，当前请求会返回 422，前端不会请求该格式，避免生成内容错误的“整改任务”文件。
+当前支持格式：`assessment_xlsx`、`actions_xlsx`、`management_pdf`、`print_html`。允许任意复核进度，输出带草稿标识。无整改任务时，`actions_xlsx` 仍生成包含免责声明和固定表头的有效工作簿。写入 XLSX 的字符串若以 `= + - @` 开头，会增加文本前缀，避免被表格软件解释为公式。
 
 ### `POST /api/reports/{report_id}/exports/formal`
 
@@ -374,6 +375,10 @@ multipart 上传 PDF。查询参数 `duplicate_policy` 取值为 `reject | creat
 ### `GET /api/exports/{export_id}`（规划中，MVP 当前未实现）
 
 返回版本 metadata。文件下载使用 `GET /api/exports/{export_id}/files/{file_id}`。
+
+### `GET /api/exports/{export_id}/files/{file_id}`
+
+下载 export manifest 中的单个文件。对外 manifest 只返回 `file_id`、`filename`、`format`、`size` 和 `sha256`，不返回服务器 `path` 或 `relative_path`。下载前校验 export/manifest 归属、允许目录边界、文件存在、大小和 SHA256；历史 manifest 通过稳定 legacy `file_id` 兼容。文件不存在返回 404，完整性不一致返回 `409 export_file_integrity_mismatch`，错误响应不包含本机绝对路径。
 
 ## 9. 审计接口
 

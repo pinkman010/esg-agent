@@ -591,6 +591,18 @@ uv run --no-sync python -m src.tools.evaluate_shadow_rag `
 
 ## 12. 开发日志
 
+### 2026-07-29
+
+- 经批准执行 `docs/plan/phase1.6-product-closure-implementation-plan.md`，在解冻起点 `5e4848b` 上完成安全 export 文件交付、`actions_xlsx`、577 项全局搜索和组合筛选、整改任务截止日期更新；没有新增 migration、表或外部服务依赖。
+- export 对外 manifest 只返回 `file_id`、`filename`、`format`、`size`、`sha256`；`GET /api/exports/{export_id}/files/{file_id}` 校验归属、目录边界、存在性、大小和 SHA256，并兼容历史 manifest。OpenAPI、生成的前端类型和页面均不暴露内部 `relative_path` 或本机路径。
+- `/scope-items` 支持 `query`、`unit_status`、`effective_verdict`、`review_priority`、`review_status`、`applicability_status`，先过滤后分页；上下文项继续保持 verdict、priority、review 和 applicability 为空。
+- 整改任务 PATCH 支持 due date 新增、修改和显式清空，并区分未提供字段；前端仅提交实际变更。`actions_xlsx` 使用固定免责声明和列顺序，无任务时仍生成有效工作簿。
+- 最终验证：后端 727 项测试通过，Ruff 通过；前端 28 个测试文件 114 项测试、typecheck、production build 通过；核心后端纵向测试 37 项通过。Envision v3 regeneration 保持 `577/499/78/0`，global fallback、新增 false disclosed、新增 wrong source page、audit error、audit warning 均为 0。
+- Chrome 验收覆盖 577 项总量、78 个上下文项、搜索、组合筛选、空态、清空、分页、正式输出门禁、四文件草稿和四个下载事件；console error/warning 为 0。当前数据库没有可复用整改任务样本，因此没有为浏览器验收制造任务；due date 写路径由组件、API 和端到端测试覆盖。
+- 本轮在审查前和审查修复后各执行一次 Envision regeneration gate，共创建两个新的本地报告/run；Chrome 只为第一次 gate 的报告生成一个四文件草稿。没有保存人工 snapshot、创建或修改整改任务，也没有调用 DeepSeek、SiliconFlow、OCR 或 VLM。
+- 最终独立审查修复 `d729abb`：scope 筛选类型直接派生自 OpenAPI，移除无效 verdict 并提供两种合法不适用状态；旧客户端 `status=null` 按未提供处理；XLSX 中以 `= + - @` 开头的用户文本增加公式注入转义。红灯验证后，后端目标 14 项、前端全量 114 项和 typecheck 通过。
+- Phase 1.6 完整验收见 `docs/product/phase1.6-product-closure-acceptance.md`。完成文档同步和最终自检后，v1.1 后端基线重新冻结。
+
 ### 2026-07-28
 
 - 完成 OCR 架构只读复核并决定保持 v1.1 后端冻结：pypdf/pdfplumber 继续作为正式默认链路；OCRmyPDF/Tesseract 路由保留为实验能力，Docling/PaddleOCR/VLM 和后台队列均不启动。当前可确认 OCRmyPDF 17.8.0 与 Tesseract `chi_sim/eng/osd` 可用，Ghostscript 不可用，真实扫描样本端到端验收仍未完成。

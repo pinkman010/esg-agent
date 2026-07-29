@@ -8,7 +8,7 @@
 
 **技术栈：** Python 3.11、FastAPI、Pydantic v2、SQLAlchemy 2.0、PostgreSQL JSONB、openpyxl、pytest、Next.js、TypeScript、TanStack Query、Vitest、React Testing Library、OpenAPI TypeScript。
 
-**计划状态（2026-07-29）：** 已批准编写，尚未批准执行。当前 `main` 工作区基线在计划编写前保持干净。
+**计划状态（2026-07-29）：** 已批准并执行完成。解冻起点为 `5e4848b`；代码、测试和产品验收提交均已完成，文档同步后重新冻结。未 push。
 
 ---
 
@@ -1121,3 +1121,42 @@ Requirement ID
 - Docling、PaddleOCR、VLM 和后台队列。
 
 Phase 1.6 完成只代表产品操作闭环和工程完整性提高，不构成 GRI 认证、外部鉴证、企业部署承诺或新增 ESG 专家判断。
+
+## 9. 执行结果
+
+以下清单为本计划的最终执行记录；前文逐步复选框保留原始实施顺序和预期，状态以本节为准。
+
+- [x] 解冻前基线和测试发现数已记录。
+- [x] 安全 export manifest、历史兼容和单文件下载已实现并提交。
+- [x] `actions_xlsx` 已实现并提交。
+- [x] 577 项全局搜索、组合筛选和过滤后分页已实现并提交。
+- [x] 整改任务 due date 新增、修改、清空和审计已实现并提交。
+- [x] OpenAPI 类型、下载 UI、搜索筛选 UI 和日期编辑 UI 已实现并分批提交。
+- [x] 产品闭环端到端测试已更新到 `499 + 78` 实际结构。
+- [x] 后端全量 727 项、Ruff、前端 28 文件 114 项、typecheck、production build 全部通过。
+- [x] Envision v3 regeneration 的新增 false disclosed、wrong source page、global fallback、audit error 和 audit warning 均为 0。
+- [x] Chrome 验收完成；四个下载入口均触发下载事件，console error/warning 为 0。
+- [x] 下载文件大小、SHA256、XLSX 可打开和 PDF/HTML 类型由 API 端到端测试验证；Chrome 层只验证页面入口和下载事件，未重复落盘解析。
+- [x] README、设计、开发日志、API 契约、观察清单和 Phase 1.6 验收报告已同步。
+- [x] DeepSeek、SiliconFlow、OCR 和 VLM 调用数为 0。
+
+实现提交：
+
+```text
+9bc8576 feat: add secure export file delivery
+95f168d feat: export improvement actions as xlsx
+4b34935 feat: add complete scope search and filters
+585d3cf feat: allow action due date updates
+acfaf48 feat: expose export file downloads
+22c8d2c feat: add complete scope search controls
+4a1c787 feat: add action due date editing
+dc3a77a test: cover phase 1.6 product closure
+d729abb fix: harden phase 1.6 contracts
+```
+
+受控验收写入：
+
+- Envision v3 regeneration 在审查前和修复后各创建一个本地报告和 run；
+- Chrome 为第一次 regeneration 的报告生成一个含四个文件的草稿 export；
+- 未保存人工 snapshot，未创建或修改整改任务，未生成正式 export；
+- 浏览器没有可复用整改任务样本，due date 浏览器写入未执行，相关语义由组件、API 和端到端自动测试覆盖。
