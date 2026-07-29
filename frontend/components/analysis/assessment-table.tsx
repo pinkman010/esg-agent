@@ -177,6 +177,13 @@ export function AssessmentTable({ reportId }: { reportId: string }) {
           <tbody className="divide-y divide-border">
             {query.data.items.map((item) => {
               const isContext = item.unit_status === "context_incorporated";
+              const analysisUnavailable = item.analysis_status === "failed"
+                || item.analysis_status === "not_generated";
+              const analysisStatusLabel = item.analysis_status === "failed"
+                ? "分析失败"
+                : item.analysis_status === "not_generated"
+                  ? "未生成"
+                  : null;
               return (
                 <tr key={item.requirement_id} className={isContext ? "bg-slate-50 text-muted-foreground" : "hover:bg-emerald-50/30"}>
                   <td className="px-3 py-3.5 font-medium">
@@ -193,7 +200,18 @@ export function AssessmentTable({ reportId }: { reportId: string }) {
                   <td className="px-3 py-3.5">
                     {isContext
                       ? "已纳入相关判断"
-                      : verdictLabels[item.effective_verdict ?? ""] ?? item.effective_verdict ?? "-"}
+                      : analysisUnavailable
+                        ? (
+                          <span className="block">
+                            <span className="font-medium text-amber-800">{analysisStatusLabel}</span>
+                            {item.failure_message && (
+                              <span className="mt-1 block max-w-xs text-xs leading-5 text-muted-foreground">
+                                {item.failure_message}
+                              </span>
+                            )}
+                          </span>
+                        )
+                        : verdictLabels[item.effective_verdict ?? ""] ?? item.effective_verdict ?? "-"}
                   </td>
                   <td className="px-3 py-3.5">
                     {isContext
@@ -203,7 +221,11 @@ export function AssessmentTable({ reportId }: { reportId: string }) {
                   <td className="px-3 py-3.5">
                     {isContext
                       ? "-"
-                      : reviewStatusLabels[item.review_status ?? ""] ?? "待确认"}
+                      : item.analysis_status === "failed"
+                        ? "等待重跑"
+                        : item.analysis_status === "not_generated"
+                          ? "等待分析"
+                          : reviewStatusLabels[item.review_status ?? ""] ?? "待确认"}
                   </td>
                   <td className="px-3 py-3.5">{isContext ? "-" : item.source_pdf_pages.join(", ") || "-"}</td>
                 </tr>

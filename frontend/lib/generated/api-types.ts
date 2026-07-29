@@ -1496,6 +1496,17 @@ export interface components {
             applicability_status?: string | null;
             /** Source Pdf Pages */
             source_pdf_pages: number[];
+            /**
+             * Analysis Status
+             * @enum {string|null}
+             */
+            analysis_status: "succeeded" | "failed" | "not_generated" | null;
+            /** Source Run Id */
+            source_run_id: string | null;
+            /** Failure Code */
+            failure_code: string | null;
+            /** Failure Message */
+            failure_message: string | null;
         };
         /** RequirementScopeListResponse */
         RequirementScopeListResponse: {

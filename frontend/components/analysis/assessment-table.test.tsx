@@ -231,4 +231,70 @@ describe("AssessmentTable", () => {
     const lastUrl = new URL(String(fetchMock.mock.lastCall?.[0]));
     expect(lastUrl.searchParams.has("query")).toBe(false);
   });
+
+  it("shows failed and not-generated items without fake verdict links", async () => {
+    const fetchMock = vi.fn(() => Promise.resolve(new Response(JSON.stringify({
+      items: [
+        {
+          requirement_id: "GRI 2-1-a",
+          gri_topic: "GRI 2",
+          unit_status: "assessed",
+          source_requirement_text: "组织法定名称",
+          effective_requirement_text: "组织法定名称",
+          component_requirement_ids: [],
+          incorporated_into_requirement_ids: [],
+          assessment_id: null,
+          effective_verdict: null,
+          review_priority: null,
+          review_status: null,
+          applicability_status: null,
+          source_pdf_pages: [],
+          analysis_status: "failed",
+          source_run_id: null,
+          failure_code: "assessment_failed",
+          failure_message: "该核查项分析失败，可通过失败重试恢复。",
+        },
+        {
+          requirement_id: "GRI 2-1-b",
+          gri_topic: "GRI 2",
+          unit_status: "assessed",
+          source_requirement_text: "所有权和法律形式",
+          effective_requirement_text: "所有权和法律形式",
+          component_requirement_ids: [],
+          incorporated_into_requirement_ids: [],
+          assessment_id: null,
+          effective_verdict: null,
+          review_priority: null,
+          review_status: null,
+          applicability_status: null,
+          source_pdf_pages: [],
+          analysis_status: "not_generated",
+          source_run_id: null,
+          failure_code: null,
+          failure_message: "该核查项尚未生成分析结果。",
+        },
+      ],
+      page: 1,
+      page_size: 50,
+      total: 2,
+    }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    })));
+    vi.stubGlobal("fetch", fetchMock);
+
+    renderWithQuery(<AssessmentTable reportId="report-1" />);
+
+    expect(await screen.findByText("分析失败")).toBeInTheDocument();
+    expect(screen.getByText("未生成")).toBeInTheDocument();
+    expect(
+      screen.getByText("该核查项分析失败，可通过失败重试恢复。"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "GRI 2-1-a" }),
+    ).not.toBeInTheDocument();
+    const failedRow = screen.getByText("GRI 2-1-a").closest("tr");
+    expect(failedRow).not.toBeNull();
+    expect(within(failedRow!).queryByText("待确认")).not.toBeInTheDocument();
+  });
 });
