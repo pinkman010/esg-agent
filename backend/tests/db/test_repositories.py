@@ -51,6 +51,51 @@ def make_session():
     return engine, SessionLocal()
 
 
+def test_latest_run_for_report_prefers_active_or_most_recent_terminal_activity():
+    engine, session = make_session()
+    try:
+        repo = Repository(session)
+        repo.create_report(
+            Report(
+                report_id="report-latest-run",
+                original_filename="report.pdf",
+                stored_path="x",
+                file_hash="hash-latest-run",
+            )
+        )
+        repo.create_run(
+            AnalysisRun(
+                run_id="run-z-parent",
+                report_id="report-latest-run",
+                status=RunStatus.COMPLETED,
+                started_at=datetime.now(UTC) - timedelta(hours=1),
+                completed_at=datetime.now(UTC) - timedelta(minutes=50),
+            )
+        )
+        repo.create_run(
+            AnalysisRun(
+                run_id="run-a-retry",
+                report_id="report-latest-run",
+                status=RunStatus.PENDING,
+                parent_run_id="run-z-parent",
+            )
+        )
+
+        assert repo.latest_run_for_report("report-latest-run").run_id == "run-a-retry"
+
+        repo.update_run_status(
+            "run-a-retry",
+            RunStatus.FAILED,
+            error_message="worker recovery failed",
+        )
+
+        assert repo.latest_run_for_report("report-latest-run").run_id == "run-a-retry"
+    finally:
+        session.close()
+        reset_database(engine)
+        engine.dispose()
+
+
 def test_required_tables_are_declared():
     engine, session = make_session()
     try:

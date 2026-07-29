@@ -1,6 +1,6 @@
 from uuid import uuid4
 
-from sqlalchemy import delete, func, or_, select, text
+from sqlalchemy import case, delete, func, or_, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
@@ -755,7 +755,24 @@ class Repository:
         record = self.session.scalar(
             select(AnalysisRunRecord)
             .where(AnalysisRunRecord.report_id == report_id)
-            .order_by(AnalysisRunRecord.started_at.desc().nullslast(), AnalysisRunRecord.run_id.desc())
+            .order_by(
+                case(
+                    (
+                        AnalysisRunRecord.status.in_(
+                            [status.value for status in ACTIVE_RUN_STATUSES]
+                        ),
+                        1,
+                    ),
+                    else_=0,
+                ).desc(),
+                func.coalesce(
+                    AnalysisRunRecord.completed_at,
+                    AnalysisRunRecord.started_at,
+                )
+                .desc()
+                .nullslast(),
+                AnalysisRunRecord.run_id.desc(),
+            )
             .limit(1)
         )
         return self._run_from_record(record) if record is not None else None

@@ -552,6 +552,26 @@ async def test_scope_items_exposes_complete_577_unit_range_without_fake_context_
     assert dashboard.json()["standard_unit_count"] == 577
 
 
+async def test_dashboard_counts_not_generated_scope_items_as_incomplete(
+    api_client,
+    api_session,
+):
+    seed_v3_scope_assessments(api_session)
+    missing = api_session.get(AssessmentRecord, "assessment-v3-499")
+    api_session.query(AssessmentRiskRecord).filter(
+        AssessmentRiskRecord.assessment_id == missing.assessment_id
+    ).delete()
+    api_session.delete(missing)
+    api_session.commit()
+
+    dashboard = await api_client.get("/api/reports/report-v3-scope/dashboard")
+
+    assert dashboard.status_code == 200
+    assert dashboard.json()["failed_requirement_count"] == 1
+    assert dashboard.json()["high_priority_total"] == 26
+    assert dashboard.json()["high_priority_unresolved"] == 26
+
+
 def seed_partial_retry_scope(session):
     repo = Repository(session)
     repo.create_report(

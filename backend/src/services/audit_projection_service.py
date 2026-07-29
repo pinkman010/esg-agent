@@ -5,6 +5,9 @@ from typing import Any
 
 
 _WINDOWS_PATH = re.compile(r"(?i)\b[a-z]:\\[^\s]+")
+_POSIX_PATH = re.compile(
+    r"(?<![:\w])/(?:home|Users|tmp|var|opt|srv|etc)/[^\s]+"
+)
 _CONNECTION_URL = re.compile(
     r"(?i)\b(?:postgresql|postgres|mysql|mariadb|mongodb|redis)://[^\s]+"
 )
@@ -38,6 +41,10 @@ def sanitize_audit_payload(payload: dict[str, Any]) -> dict[str, Any]:
     return sanitized if isinstance(sanitized, dict) else {}
 
 
+def sanitize_audit_text(value: str) -> str:
+    return _sanitize_text(value)
+
+
 def _sanitize_value(value: Any, *, depth: int) -> Any:
     if depth >= _MAX_DEPTH:
         return "[truncated]"
@@ -67,6 +74,7 @@ def _blocked_key(key: str) -> bool:
 def _sanitize_text(value: str) -> str:
     text = " ".join(value.split())
     text = _WINDOWS_PATH.sub("[path redacted]", text)
+    text = _POSIX_PATH.sub("[path redacted]", text)
     text = _CONNECTION_URL.sub("[connection redacted]", text)
     text = _BEARER_TOKEN.sub("Authorization: Bearer [redacted]", text)
     text = _NAMED_SECRET.sub("[secret redacted]", text)

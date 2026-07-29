@@ -183,7 +183,10 @@ def _report_assessments(repo: Repository, report_id: str):
         assessments,
         risks,
         snapshots,
-        len(effective_view.failed_requirement_ids),
+        (
+            len(effective_view.failed_requirement_ids)
+            + len(effective_view.not_generated_requirement_ids)
+        ),
     )
 
 

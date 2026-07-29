@@ -4,7 +4,10 @@ from sqlalchemy.orm import Session
 from src.api.schemas import AuditRun, ReportAuditListResponse
 from src.db.repositories import Repository
 from src.db.session import get_db_session
-from src.services.audit_projection_service import sanitize_audit_payload
+from src.services.audit_projection_service import (
+    sanitize_audit_payload,
+    sanitize_audit_text,
+)
 
 router = APIRouter(prefix="/api/audit", tags=["audit"])
 report_router = APIRouter(
@@ -15,7 +18,25 @@ report_router = APIRouter(
 
 @router.get("/runs", response_model=list[AuditRun])
 def list_audit_runs(session: Session = Depends(get_db_session)) -> list[dict]:
-    return Repository(session).list_audit_runs()
+    runs = Repository(session).list_audit_runs()
+    return [
+        {
+            **run,
+            "error_message": (
+                sanitize_audit_text(run["error_message"])
+                if run["error_message"]
+                else None
+            ),
+            "events": [
+                {
+                    **event,
+                    "payload": sanitize_audit_payload(event["payload"]),
+                }
+                for event in run["events"]
+            ],
+        }
+        for run in runs
+    ]
 
 
 @report_router.get("/audit", response_model=ReportAuditListResponse)
