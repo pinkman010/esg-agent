@@ -78,6 +78,7 @@ def test_scope_service_merges_499_assessments_into_577_standard_units():
     assert all(item["effective_verdict"] is None for item in context)
     assert all(item["review_priority"] is None for item in context)
     assert all(item["review_status"] is None for item in context)
+    assert all(item["applicability_status"] is None for item in context)
     assert any(item["incorporated_into_requirement_ids"] for item in context)
     assert items[0]["requirement_id"] == "GRI 2-1-a"
 

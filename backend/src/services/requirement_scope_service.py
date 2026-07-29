@@ -135,6 +135,7 @@ class RequirementScopeService:
                 "effective_verdict": None,
                 "review_priority": None,
                 "review_status": None,
+                "applicability_status": None,
                 "source_pdf_pages": [],
             }
 
@@ -192,6 +193,12 @@ class RequirementScopeService:
             ),
             "review_status": (
                 _review_status(snapshot) if assessment is not None else None
+            ),
+            "applicability_status": (
+                risk.applicability_status.value
+                if risk is not None
+                and risk.applicability_status is not None
+                else None
             ),
             "source_pdf_pages": source_pages,
         }

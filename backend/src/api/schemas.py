@@ -130,6 +130,7 @@ class RequirementScopeItemResponse(BaseModel):
     effective_verdict: str | None
     review_priority: str | None
     review_status: str | None
+    applicability_status: str | None = None
     source_pdf_pages: list[int]
 
 

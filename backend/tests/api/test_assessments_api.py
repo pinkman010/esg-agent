@@ -17,6 +17,7 @@ from src.domain.enums import (
     RunStatus,
 )
 from src.domain.models import AnalysisRun, AssessmentRisk, DisclosureAssessment, DisclosureTask, EvidenceItem, Report
+from src.api.routes.assessments import filter_scope_items
 from src.services.risk_service import calculate_and_store_risk
 from src.services.review_service import ReviewService
 from src.standards.gri import GRIAdapter
@@ -475,8 +476,7 @@ def seed_v3_scope_assessments(session):
     requirements = GRIAdapter(
         backend_root / "data/manifests/gri_requirement_checklist_v3.json"
     ).load_requirements()
-    session.add_all(
-        [
+    assessment_records = [
             AssessmentRecord(
                 assessment_id=f"assessment-v3-{index:03d}",
                 run_id="run-v3-scope",
@@ -492,6 +492,24 @@ def seed_v3_scope_assessments(session):
                 review_status="needs_manual_review",
             )
             for index, requirement in enumerate(requirements, start=1)
+    ]
+    session.add_all(assessment_records)
+    session.flush()
+    session.add_all(
+        [
+            AssessmentRiskRecord(
+                risk_id=f"risk-v3-{index:03d}",
+                assessment_id=record.assessment_id,
+                risk_level="high" if index <= 25 else "medium",
+                reason_codes=["test_scope_filter"],
+                risk_rule_version="risk-v2.1",
+                evidence_status="missing",
+                applicability_status=(
+                    "undetermined" if index <= 30 else "applicable"
+                ),
+                trigger_event="analysis_completed",
+            )
+            for index, record in enumerate(assessment_records, start=1)
         ]
     )
     session.commit()
@@ -532,3 +550,175 @@ async def test_scope_items_exposes_complete_577_unit_range_without_fake_context_
     assert context["review_status"] is None
     assert dashboard.status_code == 200
     assert dashboard.json()["standard_unit_count"] == 577
+
+
+async def test_scope_items_searches_ids_and_text_before_pagination(
+    api_client,
+    api_session,
+):
+    seed_v3_scope_assessments(api_session)
+
+    by_id = await api_client.get(
+        "/api/reports/report-v3-scope/scope-items",
+        params={"query": "GRI 2-1", "page_size": 100},
+    )
+    by_english_text = await api_client.get(
+        "/api/reports/report-v3-scope/scope-items",
+        params={"query": "LEGAL NAME"},
+    )
+    context_and_assessed = await api_client.get(
+        "/api/reports/report-v3-scope/scope-items",
+        params={
+            "query": "approach used for consolidating",
+            "page_size": 100,
+        },
+    )
+    no_match = await api_client.get(
+        "/api/reports/report-v3-scope/scope-items",
+        params={"query": "不存在的核查文本"},
+    )
+
+    assert by_id.status_code == 200
+    assert by_id.json()["total"] > 0
+    assert all(
+        "gri 2-1" in item["requirement_id"].casefold()
+        for item in by_id.json()["items"]
+    )
+    assert by_english_text.json()["total"] == 1
+    assert (
+        by_english_text.json()["items"][0]["requirement_id"]
+        == "GRI 2-1-a"
+    )
+    assert {
+        item["unit_status"]
+        for item in context_and_assessed.json()["items"]
+    } == {"assessed", "context_incorporated"}
+    assert no_match.json() == {
+        "items": [],
+        "page": 1,
+        "page_size": 100,
+        "total": 0,
+    }
+
+
+async def test_scope_items_combines_filters_then_paginates(
+    api_client,
+    api_session,
+):
+    seed_v3_scope_assessments(api_session)
+    filters = {
+        "effective_verdict": "unknown",
+        "review_priority": "high",
+        "review_status": "pending_review",
+        "applicability_status": "undetermined",
+        "page_size": 10,
+    }
+
+    first = await api_client.get(
+        "/api/reports/report-v3-scope/scope-items",
+        params={**filters, "page": 1},
+    )
+    second = await api_client.get(
+        "/api/reports/report-v3-scope/scope-items",
+        params={**filters, "page": 2},
+    )
+
+    assert first.status_code == second.status_code == 200
+    assert first.json()["total"] == second.json()["total"] == 25
+    assert len(first.json()["items"]) == len(second.json()["items"]) == 10
+    assert first.json()["items"] != second.json()["items"]
+    for item in first.json()["items"] + second.json()["items"]:
+        assert item["effective_verdict"] == "unknown"
+        assert item["review_priority"] == "high"
+        assert item["review_status"] == "pending_review"
+        assert item["applicability_status"] == "undetermined"
+
+
+async def test_scope_items_context_filter_preserves_context_semantics(
+    api_client,
+    api_session,
+):
+    seed_v3_scope_assessments(api_session)
+
+    context = await api_client.get(
+        "/api/reports/report-v3-scope/scope-items",
+        params={
+            "unit_status": "context_incorporated",
+            "page_size": 100,
+        },
+    )
+    context_with_verdict = await api_client.get(
+        "/api/reports/report-v3-scope/scope-items",
+        params={
+            "unit_status": "context_incorporated",
+            "effective_verdict": "unknown",
+        },
+    )
+
+    assert context.status_code == 200
+    assert context.json()["total"] == 78
+    assert all(
+        item["effective_verdict"] is None
+        and item["review_priority"] is None
+        and item["review_status"] is None
+        and item["applicability_status"] is None
+        for item in context.json()["items"]
+    )
+    assert context_with_verdict.json()["total"] == 0
+    assert context_with_verdict.json()["items"] == []
+
+
+@pytest.mark.parametrize(
+    "params",
+    [
+        {"unit_status": "invalid"},
+        {"effective_verdict": "invalid"},
+        {"review_priority": "invalid"},
+        {"review_status": "invalid"},
+        {"applicability_status": "invalid"},
+        {"query": "x" * 101},
+    ],
+)
+async def test_scope_items_rejects_invalid_filters(
+    api_client,
+    api_session,
+    params,
+):
+    seed_v3_scope_assessments(api_session)
+
+    response = await api_client.get(
+        "/api/reports/report-v3-scope/scope-items",
+        params=params,
+    )
+
+    assert response.status_code == 422
+
+
+def test_scope_filter_matches_chinese_effective_text():
+    items = [
+        {
+            "requirement_id": "GRI 305-1-a",
+            "gri_topic": "GRI 305",
+            "unit_status": "assessed",
+            "source_requirement_text": "Gross direct GHG emissions",
+            "effective_requirement_text": "披露直接温室气体排放总量",
+            "component_requirement_ids": [],
+            "incorporated_into_requirement_ids": [],
+            "effective_verdict": "unknown",
+            "review_priority": "high",
+            "review_status": "pending_review",
+            "applicability_status": "undetermined",
+        }
+    ]
+
+    result = filter_scope_items(
+        items,
+        query="温室气体",
+        unit_status=None,
+        effective_verdict=None,
+        review_priority=None,
+        review_status=None,
+        applicability_status=None,
+    )
+
+    assert result == items

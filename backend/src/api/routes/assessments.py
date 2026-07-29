@@ -1,5 +1,6 @@
 from collections import Counter
 import re
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
@@ -12,7 +13,11 @@ from src.api.schemas import (
 )
 from src.db.repositories import Repository
 from src.db.session import get_db_session
-from src.domain.enums import ApplicabilityStatus, RiskLevel
+from src.domain.enums import (
+    ApplicabilityStatus,
+    AssessmentVerdict,
+    RiskLevel,
+)
 from src.services.analysis_runner import GRI_REQUIREMENTS_PATH
 from src.services.presentation_localization import localize_missing_items, localize_rationale
 from src.services.requirement_scope_service import RequirementScopeService
@@ -56,6 +61,51 @@ def _paginate(items: list[dict], *, page: int, page_size: int) -> dict:
         "page_size": page_size,
         "total": total,
     }
+
+
+def filter_scope_items(
+    items: list[dict],
+    *,
+    query: str | None,
+    unit_status: str | None,
+    effective_verdict: str | None,
+    review_priority: str | None,
+    review_status: str | None,
+    applicability_status: str | None,
+) -> list[dict]:
+    normalized_query = (query or "").strip().casefold()
+    filtered = []
+    for item in items:
+        if normalized_query:
+            searchable_values = [
+                item.get("requirement_id"),
+                item.get("gri_topic"),
+                item.get("source_requirement_text"),
+                item.get("effective_requirement_text"),
+                *(item.get("component_requirement_ids") or []),
+                *(item.get("incorporated_into_requirement_ids") or []),
+            ]
+            haystack = "\n".join(
+                str(value).casefold()
+                for value in searchable_values
+                if value is not None
+            )
+            if normalized_query not in haystack:
+                continue
+        expected = {
+            "unit_status": unit_status,
+            "effective_verdict": effective_verdict,
+            "review_priority": review_priority,
+            "review_status": review_status,
+            "applicability_status": applicability_status,
+        }
+        if any(
+            value is not None and item.get(field) != value
+            for field, value in expected.items()
+        ):
+            continue
+        filtered.append(item)
+    return filtered
 
 
 def _item(assessment, risk, snapshot=None) -> dict:
@@ -152,6 +202,23 @@ def list_scope_items(
     report_id: str,
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=100, ge=1, le=100),
+    query: str | None = Query(default=None, max_length=100),
+    unit_status: Literal[
+        "assessed",
+        "context_incorporated",
+    ]
+    | None = None,
+    effective_verdict: AssessmentVerdict | None = None,
+    review_priority: RiskLevel | None = None,
+    review_status: Literal[
+        "pending_review",
+        "reviewed_approved",
+        "reviewed_modified",
+        "evidence_invalidated",
+        "reopened",
+    ]
+    | None = None,
+    applicability_status: ApplicabilityStatus | None = None,
     session: Session = Depends(get_db_session),
 ) -> dict:
     repo = Repository(session)
@@ -162,6 +229,21 @@ def list_scope_items(
         items = service.list_items(report_id)
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    items = filter_scope_items(
+        items,
+        query=query,
+        unit_status=unit_status,
+        effective_verdict=(
+            effective_verdict.value if effective_verdict else None
+        ),
+        review_priority=(
+            review_priority.value if review_priority else None
+        ),
+        review_status=review_status,
+        applicability_status=(
+            applicability_status.value if applicability_status else None
+        ),
+    )
     return _paginate(items, page=page, page_size=page_size)
 
 
