@@ -135,6 +135,13 @@ PDF/OCR/VLM 相关证据还应尽量保留：
 - `backend/data/reports/Envision Energy 2024-zh.pdf`
 - `backend/data/standards/gri/GRI_Standards_Official_Consolidated_Set_en.pdf`
 
+Phase 1.7 独立产品闭环验收还使用以下本地只读资产：
+
+- `backend/data/reports/Goldwind 2024-zh.pdf`
+- `backend/data/reports/profiles/goldwind_2024.json`
+
+Envision 是权威主线回归样本；Goldwind 是不同企业、52 页双页拼版报告的产品泛化工程样本。两者都不得覆盖或改写。Goldwind 验收结果不能当作 ESG 专家 gold，也不能替代 Envision 零回归门禁。原始 Goldwind PDF 不提交 Git；缺少该本地资产时，相关真实 PDF E2E 应明确跳过或失败，不能用处理后文本、空白 PDF 或伪造页数替代。
+
 可用 PowerShell 校验单个文件：
 
 ```powershell
@@ -143,7 +150,7 @@ Get-FileHash "backend/data/reports/Envision Energy 2024-zh.pdf" -Algorithm SHA25
 
 校验结果必须与 `backend/data/manifests/assets_manifest.json` 中对应条目的 `sha256` 一致。
 
-恢复资产时只复制原始文件，不覆盖、删改来源目录。派生文件、上传文件、OCR 文件和导出文件仍写入 `backend/data/runtime/`。
+恢复资产时只复制原始文件，不覆盖、删改来源目录。Phase 1.7 Chrome 验收对 Goldwind 的上传只创建 runtime 副本，不修改 `backend/data/reports/` 中的源文件。派生文件、上传文件、OCR 文件和导出文件仍写入 `backend/data/runtime/`。
 
 ### 10.1 人工复核与模型评估资产
 

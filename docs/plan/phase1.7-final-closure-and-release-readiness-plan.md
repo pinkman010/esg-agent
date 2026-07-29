@@ -1148,27 +1148,27 @@ rg -n --hidden --glob '!tmp/**' --glob '!.git/**' `
 
 **桌面端流程：**
 
-- [ ] 报告列表和上传入口可用。
-- [ ] 上传 Goldwind，确认 metadata。
-- [ ] 启动分析并观察进度。
-- [ ] 进入 577 项范围和 dashboard。
-- [ ] 验证失败/未生成空态不会伪造 verdict。
-- [ ] 打开 PDF 证据页。
-- [ ] 创建人工复核快照。
-- [ ] 创建和更新整改事项。
-- [ ] 生成草稿并下载文件。
-- [ ] 打开报告审计时间线。
-- [ ] 验证正式输出 gate 文案。
-- [ ] 浏览器 console 0 error。
-- [ ] 关键请求无 4xx/5xx。
+- [x] 报告列表和上传入口可用。
+- [x] 上传 Goldwind，确认 metadata。
+- [x] 启动分析并观察进度。
+- [x] 进入 577 项范围和 dashboard。
+- [x] 验证失败/未生成空态不会伪造 verdict。
+- [x] 打开 PDF 证据页。
+- [x] 创建人工复核快照。
+- [x] 创建和更新整改事项。
+- [x] 生成草稿并下载文件。
+- [x] 打开报告审计时间线。
+- [x] 验证正式输出 gate 文案。
+- [x] 浏览器 console 0 error。
+- [x] 关键请求无 4xx/5xx。
 
 **窄屏和键盘：**
 
-- [ ] 关键页面无横向遮挡。
-- [ ] Tab 顺序合理。
-- [ ] 按钮有可辨识名称。
-- [ ] 对话框焦点可进入和退出。
-- [ ] 状态不只依赖颜色。
+- [x] 关键页面无横向遮挡。
+- [x] Tab 顺序合理。
+- [x] 按钮有可辨识名称。
+- [x] 对话框焦点可进入和退出（验收流程未出现模态对话框，页面焦点未被困住）。
+- [x] 状态不只依赖颜色。
 
 **自动验收限制：**
 
@@ -1196,17 +1196,17 @@ rg -n --hidden --glob '!tmp/**' --glob '!.git/**' `
 
 **校准要求：**
 
-- [ ] README 写明最终支持声明和限制。
-- [ ] DESIGN 写明运行谱系有效视图、报告审计和 PDF 能力边界。
-- [ ] DEVELOPMENT 写明测试、双报告 gate、测试数据库和启动命令。
-- [ ] ASSETS 只记录现有 Envision/Goldwind 资产用途与保护规则。
-- [ ] API contract 与 OpenAPI 一致。
-- [ ] state model 明确 assessment reopen 驱动 report reopened。
-- [ ] 删除或标记未实现的独立 report reopen、voided 输出等承诺。
-- [ ] `mvp-acceptance-report.md` 标注为历史快照；历史事实不静默改写。
-- [ ] 清理仍称 `actions_xlsx` 或下载未实现的过期描述。
-- [ ] 新验收报告记录命令、日期、commit、测试数、差异和限制。
-- [ ] 文档不写本机绝对路径。
+- [x] README 写明最终支持声明和限制。
+- [x] DESIGN 写明运行谱系有效视图、报告审计和 PDF 能力边界。
+- [x] DEVELOPMENT 写明测试、双报告 gate、测试数据库和启动命令。
+- [x] ASSETS 只记录现有 Envision/Goldwind 资产用途与保护规则。
+- [x] API contract 与 OpenAPI 一致。
+- [x] state model 明确 assessment reopen 驱动 report reopened。
+- [x] 删除或标记未实现的独立 report reopen、voided 输出等承诺。
+- [x] `mvp-acceptance-report.md` 标注为历史快照；历史事实不静默改写。
+- [x] 清理仍称 `actions_xlsx` 或下载未实现的过期描述。
+- [x] 新验收报告记录命令、日期、commit、测试数、差异和限制。
+- [x] 文档不写本机绝对路径。
 
 **最终文档必须回答：**
 

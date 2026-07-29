@@ -1,5 +1,7 @@
 # Envision 2024 中文报告 MVP 产品验收报告
 
+> 历史快照：本文记录 2026-07-26 的 v1.1 MVP 验收事实，测试数量、接口能力和已知限制不得作为当前发布状态。Phase 1.7 的现行结论见 `docs/product/phase1.7-final-closure-acceptance.md`。
+
 ## 1. 验收结论
 
 截至 2026-07-26，Envision 2024 中文报告已完成 577 项 GRI 核查，达到本地 MVP 后端冻结条件，并完成报告中心前端演示体验验收。冻结名称：
@@ -148,16 +150,20 @@ Chrome 扩展无法自动向本机原生文件选择器赋值，返回 `Not allo
 
 当前无未解决 P0/P1 产品问题。
 
-## 9. 已知限制
+## 9. 当时已知限制
 
-- `actions_xlsx` 尚未按整改任务字段生成完整任务清单；
-- 通用 verdict 批量复核、独立 reopen、report 级审计和单 export 下载仍为规划接口；
+- `actions_xlsx` 当时尚未按整改任务字段生成完整任务清单；
+- 通用 verdict 批量复核、独立 reopen、report 级审计和单 export 下载当时仍为规划接口；
 - 旧 `review_decisions`、旧 API 和旧页面仍有调用者，继续保留；
 - 225 条 AI 基线属于工程验证；
 - 企业条件适用性可能需要企业确认；
 - 当前冻结主线只承诺 Envision 2024 中文报告；
 - Goldwind 作为次级泛化证据，当前不阻塞；
 - 项目只承诺本地 MVP 验证，不承诺企业部署能力。
+
+Phase 1.6 已实现 `actions_xlsx` 和单 export 安全下载；Phase 1.7 已实现 report 级审计、运行谱系有效视图和 assessment reopen 驱动的正式输出纠正。
+
+独立 report reopen API 仍未实现，当前产品也不需要该重复入口。
 
 ## 10. 冻结后的变更控制
 

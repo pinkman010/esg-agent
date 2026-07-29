@@ -1,5 +1,7 @@
 # Phase 1.6 产品闭环补全验收报告
 
+> 历史快照：本文记录 Phase 1.6 完成时的能力与限制。部分失败 577 项投影、报告审计、扫描 PDF 能力边界、独立报告闭环和正式输出后纠正已由 Phase 1.7 补齐；现行结论见 `docs/product/phase1.7-final-closure-acceptance.md`。
+
 ## 1. 结论
 
 Phase 1.6 已完成并达到重新冻结条件。OBS-001、OBS-002、OBS-004、OBS-007 已关闭，`actions_xlsx` 已进入版本化输出。`577/499/78/0`、规则 assessment、risk-v2.1、AI suggestion、人工 snapshot、正式输出门禁和三层结论权威关系均未改变。

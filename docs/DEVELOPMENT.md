@@ -305,15 +305,15 @@ uv run --no-sync python -c "from sqlalchemy.engine import make_url; from src.con
 
 本轮已闭环：重复上传提供“查看已有结果”和“重新上传并分析”，后者保留历史并创建新报告；同一报告 active run 同时受 API 预检查和 `0009` 数据库部分唯一索引保护；metadata 进入分析后禁止改写；服务重启会收敛遗留 active run。
 
-- 适用性单条与当前页批量确认已实现；通用 verdict 批量复核、独立 report/assessment reopen、report 级审计、单 export metadata 和文件下载 API 尚未实现；这些接口在 `docs/product/api-contract.md` 标记为规划中。
-- `actions_xlsx` 尚未按整改任务字段生成完整任务清单，后端当前明确返回 422，前端不请求该格式；当前验收只覆盖核查表 XLSX、管理层摘要 PDF 和打印 HTML。
+- 适用性单条与当前页批量确认、assessment reopen、report 级审计和单 export 文件下载均已实现；通用 verdict 批量复核、独立 report reopen 和单 export metadata 接口不在当前范围。
+- `actions_xlsx` 已按整改任务字段生成任务清单，并进入草稿和正式输出的四文件 manifest；无任务时仍生成带固定表头和免责声明的有效工作簿。
 - 旧 `/api/review/*`、旧 `/api/exports/runs/*`、`/api/audit/runs` 和对应旧前端页面仍承担兼容用途，不能删除 `review_decisions`。
-- Goldwind 100 条人工 gold gate 的 `unknown_leakage_count=2`，但 `false_disclosed_count=0`、`wrong_source_page_count=0`；该风险不阻塞 MVP 人工验收。
+- Goldwind 100 条历史人工 gate 保留；Phase 1.7 另以 Goldwind 52 页真实报告完成独立产品 E2E。两者均为工程证据，不构成 ESG 专家 gold。
 - `esg_agent` 开发/长期验收库包含多次 Envision regeneration 记录，禁止为演示清理；重复上传可直接创建新报告，因此普通演示和验收都不依赖空库。需要隔离展示数据时可连接 `esg_agent_demo`，reset 只作为显式维护操作。
 - Codex 内置浏览器控制在本机发生两次桌面应用闪退。自动页面截图改用独立无头 Edge；人工验收使用普通浏览器，不再启用 Codex 内置浏览器。
 - 外部模型和 OCR/VLM 默认关闭。DeepSeek 只在 `confirm_llm=true` 且用户明确批准后启用；OCR/VLM 本轮未启用。
 
-当前自动门禁（2026-07-28）：后端 709 项测试通过；前端 28 个测试文件、105 项测试、typecheck 和 production build 通过；Envision v3 内部结构为 `577/499/78/0`，global fallback、新增 false disclosed 和新增 wrong source page 均为 0，audit 为 0 error、0 warning。16 条历史结果差异全部进入最终裁决资产，其中 13 条与规则一致、3 条需要最终人工覆盖、0 条 pending。Goldwind 100 条历史人工 gold 为 recall 96.08%、false disclosed 0、wrong source page 0、unknown leakage 2，作为低优先级泛化证据，不阻塞 Envision 主线验收。main 与 demo 数据库 head 均为 `0012_chunk_embeddings`。
+当前自动门禁（2026-07-29）：后端 766 项测试和 Ruff 通过；前端 30 个测试文件、119 项测试、typecheck 和 production build 通过；Envision v3 内部结构为 `577/499/78/0`，global fallback、新增 false disclosed 和新增 wrong source page 均为 0，audit 为 0 error、0 warning。16 条历史结果差异全部进入最终裁决资产，0 条 pending。Goldwind 52 页真实报告产品 E2E 通过。代码和空测试数据库 head 均为 `0012_chunk_embeddings`。
 
 DeepSeek 225 条真实评估固定使用 Envision 报告 `report-14864b1a3ef64512b0e5d3676a120bc1` 和 run `run-526bd97aef5d4b9baa14618b719081c9`。最终指标：一致 162/224（72.32%），适用性例外 1，累计定向补跑 18 次；guardrail 后 false disclosed、证据 ID 越界、可比错页、schema 失败和模型失败均为 0。该结果保留为 AI 辅助工程基线，不构成 GRI 专家认证或最终合规结论。本轮 v1.1 冻结没有修改 DeepSeek 模型、Prompt、调用范围或 guardrail。
 
@@ -593,6 +593,16 @@ uv run --no-sync python -m src.tools.evaluate_shadow_rag `
 
 ### 2026-07-29
 
+- 经批准执行 `docs/plan/phase1.7-final-closure-and-release-readiness-plan.md`，一次解冻完成运行谱系有效视图、577 项失败/未生成投影、报告审计、扫描 PDF 能力边界、通用 profile 解析、Goldwind 独立闭环和正式输出后纠正；没有新增 migration、表或外部服务依赖。
+- 有效视图从最新 run 沿 `parent_run_id` 合并同一报告结果，带循环、深度和跨报告防护。失败或未生成行不生成伪 verdict、evidence、risk、applicability 或人工状态；dashboard、scope、review、report status 和 formal export gate 使用同一有效语义。
+- 完全扫描且未启用实验 OCR 的 PDF 在 requirement 规则执行前返回 `unsupported_scanned_pdf`；数字文本与少量扫描页混合报告标记为 `supported_with_review`。本轮未运行 OCR/VLM，也未改变 OCR 实验路由。
+- Goldwind 52 页真实 PDF 已通过上传、metadata、499 assessment、577 项范围、页码边界、人工快照、整改任务、四类草稿文件下载和报告审计 E2E。Goldwind 使用 profile 配置进入通用 workflow，没有专用规则分支，也不构成 ESG 专家 gold。
+- 正式输出后的纠正复用 assessment `reopen`：报告进入 `reopened`，新解决型人工快照恢复 gate，N+1 正式版本替代 N，旧快照和文件保持可读。没有新增独立 report reopen API 或 `voided` 操作。
+- 最终门禁：`uv run pytest -q` 为 766 passed，`uv run ruff check .` 通过；前端 30 个测试文件 119 项测试、typecheck 和 production build 通过。空测试数据库从零迁移到 `0012_chunk_embeddings (head)`，health、OpenAPI 和服务重启恢复冒烟通过。
+- Envision v3 重新生成保持 `577/499/78/0`，499 个唯一独立 assessment，global fallback、新增 false disclosed、新增 wrong source page、audit error 和 audit warning 均为 0，16 条最终裁决无 pending。
+- Chrome 使用隔离 demo 端口完成 Goldwind metadata、八阶段进度、577 项、PDF 第 6 页、人工快照、整改创建/更新、草稿、正式 v1、下载和 12 条审计事件。窄屏无横向溢出，键盘 Tab 顺序可用，console error/warning 为 0。原生文件选择器因 Chrome 扩展文件 URL 权限无法自动赋值，上传改由同一 demo 后端正式 API 完成；产品上传接口和 multipart 路径已有真实 E2E 覆盖。
+- Chrome 验收发现新审计事件缺少中文名称，提交 `8f79a58` 补齐画像、分析启动、人工快照、草稿和正式输出标签及关键 payload 字段，并增加前端回归测试。
+- OpenAPI 生成时默认 8000 端口已有用户服务，因此对独立后端端口执行等价的 `pnpm exec openapi-typescript` 命令；生成类型、后端 schema、组件类型检查和 production build 一致。完整结论见 `docs/product/phase1.7-final-closure-acceptance.md`。
 - 经批准执行 `docs/plan/phase1.6-product-closure-implementation-plan.md`，在解冻起点 `5e4848b` 上完成安全 export 文件交付、`actions_xlsx`、577 项全局搜索和组合筛选、整改任务截止日期更新；没有新增 migration、表或外部服务依赖。
 - export 对外 manifest 只返回 `file_id`、`filename`、`format`、`size`、`sha256`；`GET /api/exports/{export_id}/files/{file_id}` 校验归属、目录边界、存在性、大小和 SHA256，并兼容历史 manifest。OpenAPI、生成的前端类型和页面均不暴露内部 `relative_path` 或本机路径。
 - `/scope-items` 支持 `query`、`unit_status`、`effective_verdict`、`review_priority`、`review_status`、`applicability_status`，先过滤后分页；上下文项继续保持 verdict、priority、review 和 applicability 为空。

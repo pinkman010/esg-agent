@@ -123,7 +123,7 @@ metadata 预检测优先使用文件名和 PDF 前两页可提取文本，识别
 - 整改状态；
 - 关键词。
 
-当前范围投影依赖最新 run 已生成完整 499 条 assessment。部分失败 run 若缺少 assessment，接口返回 409；失败数量继续由 run/dashboard 和正式输出门禁披露。将缺失 assessment 投影为 577 项表格内的失败行属于后续独立设计，不能伪造 verdict、risk 或 review 状态。
+范围投影使用同一报告的运行谱系有效视图：从最新 run 沿 `parent_run_id` 向上遍历，同一 requirement 取最近 assessment，并返回 `source_run_id`。明确失败但没有 assessment 的独立项标为 `failed`，从未生成的独立项标为 `not_generated`；两类行都不得伪造 verdict、evidence、risk、applicability 或 review 状态。上下文项继续保持 `context_incorporated`。遍历执行报告一致性校验、循环检测和最大深度限制，历史 run 只读，不复制或覆盖。
 
 ## 5. 业务字段与内部字段
 
@@ -348,7 +348,7 @@ API 前缀保持 `/api`。资源分组：
 
 PDF 继续采用分级路由：pypdf/pdfplumber 为正式默认主链路；扫描关键页可通过请求参数进入实验性 OCR 路由；Docling fallback 和 VLM 仍为接口或字段预留，没有进入正式产品运行。VLM 只有用户显式确认后才允许调用。
 
-截至 2026-07-28，v1.1 保持后端冻结，OCR 不进入正式生产能力承诺。当前代码已支持显式 `enable_ocr`、指定页或低质量页选择、派生 PDF 和 `source_method=ocr` chunk，但本机缺少 Ghostscript，尚无 OCR preflight、安全错误分类、非阻断 capability 状态和真实扫描样本端到端验收。只有实际扫描报告造成关键证据缺失、产品验收明确要求扫描 PDF，或已经形成可复核扫描样本集时，才允许按 `docs/plan/ocr-production-readiness-deferred-plan.md` 条件解冻后端。
+Phase 1.7 的正式输入边界为数字文本型 PDF。解析完成后生成页级质量报告；全部页面不可形成数字文本、且未启用实验 OCR 时，在 requirement 规则执行前以 `unsupported_scanned_pdf` 失败，不生成 assessment。数字文本与少量扫描页混合的报告标记为 `supported_with_review`，扫描或低文本密度页继续带人工复核提示。当前代码支持显式 `enable_ocr`、指定页或低质量页选择、派生 PDF 和 `source_method=ocr` chunk，但缺少 Ghostscript preflight 和真实扫描样本发布门禁，OCR 不进入正式生产能力承诺。只有实际扫描报告造成关键证据缺失、产品验收明确要求扫描 PDF，或已经形成可复核扫描样本集时，才允许按 `docs/plan/ocr-production-readiness-deferred-plan.md` 条件解冻后端。
 
 证据工作台通过 `GET /api/reports/{report_id}/pages/{page_number}/image` 按页渲染原始 PDF 的 PNG 预览。该预览只读、按需生成并允许私有缓存；原始 PDF 仍通过文件接口保留，不覆盖、不转换为新的事实来源。
 
@@ -449,19 +449,19 @@ pnpm build
 
 ## 18. 当前实现与验收状态
 
-截至 2026-07-29，Envision 2024 中文报告 MVP 后端业务基线 v1.1 已在 Phase 1.6 产品闭环补全后重新冻结。代码迁移 head、main 数据库和 demo 数据库均为 `0012_chunk_embeddings`；本轮没有 migration 或表结构变化。结构 manifest 为 `gri-requirement-checklist-v3`；产品方法版本为 `envision-method-v1.1`；结果裁决版本为 `envision-result-v1.1`；复核优先级规则为 `risk-v2.1`。
+截至 2026-07-29，Phase 1.7 已完成最终闭环与发布就绪验收，建议形成 `v1.2` 候选基线。代码迁移 head、main 数据库和 demo 数据库均为 `0012_chunk_embeddings`；本轮没有 migration 或表结构变化。结构 manifest 为 `gri-requirement-checklist-v3`；产品方法版本为 `envision-method-v1.1`；结果裁决版本为 `envision-result-v1.1`；复核优先级规则为 `risk-v2.1`。
 
-v3 技术结构为 `577/499/78/0`：577 个范围单元均处于 `assessed` 或 `context_incorporated` 终态；6 条历史复合提取问题已按版本化方法裁决转为独立判断，16 条历史结果差异已写入最终裁决资产，当前 pending 为 0。Envision v3 gate 的 global fallback、新增 false disclosed 和新增 wrong source page 均为 0，audit 为 0 error、0 warning。后端 727 项测试和 Ruff、前端 28 个测试文件 114 项测试、typecheck 和 production build 全部通过。
+v3 技术结构为 `577/499/78/0`。部分失败、失败项 retry 和服务重启恢复统一通过运行谱系有效视图形成当前产品状态；范围表、dashboard、review、export gate 和 report status 读取同一语义。失败或未生成项独立展示分析状态，不能形成虚假正式结论。Envision v3 gate 的 global fallback、新增 false disclosed 和新增 wrong source page 均为 0，audit 为 0 error、0 warning。后端 766 项测试和 Ruff、前端 30 个测试文件 119 项测试、typecheck 和 production build 全部通过。
 
-Phase 1.6 只增加安全 export 文件交付、`actions_xlsx`、577 项搜索筛选和整改截止日期部分更新。公开 export manifest 不包含 `path` 或 `relative_path`；下载按 export/file 归属、目录边界、文件存在、大小和 SHA256 校验。截止日期更新支持新增、修改和显式清空，并保留结构化审计。上述能力不改变 assessment、risk、AI suggestion、人工 snapshot、正式输出门禁或结论权威关系。
+报告级审计接口聚合报告级事件和该报告全部 run 的事件，按时间和稳定序号倒序；公开 payload 递归脱敏和截断。审计覆盖上传、metadata、profile 解析、分析、retry、人工快照、适用性、整改、草稿/正式输出和文件下载。前端使用业务中文名称，不展示原始 JSON。
 
-最终独立审查同时修复三项契约安全问题：筛选值直接派生自 OpenAPI，旧客户端 `status=null` 保持原状态，XLSX 用户文本对 Excel 公式前缀执行转义。
+报告 profile 从 metadata 和 `backend/data/reports/profiles/*.json` 解析，校验文件名、报告身份、页数和唯一匹配；没有匹配时进入通用路径，歧义时明确失败。Goldwind 只通过 profile 配置进入同一 workflow，没有专用规则分支。Envision 负责权威零回归，Goldwind 负责独立产品闭环和泛化工程验证。
 
-225 条真实 DeepSeek 评估继续作为 AI 辅助工程基线；模型和 Prompt 未因本轮冻结改变。本轮最终产品 run 使用 `confirm_llm=false`，OCR/VLM 均未启用。2026-07-28 的 OCR 架构复核决定继续有效，实验性 OCR 路由延期到出现真实扫描报告需求后再条件解冻。规则、AI 和人工三层权威关系保持独立。该冻结属于本地产品与工程基线，不构成 GRI 专家认证、外部鉴证或企业部署承诺；企业条件适用性仍可能需要企业确认。Goldwind 历史 100 条 gate 保留为低优先级泛化证据，不阻塞本轮冻结。
+正式输出后的纠正复用 assessment `reopen`。reopen 快照使报告进入 `reopened`；完成新的解决型人工复核并重新满足有效完整性 gate 后生成 N+1 正式版本，旧正式版本转为 `superseded`，历史快照和文件保持可读。当前没有独立 report reopen API，也没有启用 `voided` 操作。
 
-通用 verdict 批量复核、独立 reopen API 和 report 级审计仍为后续项。旧 `review_decisions` 和旧 API 继续处于兼容窗口。
+225 条真实 DeepSeek 评估继续作为 AI 辅助工程基线；模型和 Prompt 未因本轮解冻改变。最终 Envision 和 Goldwind 产品 run 均使用 `confirm_llm=false`，OCR/VLM 均未启用。规则、AI 和人工三层权威关系保持独立。该候选基线属于本地产品与工程验收，不构成 GRI 专家认证、外部鉴证或企业部署承诺。
 
-旧 `review_decisions` 已完成两个连续兼容周期的数据映射验证，但旧 API、旧前端页面和旧导出仍有调用者，因此继续保留。验收风险、运行命令和下一步见 `docs/DEVELOPMENT.md`。
+通用 verdict 批量复核、生产 OCR、RAG Phase 2 和企业级平台能力进入条件化路线图。旧 `review_decisions` 和旧 API 继续处于兼容窗口。完整结果、限制和触发条件见 `docs/product/phase1.7-final-closure-acceptance.md`。
 
 ## 19. 本地演示环境隔离
 
