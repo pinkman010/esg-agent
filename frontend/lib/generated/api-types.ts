@@ -651,6 +651,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/reports/{report_id}/audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Report Audit */
+        get: operations["list_report_audit_api_reports__report_id__audit_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1089,32 +1106,6 @@ export interface components {
             /** Events */
             events: components["schemas"]["AuditEvent"][];
         };
-        /** ReportAuditEventResponse */
-        ReportAuditEventResponse: {
-            /** Audit Event Id */
-            audit_event_id: number;
-            /** Run Id */
-            run_id: string | null;
-            /** Event Type */
-            event_type: string;
-            /** Payload */
-            payload: {
-                [key: string]: unknown;
-            };
-            /** Created At */
-            created_at?: string | null;
-        };
-        /** ReportAuditListResponse */
-        ReportAuditListResponse: {
-            /** Items */
-            items: components["schemas"]["ReportAuditEventResponse"][];
-            /** Total */
-            total: number;
-            /** Offset */
-            offset: number;
-            /** Limit */
-            limit: number;
-        };
         /** Body_upload_report_api_reports_upload_post */
         Body_upload_report_api_reports_upload_post: {
             /** File */
@@ -1394,6 +1385,32 @@ export interface components {
             /** Created At */
             created_at?: string | null;
         };
+        /** ReportAuditEventResponse */
+        ReportAuditEventResponse: {
+            /** Audit Event Id */
+            audit_event_id: number;
+            /** Run Id */
+            run_id: string | null;
+            /** Event Type */
+            event_type: string;
+            /** Payload */
+            payload: {
+                [key: string]: unknown;
+            };
+            /** Created At */
+            created_at?: string | null;
+        };
+        /** ReportAuditListResponse */
+        ReportAuditListResponse: {
+            /** Items */
+            items: components["schemas"]["ReportAuditEventResponse"][];
+            /** Total */
+            total: number;
+            /** Offset */
+            offset: number;
+            /** Limit */
+            limit: number;
+        };
         /** ReportDashboardResponse */
         ReportDashboardResponse: {
             /** Report Id */
@@ -1522,17 +1539,14 @@ export interface components {
             applicability_status?: string | null;
             /** Source Pdf Pages */
             source_pdf_pages: number[];
-            /**
-             * Analysis Status
-             * @enum {string|null}
-             */
-            analysis_status: "succeeded" | "failed" | "not_generated" | null;
+            /** Analysis Status */
+            analysis_status?: ("succeeded" | "failed" | "not_generated") | null;
             /** Source Run Id */
-            source_run_id: string | null;
+            source_run_id?: string | null;
             /** Failure Code */
-            failure_code: string | null;
+            failure_code?: string | null;
             /** Failure Message */
-            failure_message: string | null;
+            failure_message?: string | null;
         };
         /** RequirementScopeListResponse */
         RequirementScopeListResponse: {
@@ -2936,6 +2950,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AuditRun"][];
+                };
+            };
+        };
+    };
+    list_report_audit_api_reports__report_id__audit_get: {
+        parameters: {
+            query?: {
+                event_type?: string | null;
+                offset?: number;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                report_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportAuditListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

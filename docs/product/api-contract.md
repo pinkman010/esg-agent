@@ -7,7 +7,7 @@
 - 时间使用 ISO 8601 UTC；
 - 分页参数：`page` 从 1 开始，`page_size` 默认 50、最大 100；
 - 分页响应：`items`、`page`、`page_size`、`total`；
-- 写操作返回最新资源和 `audit_event_id`；
+- 写操作返回最新资源；审计事件通过报告级审计接口读取；
 - 冲突返回 409，字段校验返回 422，正式输出门槛未满足返回 409；
 - 客户端通过 OpenAPI 生成 TypeScript 类型，不手写重复 DTO。
 
@@ -133,11 +133,15 @@ EvidenceItem 对普通界面只返回：`evidence_id`、`source_pdf_page`、`sou
   "review_priority": null,
   "review_status": null,
   "applicability_status": null,
-  "source_pdf_pages": []
+  "source_pdf_pages": [],
+  "analysis_status": null,
+  "source_run_id": null,
+  "failure_code": null,
+  "failure_message": null
 }
 ```
 
-`unit_status` 只有 `assessed | context_incorporated`。上下文行的 assessment、结论、优先级、复核状态和证据页必须为空。
+`unit_status` 只有 `assessed | context_incorporated`。上下文行的 assessment、结论、优先级、复核状态、证据页和 `analysis_status` 必须为空。独立判断项的 `analysis_status` 为 `succeeded | failed | not_generated`；后四个 Phase 1.7 字段均为可选 nullable 字段，兼容旧客户端。
 
 ## 3. 报告接口
 
@@ -200,9 +204,7 @@ multipart 上传 PDF。查询参数 `duplicate_policy` 取值为 `reject | creat
 
 请求保留 `confirm_llm`、`enable_ocr`、`ocr_pages`。`confirm_llm` 默认 false；只有用户明确授权后才能传 true。报告必须处于 `ready_for_analysis`；否则返回 `409 report_not_ready`。同一报告已有 `pending/running` run 时返回 `409 analysis_already_running` 和已有 `run_id`，并发竞态由 `0009` 数据库部分唯一索引兜底。成功响应为新建的 `pending` run；后台任务只接收 ID 并使用独立数据库 session。
 
-### `POST /api/reports/{report_id}/reopen`（规划中，MVP 当前未实现）
-
-请求：`reviewer_name`、`reason`。两者必填。返回新报告状态和审计事件。
+数字文本 PDF 为正式支持输入。未启用 OCR 且报告全部页面均判定为扫描页时，run 以 `failure_summary.error_code=unsupported_scanned_pdf` 失败，`error_message` 为可操作的安全提示；该失败发生在规则判定前。混合型或低文本密度报告不会被误判为全扫描报告。
 
 ## 3.1 演示环境接口
 
@@ -245,7 +247,7 @@ multipart 上传 PDF。查询参数 `duplicate_policy` 取值为 `reject | creat
 
 ### `POST /api/runs/{run_id}/retry-failed`
 
-只允许 partially_completed/failed run。请求包含 `reason`，创建新 run 并保存 `parent_run_id` 和待重跑 requirement ids。没有失败项返回 409。
+只允许 partially_completed/failed run。请求包含长度 1–500 的 `reason`，创建新 run 并保存 `parent_run_id` 和待重跑 requirement ids。没有失败项返回 409。产品读取视图从最新 run 沿 `parent_run_id` 向上合并：同一 requirement 使用最近 assessment，失败但无 assessment 的项标为 `failed`，从未生成的项标为 `not_generated`；历史 run 和 assessment 不被复制或改写。
 
 ## 5. 仪表盘与 assessment 接口
 
@@ -255,7 +257,7 @@ multipart 上传 PDF。查询参数 `duplicate_policy` 取值为 `reject | creat
 
 ### `GET /api/reports/{report_id}/scope-items`
 
-查询参数：`page`、`page_size`、`query`、`unit_status`、`effective_verdict`、`review_priority`、`review_status`、`applicability_status`。返回分页 `RequirementScopeItem`，当前 v3 完整 run 总数固定为 577。搜索覆盖 requirement ID、GRI 主题、原始/有效 requirement 文本和结构关联 ID；组合过滤在分页前执行，`total` 为过滤后的数量。499 个独立判断项的 `unit_status=assessed`，可关联 assessment；78 个上下文项的 `unit_status=context_incorporated`，不生成伪 verdict、priority、review 或 applicability。默认使用 GRI requirement 自然顺序，供完整核查页面和输出服务复用。当前最新 run 缺少任一独立 assessment 时返回 409；部分失败项由 run/dashboard 和正式输出门禁披露，尚不在范围表中伪造失败行。
+查询参数：`page`、`page_size`、`query`、`unit_status`、`effective_verdict`、`review_priority`、`review_status`、`applicability_status`。返回分页 `RequirementScopeItem`，产品完整范围固定为 577。搜索覆盖 requirement ID、GRI 主题、原始/有效 requirement 文本和结构关联 ID；组合过滤在分页前执行，`total` 为过滤后的数量。499 个独立判断项的 `unit_status=assessed`，可关联有效谱系中的 assessment；78 个上下文项的 `unit_status=context_incorporated`，不生成伪 verdict、priority、review 或 applicability。部分失败或重试 run 仍返回完整 577 行；失败和未生成行只返回分析状态及安全错误摘要，不伪造 assessment、verdict、evidence 或人工结论。
 
 ### `GET /api/reports/{report_id}/assessments`
 
@@ -271,7 +273,7 @@ multipart 上传 PDF。查询参数 `duplicate_policy` 取值为 `reject | creat
 
 ### `GET /api/reports/{report_id}/review-queue`
 
-只返回最新 run 中未解决的 `review_priority=high` assessment，先完成全量过滤和真实计数，再分页；排序使用稳定的 requirement 自然顺序。响应为标准分页结构。分析失败且没有 assessment 的项目通过 run 失败统计和正式输出门禁处理，不伪造队列行。
+只返回有效运行谱系中未解决的 `review_priority=high` assessment，先完成全量过滤和真实计数，再分页；排序使用稳定的 requirement 自然顺序。响应为标准分页结构。分析失败且没有 assessment 的项目通过范围表、run 失败统计和正式输出门禁处理，不伪造队列行。
 
 ### `GET /api/reports/{report_id}/applicability-queue`
 
@@ -327,9 +329,7 @@ multipart 上传 PDF。查询参数 `duplicate_policy` 取值为 `reject | creat
 
 返回按 sequence 倒序的 snapshot 和字段变更，不返回内部 profile/route 信息。
 
-### `POST /api/assessments/{assessment_id}/reopen`（规划中，MVP 当前未实现）
-
-复核人和原因必填。正式输出后的重开同时使报告回到 reopened，并标记现有正式版本待 supersede。
+正式输出后的纠正复用 `POST /api/assessments/{assessment_id}/review-decisions`，提交 `operation_type=reopen`。该快照使报告进入 `reopened`；未追加新的解决型人工快照前，正式输出 gate 保持阻止。完成纠正并重新满足 gate 后生成下一正式版本，旧版本进入 `superseded`，旧文件和历史快照仍可读取。
 
 ## 7. 整改任务接口
 
@@ -370,7 +370,7 @@ multipart 上传 PDF。查询参数 `duplicate_policy` 取值为 `reject | creat
 
 高优先级 assessment 未全部完成复核时返回同样结构，`code=high_risk_review_incomplete`。旧错误码为兼容调用者保留，其业务含义为高复核优先级。
 
-成功后生成不可变版本号和文件清单。`review_scope` 同时记录高/中优先级的总数、已复核/未复核数、适用性待判定数、分析不完整数、独立 assessment 总数和实际人工复核总数，并明确说明高优先级完成不代表 577 个标准核查单元均已人工确认。JSON/CSV/XLSX 导出包含结构字段和最新 AI 建议字段，并注明未经人工确认的 AI 建议不构成最终披露结论。
+成功后生成不可变版本号和文件清单。存在旧正式版本时，新版本的 `supersedes_export_id` 指向旧版本，旧版本状态更新为 `superseded`，其文件保持可下载。`review_scope` 同时记录高/中优先级的总数、已复核/未复核数、适用性待判定数、分析不完整数、独立 assessment 总数和实际人工复核总数，并明确说明高优先级完成不代表 577 个标准核查单元均已人工确认。JSON/CSV/XLSX 导出包含结构字段和最新 AI 建议字段，并注明未经人工确认的 AI 建议不构成最终披露结论。
 
 ### `GET /api/exports/{export_id}`（规划中，MVP 当前未实现）
 
@@ -382,11 +382,11 @@ multipart 上传 PDF。查询参数 `duplicate_policy` 取值为 `reject | creat
 
 ## 9. 审计接口
 
-### `GET /api/reports/{report_id}/audit`（规划中，MVP 当前未实现）
+### `GET /api/reports/{report_id}/audit`
 
-查询：事件类型、复核人、起止时间和分页。响应只追加排序，不提供更新或删除接口。
+查询参数：`event_type`、`offset`、`limit`，其中 `limit` 最大 100。返回该报告全部运行及 payload 明确关联该报告的报告级事件，按时间和稳定序号倒序。`run_id` 允许为空。payload 在返回前递归脱敏和截断，不返回本机路径、连接串、密钥、token、原始 Prompt、模型原始响应或完整 stderr。接口只读，不提供更新或删除。
 
-当前兼容接口为 `GET /api/audit/runs`，普通产品导航已隐藏旧审计入口。
+兼容接口 `GET /api/audit/runs` 保持不变。
 
 ## 10. OpenAPI 与前端影响
 
