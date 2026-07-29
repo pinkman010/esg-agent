@@ -6,7 +6,11 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { getAssessmentDetail, listActions, updateAction } from "@/lib/api";
-import type { ActionStatus, ImprovementAction } from "@/lib/types";
+import type {
+  ActionStatus,
+  ImprovementAction,
+  UpdateActionRequest,
+} from "@/lib/types";
 
 const statusLabels: Record<string, string> = { open: "待处理", in_progress: "进行中", completed: "已完成", cancelled: "已取消" };
 const priorityLabels: Record<string, string> = { high: "高优先级", medium: "中优先级", low: "低优先级" };
@@ -14,6 +18,7 @@ const priorityLabels: Record<string, string> = { high: "高优先级", medium: "
 function ActionItem({ action, reportId }: { action: ImprovementAction; reportId: string }) {
   const [status, setStatus] = useState<ActionStatus>(action.status);
   const [ownerName, setOwnerName] = useState(action.owner_name ?? "");
+  const [dueDate, setDueDate] = useState(action.due_date ?? "");
   const [completionNote, setCompletionNote] = useState("");
   const [saved, setSaved] = useState(false);
   const queryClient = useQueryClient();
@@ -23,13 +28,23 @@ function ActionItem({ action, reportId }: { action: ImprovementAction; reportId:
   });
   const statusChanged = status !== action.status;
   const ownerChanged = ownerName.trim() !== (action.owner_name ?? "");
-  const hasChanges = statusChanged || ownerChanged;
+  const dueDateChanged = dueDate !== (action.due_date ?? "");
+  const hasChanges = statusChanged || ownerChanged || dueDateChanged;
   const mutation = useMutation({
-    mutationFn: () => updateAction(action.action_id, {
-      status: statusChanged ? status : null,
-      owner_name: ownerName.trim() || null,
-      completion_note: completionNote.trim() || null,
-    }),
+    mutationFn: () => {
+      const payload: UpdateActionRequest = {};
+      if (statusChanged) {
+        payload.status = status;
+        payload.completion_note = completionNote.trim() || null;
+      }
+      if (ownerChanged) {
+        payload.owner_name = ownerName.trim() || null;
+      }
+      if (dueDateChanged) {
+        payload.due_date = dueDate || null;
+      }
+      return updateAction(action.action_id, payload);
+    },
     onMutate: () => setSaved(false),
     onSuccess: async () => {
       setSaved(true);
@@ -52,7 +67,7 @@ function ActionItem({ action, reportId }: { action: ImprovementAction; reportId:
         </div>
         <div className="space-y-1 text-xs text-muted-foreground">{action.owner_name && <p className="flex items-center gap-1"><UserRound className="h-3.5 w-3.5" />{action.owner_name}</p>}{action.due_date && <p className="flex items-center gap-1"><CalendarDays className="h-3.5 w-3.5" />{action.due_date}</p>}</div>
       </div>
-      <div className="grid gap-3 rounded-md bg-muted/50 p-3 md:grid-cols-3">
+      <div className="grid gap-3 rounded-md bg-muted/50 p-3 md:grid-cols-2 xl:grid-cols-4">
         <label className="text-xs font-medium">
           任务状态
           <select aria-label={`任务状态：${action.title}`} className="mt-1 h-9 w-full rounded-md border border-border bg-white px-2 font-normal" value={status} onChange={(event) => setStatus(event.target.value as ActionStatus)}>
@@ -65,6 +80,10 @@ function ActionItem({ action, reportId }: { action: ImprovementAction; reportId:
         <label className="text-xs font-medium">
           负责人
           <input aria-label={`负责人：${action.title}`} className="mt-1 h-9 w-full rounded-md border border-border px-2 font-normal" value={ownerName} onChange={(event) => setOwnerName(event.target.value)} />
+        </label>
+        <label className="text-xs font-medium">
+          截止日期
+          <input aria-label={`截止日期：${action.title}`} className="mt-1 h-9 w-full rounded-md border border-border px-2 font-normal" type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} />
         </label>
         <label className="text-xs font-medium">
           状态变更说明

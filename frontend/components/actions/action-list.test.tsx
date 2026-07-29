@@ -47,8 +47,87 @@ describe("ActionList", () => {
       expect.objectContaining({ method: "PATCH" }),
     ));
     const patchCall = fetchMock.mock.calls.find(([, init]) => init?.method === "PATCH");
-    expect(JSON.parse(String(patchCall?.[1]?.body))).toMatchObject({ status: "completed", owner_name: "张三", completion_note: "已补充并核验" });
+    expect(JSON.parse(String(patchCall?.[1]?.body))).toEqual({
+      status: "completed",
+      completion_note: "已补充并核验",
+    });
     expect(await screen.findByText("任务已更新")).toBeInTheDocument();
+  });
+
+  it("updates and clears a due date without requiring a status note", async () => {
+    let dueDate: string | null = "2026-08-01";
+    let listCalls = 0;
+    const patchPayloads: Array<Record<string, unknown>> = [];
+    const action = () => ({
+      action_id: "action-1",
+      report_id: "report-1",
+      assessment_id: "a-1",
+      title: "补充能源核算方法",
+      priority: "high",
+      status: "open",
+      owner_name: "张三",
+      due_date: dueDate,
+      recommendation_text: "补充方法说明",
+      completion_note: null,
+      created_by: "张三",
+      created_at: null,
+      updated_at: null,
+    });
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (init?.method === "PATCH") {
+        const payload = JSON.parse(String(init.body));
+        patchPayloads.push(payload);
+        dueDate = payload.due_date;
+        return Promise.resolve(new Response(JSON.stringify(action()), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }));
+      }
+      if (url.includes("/assessments/")) {
+        return Promise.resolve(new Response(JSON.stringify({
+          requirement_id: "GRI 305-1-a",
+        }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }));
+      }
+      listCalls += 1;
+      return Promise.resolve(new Response(JSON.stringify([action()]), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    renderWithQuery(<ActionList reportId="report-1" />);
+    const dueDateInput = await screen.findByLabelText(
+      "截止日期：补充能源核算方法",
+    );
+    expect(dueDateInput).toHaveAttribute("type", "date");
+    expect(dueDateInput).toHaveValue("2026-08-01");
+
+    fireEvent.change(dueDateInput, {
+      target: { value: "2026-08-15" },
+    });
+    expect(screen.getByRole("button", {
+      name: "保存任务更新",
+    })).toBeEnabled();
+    fireEvent.click(screen.getByRole("button", {
+      name: "保存任务更新",
+    }));
+    await waitFor(() => expect(patchPayloads).toEqual([
+      { due_date: "2026-08-15" },
+    ]));
+    await waitFor(() => expect(listCalls).toBeGreaterThanOrEqual(2));
+
+    fireEvent.change(dueDateInput, { target: { value: "" } });
+    fireEvent.click(screen.getByRole("button", {
+      name: "保存任务更新",
+    }));
+    await waitFor(() => expect(patchPayloads[1]).toEqual({
+      due_date: null,
+    }));
   });
 
   it("keeps the unsaved note when an update fails", async () => {
