@@ -48,6 +48,25 @@ class FailingParser:
         raise RuntimeError("parse failed")
 
 
+class FullyScannedParser:
+    def parse_pdf(self, pdf_path, report_id, source_file_hash, ocr_pages=None):
+        return ParsedDocument(
+            report_id=report_id,
+            page_count=2,
+            pages=[
+                PageExtraction(
+                    report_id=report_id,
+                    page_number=page_number,
+                    quality_flags=["low_text_density", "scanned"],
+                )
+                for page_number in (1, 2)
+            ],
+            chunks=[],
+            metadata={},
+            outline=[],
+        )
+
+
 class LowTextParser:
     def __init__(self):
         self.calls = []
@@ -562,6 +581,37 @@ def test_single_report_workflow_marks_run_failed_on_parser_error(repo_session):
     assert run.status is RunStatus.FAILED
     assert "parse failed" in (run.error_message or "")
     assert repo_session.scalar(select(RecommendationRecord).where(RecommendationRecord.run_id == run.run_id)) is None
+
+
+def test_single_report_workflow_rejects_fully_scanned_pdf_without_ocr(repo_session):
+    repo = Repository(repo_session)
+    seed_report(repo)
+    workflow = SingleReportWorkflow(
+        repo,
+        FullyScannedParser(),
+        FakeAdapter(),
+        DisclosureAgent(),
+    )
+
+    run = workflow.run(
+        "report-1",
+        Path("report.pdf"),
+        "hash-1",
+        confirm_llm=False,
+        enable_ocr=False,
+    )
+
+    assert run.status is RunStatus.FAILED
+    assert run.failure_summary["error_code"] == "unsupported_scanned_pdf"
+    assert run.error_message == "当前版本无法分析全扫描 PDF，请改用可检索文本 PDF。"
+    assert repo.list_assessments_by_run(run.run_id) == []
+    failure_event = repo_session.scalars(
+        select(AuditEventRecord).where(
+            AuditEventRecord.run_id == run.run_id,
+            AuditEventRecord.event_type == "analysis_failed",
+        )
+    ).one()
+    assert failure_event.event_payload["error_code"] == "unsupported_scanned_pdf"
 
 
 def test_single_report_workflow_rolls_back_before_persisting_failure_state():

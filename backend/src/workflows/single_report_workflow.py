@@ -10,6 +10,11 @@ from src.domain.versions import CURRENT_RISK_RULE_VERSION
 from src.reports.profile import ReportProfile, load_report_profile
 from src.services.risk_service import calculate_and_store_risk
 from src.services.ai_assessment_service import AIAssessmentCandidate, AIAssessmentService
+from src.services.document_capability_service import (
+    DocumentCapabilityStatus,
+    UnsupportedScannedPdfError,
+    assess_document_capability,
+)
 from src.standards.evidence_contracts import get_requirement_contract
 from src.standards.gri_report_index import build_report_index
 from src.tools.evidence_routing import EvidenceRouter
@@ -106,11 +111,27 @@ class SingleReportWorkflow:
                         source_file_hash=source_file_hash,
                         ocr_pages=selected_ocr_pages,
                     )
+            capability = assess_document_capability(parsed.pages)
+            if (
+                not enable_ocr
+                and capability.status
+                is DocumentCapabilityStatus.UNSUPPORTED_SCANNED_PDF
+            ):
+                raise UnsupportedScannedPdfError
             self._stage(run_id, "pdf_parsing", "completed", 1, 1)
             self.repository.create_audit_event(
                 run_id,
                 "parse_completed",
-                {"page_count": parsed.page_count, "chunk_count": len(parsed.chunks)},
+                {
+                    "page_count": parsed.page_count,
+                    "chunk_count": len(parsed.chunks),
+                    "document_capability": capability.status.value,
+                    "digital_text_page_count": capability.digital_text_page_count,
+                    "scanned_page_count": capability.scanned_page_count,
+                    "low_text_density_page_count": (
+                        capability.low_text_density_page_count
+                    ),
+                },
             )
             self.repository.save_pages_and_chunks(parsed.pages, parsed.chunks)
             self._stage(run_id, "report_structure", "running", 0, 1)
@@ -188,9 +209,23 @@ class SingleReportWorkflow:
         except Exception as exc:
             self.repository.rollback()
             try:
+                error_code = (
+                    exc.code
+                    if isinstance(exc, UnsupportedScannedPdfError)
+                    else "analysis_execution_failed"
+                )
                 self._stage(run_id, "result_summary", "failed", 0, 1, str(exc))
-                self.repository.create_audit_event(run_id, "analysis_failed", {"error": str(exc)})
-                return self.repository.update_run_status(run_id, RunStatus.FAILED, error_message=str(exc))
+                self.repository.create_audit_event(
+                    run_id,
+                    "analysis_failed",
+                    {"error_code": error_code, "error": str(exc)},
+                )
+                return self.repository.update_run_status(
+                    run_id,
+                    RunStatus.FAILED,
+                    error_message=str(exc),
+                    failure_summary={"error_code": error_code},
+                )
             except Exception as persistence_exc:
                 self.repository.rollback()
                 raise exc from persistence_exc
