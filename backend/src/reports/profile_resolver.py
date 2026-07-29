@@ -26,6 +26,7 @@ class ReportProfileResolver:
         *,
         original_filename: str,
         page_count: int,
+        source_file_hash: str,
     ) -> Path | None:
         target = _normalized_filename(original_filename)
         matches: list[tuple[Path, ReportProfile]] = []
@@ -54,5 +55,15 @@ class ReportProfileResolver:
             raise ReportProfileResolutionError(
                 "report_profile_page_count_mismatch",
                 "报告页数与匹配的 profile 不一致。",
+            )
+        if profile.source_file_hash is None:
+            raise ReportProfileResolutionError(
+                "report_profile_source_hash_missing",
+                "匹配的报告 profile 缺少来源文件哈希。",
+            )
+        if profile.source_file_hash != source_file_hash.strip().casefold():
+            raise ReportProfileResolutionError(
+                "report_profile_source_hash_mismatch",
+                "报告内容与匹配的 profile 身份不一致。",
             )
         return path

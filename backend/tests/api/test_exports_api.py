@@ -809,7 +809,10 @@ async def test_v3_retry_export_uses_effective_lineage_and_blocks_formal(
 
     draft = await api_client.post(
         "/api/reports/report-v3-partial-export/exports/draft",
-        json={"formats": ["assessment_xlsx"], "created_by": "张三"},
+        json={
+            "formats": ["assessment_xlsx", "print_html"],
+            "created_by": "张三",
+        },
     )
     formal = await api_client.post(
         "/api/reports/report-v3-partial-export/exports/formal",
@@ -827,6 +830,12 @@ async def test_v3_retry_export_uses_effective_lineage_and_blocks_formal(
         "code": "analysis_incomplete",
         "remaining": 1,
     }
+    _, html_download = await download_export_file(
+        api_client,
+        draft.json(),
+        "print_html",
+    )
+    assert "分析失败（待重试）" in html_download.text
 
 
 def seed_complete_v3_export_scope(session):

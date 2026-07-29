@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class PageNumbering(BaseModel):
@@ -71,6 +71,7 @@ class ReportProfile(BaseModel):
     company_name: str
     report_year: int
     pdf_file: str
+    source_file_hash: str | None = None
     total_pdf_pages: int
     page_numbering: PageNumbering
     gri_index: dict = Field(default_factory=dict)
@@ -79,6 +80,19 @@ class ReportProfile(BaseModel):
     index_note_pages: list[IndexNotePageProfile] = Field(default_factory=list)
     assurance_pages: list[AssurancePageProfile] = Field(default_factory=list)
     requirement_routes: dict[str, ReportRequirementRoute] = Field(default_factory=dict)
+
+    @field_validator("source_file_hash")
+    @classmethod
+    def validate_source_file_hash(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = value.strip().casefold()
+        if len(normalized) != 64 or any(
+            character not in "0123456789abcdef"
+            for character in normalized
+        ):
+            raise ValueError("source_file_hash must be a SHA-256 digest")
+        return normalized
 
     @property
     def kpi_pdf_pages(self) -> list[int]:

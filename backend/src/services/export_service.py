@@ -656,6 +656,10 @@ class VersionedExportService:
                 conclusion = (
                     "已作为上下文纳入相关判断"
                     if unit_status == "context_incorporated"
+                    else "分析失败（待重试）"
+                    if row.get("analysis_status") == "failed"
+                    else "尚未生成分析结果"
+                    if row.get("analysis_status") == "not_generated"
                     else str(
                         row.get("effective_verdict")
                         or row.get("verdict")

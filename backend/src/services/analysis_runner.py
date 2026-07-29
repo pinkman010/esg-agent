@@ -90,6 +90,7 @@ def execute_analysis(
     profile_path = ReportProfileResolver(REPORT_PROFILE_ROOT).resolve(
         original_filename=report.original_filename,
         page_count=report.page_count,
+        source_file_hash=report.file_hash,
     )
     profile_id = (
         load_report_profile(profile_path).report_id

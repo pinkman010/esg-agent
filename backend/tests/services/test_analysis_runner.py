@@ -156,7 +156,9 @@ def test_execute_analysis_resolves_goldwind_profile_and_audits_selection(
         report_id="report-goldwind",
         original_filename="Goldwind 2024-zh.pdf",
         stored_path="data/reports/Goldwind 2024-zh.pdf",
-        file_hash="hash-goldwind",
+        file_hash=(
+            "f712694a6c05c599f3a272f314aa749be393f9007d92bc1fa6fd11bac5ad0119"
+        ),
         page_count=52,
     )
 
