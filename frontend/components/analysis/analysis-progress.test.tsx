@@ -31,6 +31,7 @@ function runResponse(
   failedRequirementCount = 0,
   confirmLlm = false,
   aiSummary = { eligible: 0, succeeded: 0, failed: 0, skipped: 0 },
+  failureSummary: Record<string, unknown> | null = null,
 ) {
   return {
     run_id: "run-1",
@@ -46,7 +47,9 @@ function runResponse(
     eligible_requirement_count: 577,
     succeeded_requirement_count: 577 - failedRequirementCount,
     failed_requirement_count: failedRequirementCount,
-    failure_summary: { failed_requirement_ids: failedRequirementCount ? ["GRI 2-1-b"] : [] },
+    failure_summary: failureSummary ?? {
+      failed_requirement_ids: failedRequirementCount ? ["GRI 2-1-b"] : [],
+    },
     ai_summary: aiSummary,
   };
 }
@@ -188,6 +191,28 @@ describe("AnalysisProgress", () => {
     renderWithQuery(<AnalysisProgress reportId={report.report_id} runId="run-1" />);
 
     expect(await screen.findByText("分析进度读取失败，请稍后重试。")).toBeInTheDocument();
+  });
+
+  it("explains the supported input when a fully scanned PDF is rejected", async () => {
+    vi.stubGlobal("fetch", vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith(`/api/reports/${report.report_id}`)) return Promise.resolve(jsonResponse(report));
+      if (url.endsWith("/api/runs/run-1/stages")) return Promise.resolve(jsonResponse(stageResponse()));
+      if (url.endsWith("/api/runs/run-1")) {
+        return Promise.resolve(jsonResponse(runResponse(
+          "failed",
+          0,
+          false,
+          { eligible: 0, succeeded: 0, failed: 0, skipped: 0 },
+          { error_code: "unsupported_scanned_pdf" },
+        )));
+      }
+      throw new Error(`unexpected request: ${url}`);
+    }));
+
+    renderWithQuery(<AnalysisProgress reportId={report.report_id} runId="run-1" />);
+
+    expect(await screen.findByText("当前版本无法分析全扫描 PDF，请改用可检索文本 PDF。")).toBeInTheDocument();
   });
 
   it("refreshes stale stages once when the run reaches completed", async () => {

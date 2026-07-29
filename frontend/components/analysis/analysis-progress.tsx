@@ -59,6 +59,8 @@ export function AnalysisProgress({ reportId, runId }: { reportId: string; runId:
     : report?.original_filename ?? "ESG 报告";
   const resultAvailable = run?.status === "completed" || run?.status === "partially_completed";
   const runIsTerminal = terminalStatuses.has(run?.status ?? "");
+  const unsupportedScannedPdf =
+    run?.failure_summary?.error_code === "unsupported_scanned_pdf";
 
   const statusMessage = !run
     ? "正在读取进度..."
@@ -102,6 +104,11 @@ export function AnalysisProgress({ reportId, runId }: { reportId: string; runId:
         )}
         {isStalled && (
           <p className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">分析进度长时间没有更新，后台任务可能已中断。请返回报告列表查看状态。</p>
+        )}
+        {unsupportedScannedPdf && (
+          <p className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+            当前版本无法分析全扫描 PDF，请改用可检索文本 PDF。
+          </p>
         )}
         {!terminalStatuses.has(run?.status ?? "") && run && (
           <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted" aria-label={`分析进度 ${progress.percent}%`}>
