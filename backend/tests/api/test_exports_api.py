@@ -349,7 +349,78 @@ async def test_legacy_export_manifest_is_safely_projected_and_downloadable(
     assert first.content == legacy_path.read_bytes()
 
 
-async def test_versioned_export_rejects_unimplemented_actions_xlsx(
+async def test_versioned_export_generates_actions_xlsx(
+    api_client,
+    api_session,
+):
+    seed_export_data(api_session)
+    created = await api_client.post(
+        "/api/reports/report-1/actions",
+        json={
+            "assessment_id": "assessment-1",
+            "title": "补充能源披露",
+            "priority": "high",
+            "owner_name": "张三",
+            "due_date": "2026-08-31",
+            "recommendation_text": "补充报告期能源消费数据。",
+            "created_by": "李四",
+        },
+    )
+
+    response = await api_client.post(
+        "/api/reports/report-1/exports/draft",
+        json={"formats": ["actions_xlsx"], "created_by": "张三"},
+    )
+
+    assert created.status_code == 200
+    assert response.status_code == 200
+    body = response.json()
+    item, download = await download_export_file(
+        api_client,
+        body,
+        "actions_xlsx",
+    )
+    assert item["filename"] == "actions_xlsx.xlsx"
+    assert download.status_code == 200
+    workbook = load_workbook(BytesIO(download.content), read_only=True)
+    sheet = workbook["整改任务"]
+    assert sheet["A1"].value == (
+        "本清单为整改任务跟踪材料；任务状态和截止日期"
+        "不构成 GRI 认证或外部鉴证结论。"
+    )
+    assert [cell.value for cell in sheet[2]] == [
+        "整改任务 ID",
+        "Requirement ID",
+        "任务标题",
+        "优先级",
+        "状态",
+        "负责人",
+        "截止日期",
+        "建议内容",
+        "完成说明",
+        "创建人",
+        "创建时间",
+        "更新时间",
+    ]
+    row = [cell.value for cell in sheet[3]]
+    assert row[:7] == [
+        created.json()["action_id"],
+        "GRI 302-1-a",
+        "补充能源披露",
+        "high",
+        "open",
+        "张三",
+        "2026-08-31",
+    ]
+    assert row[7:10] == [
+        "补充报告期能源消费数据。",
+        None,
+        "李四",
+    ]
+    workbook.close()
+
+
+async def test_actions_xlsx_is_valid_when_report_has_no_actions(
     api_client,
     api_session,
 ):
@@ -359,9 +430,20 @@ async def test_versioned_export_rejects_unimplemented_actions_xlsx(
         "/api/reports/report-1/exports/draft",
         json={"formats": ["actions_xlsx"], "created_by": "张三"},
     )
+    _, download = await download_export_file(
+        api_client,
+        response.json(),
+        "actions_xlsx",
+    )
 
-    assert response.status_code == 422
-    assert response.json()["detail"] == "unsupported export format: actions_xlsx"
+    assert response.status_code == 200
+    assert download.status_code == 200
+    workbook = load_workbook(BytesIO(download.content), read_only=True)
+    sheet = workbook["整改任务"]
+    assert sheet.max_row == 2
+    assert sheet["A1"].value.startswith("本清单为整改任务跟踪材料")
+    assert sheet["A2"].value == "整改任务 ID"
+    workbook.close()
 
 
 @pytest.mark.parametrize(
@@ -395,7 +477,7 @@ async def test_versioned_draft_and_formal_exports(api_client, api_session):
     )
     blocked = await api_client.post(
         "/api/reports/report-1/exports/formal",
-        json={"formats": ["assessment_xlsx"], "created_by": "张三"},
+        json={"formats": ["actions_xlsx"], "created_by": "张三"},
     )
     ReviewService(Repository(api_session)).record(
         "assessment-1",

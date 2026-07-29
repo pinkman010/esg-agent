@@ -13,7 +13,7 @@ from reportlab.pdfgen import canvas
 
 from src.db.repositories import Repository, new_id
 from src.domain.enums import ReportStatus, RiskLevel
-from src.domain.models import ExportVersion
+from src.domain.models import ExportVersion, ImprovementAction
 from src.services.analysis_runner import GRI_REQUIREMENTS_PATH
 from src.services.presentation_localization import localize_missing_items, localize_rationale
 from src.services.requirement_scope_service import RequirementScopeService
@@ -22,6 +22,24 @@ from src.domain.versions import CURRENT_RISK_RULE_VERSION
 
 
 AI_DISCLAIMER = "AI建议未经人工确认时不构成最终披露结论。"
+ACTIONS_DISCLAIMER = (
+    "本清单为整改任务跟踪材料；任务状态和截止日期"
+    "不构成 GRI 认证或外部鉴证结论。"
+)
+ACTION_EXPORT_HEADERS = [
+    "整改任务 ID",
+    "Requirement ID",
+    "任务标题",
+    "优先级",
+    "状态",
+    "负责人",
+    "截止日期",
+    "建议内容",
+    "完成说明",
+    "创建人",
+    "创建时间",
+    "更新时间",
+]
 
 
 class ExportFileNotFoundError(FileNotFoundError):
@@ -231,6 +249,38 @@ def review_rows(repository: Repository, run_id: str) -> list[dict]:
     return rows
 
 
+def action_export_rows(
+    actions: list[ImprovementAction],
+    requirement_ids_by_assessment: dict[str, str],
+) -> list[dict[str, object]]:
+    return [
+        {
+            "整改任务 ID": action.action_id,
+            "Requirement ID": requirement_ids_by_assessment.get(
+                action.assessment_id,
+                "",
+            ),
+            "任务标题": action.title,
+            "优先级": action.priority.value,
+            "状态": action.status.value,
+            "负责人": action.owner_name,
+            "截止日期": action.due_date.isoformat()
+            if action.due_date
+            else None,
+            "建议内容": action.recommendation_text,
+            "完成说明": action.completion_note,
+            "创建人": action.created_by,
+            "创建时间": action.created_at.isoformat()
+            if action.created_at
+            else None,
+            "更新时间": action.updated_at.isoformat()
+            if action.updated_at
+            else None,
+        }
+        for action in actions
+    ]
+
+
 def rows_to_csv(rows: list[dict]) -> str:
     if not rows:
         return ""
@@ -254,7 +304,12 @@ class VersionedExportService:
         formats: list[str],
         created_by: str,
     ) -> ExportVersion:
-        supported_formats = {"assessment_xlsx", "management_pdf", "print_html"}
+        supported_formats = {
+            "assessment_xlsx",
+            "actions_xlsx",
+            "management_pdf",
+            "print_html",
+        }
         unsupported_formats = [item for item in formats if item not in supported_formats]
         if unsupported_formats:
             raise ValueError(
@@ -362,7 +417,33 @@ class VersionedExportService:
             if uses_complete_scope
             else assessment_rows
         )
-        manifest = [self._write_format(destination, item, rows, report_id, is_draft) for item in formats]
+        actions = (
+            self.repository.list_improvement_actions(report_id)
+            if "actions_xlsx" in formats
+            else []
+        )
+        requirement_ids_by_assessment = {}
+        for action in actions:
+            assessment = self.repository.get_assessment(action.assessment_id)
+            if assessment is not None:
+                requirement_ids_by_assessment[action.assessment_id] = (
+                    assessment.requirement_id
+                )
+        action_rows = action_export_rows(
+            actions,
+            requirement_ids_by_assessment,
+        )
+        manifest = [
+            self._write_format(
+                destination,
+                item,
+                rows,
+                report_id,
+                is_draft,
+                action_rows=action_rows,
+            )
+            for item in formats
+        ]
         digest = sha256("".join(item["sha256"] for item in manifest).encode()).hexdigest()
         export = self.repository.save_export_version(
             ExportVersion(
@@ -429,7 +510,16 @@ class VersionedExportService:
             rows.append(row)
         return rows
 
-    def _write_format(self, destination: Path, format_name: str, rows: list[dict], report_id: str, is_draft: bool) -> dict:
+    def _write_format(
+        self,
+        destination: Path,
+        format_name: str,
+        rows: list[dict],
+        report_id: str,
+        is_draft: bool,
+        *,
+        action_rows: list[dict[str, object]],
+    ) -> dict:
         if format_name == "assessment_xlsx":
             path = destination / f"{format_name}.xlsx"
             workbook = Workbook()
@@ -445,6 +535,21 @@ class VersionedExportService:
                             for key in rows[0].keys()
                         ]
                     )
+            workbook.save(path)
+        elif format_name == "actions_xlsx":
+            path = destination / f"{format_name}.xlsx"
+            workbook = Workbook()
+            sheet = workbook.active
+            sheet.title = "整改任务"
+            sheet.append([ACTIONS_DISCLAIMER])
+            sheet.append(ACTION_EXPORT_HEADERS)
+            for row in action_rows:
+                sheet.append(
+                    [
+                        _xlsx_value(row.get(header))
+                        for header in ACTION_EXPORT_HEADERS
+                    ]
+                )
             workbook.save(path)
         elif format_name == "management_pdf":
             path = destination / "management-summary.pdf"

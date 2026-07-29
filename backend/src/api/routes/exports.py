@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse, PlainTextResponse
 from sqlalchemy.orm import Session
+from typing import Literal
+
 from pydantic import BaseModel, Field, model_validator
 
 from src.db.repositories import Repository
@@ -24,7 +26,14 @@ report_export_router = APIRouter(prefix="/api/reports/{report_id}/exports", tags
 
 
 class GenerateExportRequest(BaseModel):
-    formats: list[str] = Field(min_length=1)
+    formats: list[
+        Literal[
+            "assessment_xlsx",
+            "actions_xlsx",
+            "management_pdf",
+            "print_html",
+        ]
+    ] = Field(min_length=1)
     created_by: str
 
     @model_validator(mode="after")
@@ -133,6 +142,10 @@ def download_export_file(
 
     media_types = {
         "assessment_xlsx": (
+            "application/vnd.openxmlformats-officedocument."
+            "spreadsheetml.sheet"
+        ),
+        "actions_xlsx": (
             "application/vnd.openxmlformats-officedocument."
             "spreadsheetml.sheet"
         ),
