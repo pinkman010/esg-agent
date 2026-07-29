@@ -253,7 +253,7 @@ multipart 上传 PDF。查询参数 `duplicate_policy` 取值为 `reject | creat
 
 ### `GET /api/reports/{report_id}/dashboard`
 
-当前返回 report/run id、`standard_unit_count`、结论分布、兼容风险分布、复核优先级分布、高优先级复核进度、适用性分布/待判定数量和分析失败项数。普通产品页面使用 `standard_unit_count=577` 作为核查范围。GRI 主题分布、整改摘要和最新输出为后续增强。
+当前返回 report/run id、`standard_unit_count`、结论分布、兼容风险分布、复核优先级分布、高优先级复核进度、适用性分布/待判定数量，以及 `failed_requirement_count`、`not_generated_requirement_count`、`analysis_incomplete_count`。前两个字段分别表示明确失败和未生成结果的独立判断项，聚合字段为两者之和并驱动正式输出门禁；新增字段保持 nullable 以兼容旧服务响应。普通产品页面使用 `standard_unit_count=577` 作为核查范围。GRI 主题分布、整改摘要和最新输出为后续增强。
 
 ### `GET /api/reports/{report_id}/scope-items`
 

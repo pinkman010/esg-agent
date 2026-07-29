@@ -10,7 +10,7 @@
 
 **技术栈：** FastAPI、SQLAlchemy、PostgreSQL、Alembic、pytest、React/Next.js、TypeScript、Vitest、Playwright/Chrome、OpenAPI。
 
-**计划状态：** 已批准执行；实施中。
+**计划状态：** 已完成；等待用户批准集成、`v1.2` 标签和 push。
 
 **建议发布基线：** `v1.2`。标签、提交和推送必须在全部 gates 通过后另行批准。
 
@@ -830,6 +830,7 @@ class ReportProfileResolver:
         *,
         original_filename: str,
         page_count: int,
+        source_file_hash: str,
     ) -> Path | None:
         ...
 ```
@@ -1239,16 +1240,16 @@ docs: freeze Phase 1.7 final product closure
 
 **复核范围：**
 
-- [ ] 运行谱系是否可能串报告。
-- [ ] 最新优先合并是否确定性。
-- [ ] 失败行是否伪造 verdict 或 evidence。
-- [ ] formal export 是否绕过有效完整性 gate。
-- [ ] reopen/supersede 是否保留不可变历史。
-- [ ] audit 是否泄露路径、密钥或原始响应。
-- [ ] profile resolver 是否可能误匹配。
-- [ ] 完全扫描 PDF 是否在规则执行前被拒绝。
-- [ ] Goldwind 是否引入专用规则分支。
-- [ ] 所有外部调用默认关闭。
+- [x] 运行谱系是否可能串报告。
+- [x] 最新优先合并是否确定性。
+- [x] 失败行是否伪造 verdict 或 evidence。
+- [x] formal export 是否绕过有效完整性 gate。
+- [x] reopen/supersede 是否保留不可变历史。
+- [x] audit 是否泄露路径、密钥或原始响应。
+- [x] profile resolver 是否可能误匹配。
+- [x] 完全扫描 PDF 是否在规则执行前被拒绝。
+- [x] Goldwind 是否引入专用规则分支。
+- [x] 所有外部调用默认关闭。
 
 **完成标准：**
 
@@ -1328,7 +1329,7 @@ git log --oneline --decorate -20
 | 失败行被当作不披露 | 形成错误正式结论 | 独立 `analysis_status`，verdict 保持空 |
 | formal export 绕过缺失项 | 输出不完整 | 有效 499 完整性 gate |
 | audit 泄露敏感信息 | 安全与隐私风险 | 白名单、递归脱敏、长度限制 |
-| profile 误匹配 | 使用错误证据规则 | 唯一匹配、页数校验、歧义失败 |
+| profile 误匹配 | 使用错误证据规则 | 唯一匹配、页数与源 PDF SHA-256 校验、歧义或身份不一致时失败 |
 | Goldwind 被误当专业 gold | 夸大产品结论 | 文档固定工程验证边界 |
 | 扫描 PDF 生成虚假结果 | 证据不可复核 | 规则执行前能力检查 |
 | 计划范围继续膨胀 | 无法形成终止基线 | 排除项和停止条件硬约束 |
@@ -1339,22 +1340,22 @@ git log --oneline --decorate -20
 
 只有以下条件全部满足，才能宣布 Phase 1.7 完成：
 
-- [ ] 部分失败 run 可通过 577 项完整范围接口查看，不再因 assessment 不足统一返回 409。
-- [ ] retry 后形成确定、可审计的有效谱系结果。
-- [ ] 失败和未生成项不产生虚假 verdict、证据或正式结论。
-- [ ] 正式输出后的 assessment reopen、重新复核和 supersede 形成闭环。
-- [ ] 报告级审计覆盖上传、分析、重试、复核、整改和输出。
-- [ ] 完全扫描 PDF 获得明确、安全的能力边界错误。
-- [ ] Envision 权威回归全部通过。
-- [ ] Goldwind 独立产品闭环全部通过。
-- [ ] 干净测试数据库 migration、启动、health 和核心 E2E 通过。
-- [ ] 后端全量、Ruff、前端测试、typecheck 和 build 通过。
-- [ ] Chrome 桌面端、窄屏、键盘和 PDF 交互验收通过。
-- [ ] 外部 LLM/OCR/VLM 调用为 0。
-- [ ] 文档、OpenAPI、前端类型和实际行为一致。
-- [ ] Critical/P0 和 Important/P1 未解决问题为 0。
-- [ ] 剩余 P2 全部写入限制或条件化路线图。
-- [ ] 工作区无意外文件，无密钥和本机绝对路径泄露。
+- [x] 部分失败 run 可通过 577 项完整范围接口查看，不再因 assessment 不足统一返回 409。
+- [x] retry 后形成确定、可审计的有效谱系结果。
+- [x] 失败和未生成项不产生虚假 verdict、证据或正式结论。
+- [x] 正式输出后的 assessment reopen、重新复核和 supersede 形成闭环。
+- [x] 报告级审计覆盖上传、分析、重试、复核、整改和输出。
+- [x] 完全扫描 PDF 获得明确、安全的能力边界错误。
+- [x] Envision 权威回归全部通过。
+- [x] Goldwind 独立产品闭环全部通过。
+- [x] 干净测试数据库 migration、启动、health 和核心 E2E 通过。
+- [x] 后端全量、Ruff、前端测试、typecheck 和 build 通过。
+- [x] Chrome 桌面端、窄屏、键盘和 PDF 交互验收通过。
+- [x] 外部 LLM/OCR/VLM 调用为 0。
+- [x] 文档、OpenAPI、前端类型和实际行为一致。
+- [x] Critical/P0 和 Important/P1 未解决问题为 0。
+- [x] 剩余 P2 全部关闭或写入限制与条件化路线图。
+- [x] 工作区无意外文件，无密钥和本机绝对路径泄露。
 
 达到上述条件后：
 

@@ -87,6 +87,15 @@ Envision 继续作为权威主线回归样本。最终 regeneration 结果：
 
 Envision 用于证明主线规则、证据页和既有裁决未回归。
 
+本轮重新生成产物保留在本地 runtime，不提交 Git；SHA-256 为：
+
+| 产物 | SHA-256 |
+| --- | --- |
+| `current_499_review_regenerated.csv` | `16f9ca3e15cf4e75502176fbae8ae76d3c7a2ca7e0272203e7d9be7fcd8bdc3e` |
+| `current_499_review_regenerated_audit.json` | `42bcde6af5a675e135e77c9fda8ee137a12b3d6d5866de78f2d1eb3f0883c83b` |
+| `current_499_review_regeneration_diff_summary.json` | `1a18fc4469960d65e0edb9953a522c102c8170fcd2578e9da01b6ca99c935c3e` |
+| `current_499_review_scope_summary.json` | `7123241741c01844476bb425b86fca5795dac6e4c1ca606d70220de5e22f6330` |
+
 ### 6.2 Goldwind
 
 Goldwind 2024 报告共 52 个 PDF 页，用于验证不同企业、不同页数和双页拼版报告能够走通同一产品流程。真实 PDF API E2E 验证：
@@ -102,11 +111,11 @@ Goldwind 是独立产品泛化和工程闭环样本，不是 ESG 专家 gold，�
 
 ## 7. 自动门禁
 
-验收前实现提交范围为 `d638f01` 至 `8f79a58`；最终文档提交以 Git 历史为准。
+验收实现提交范围为 `d638f01` 至 `549c6b2`；最终文档提交以 Git 历史为准。
 
 | 门禁 | 命令 | 结果 |
 | --- | --- | --- |
-| 后端全量 | `uv run pytest -q --basetemp=../tmp/pytest-phase17-final` | 766 passed |
+| 后端全量 | `uv run pytest -q --basetemp=../tmp/pytest-phase17-p2-final` | 774 passed |
 | 后端静态检查 | `uv run ruff check .` | 通过 |
 | 前端全量 | `pnpm test -- --run` | 30 个文件，119 passed |
 | 前端类型 | `pnpm typecheck` | 通过 |
@@ -114,6 +123,19 @@ Goldwind 是独立产品泛化和工程闭环样本，不是 ESG 专家 gold，�
 | Envision regeneration | Phase 1.7 计划中的正式 regeneration 命令 | 通过，0 error、0 warning |
 | 空数据库 migration | `uv run alembic upgrade head` | `0012_chunk_embeddings (head)` |
 | 启动与恢复冒烟 | health、OpenAPI、重启恢复目标测试 | 通过 |
+
+独立代码复核后追加三批修复：
+
+| 提交 | 关闭问题 |
+| --- | --- |
+| `3c707aa` | active/recovered retry run 选择、`not_generated` 仪表盘计数、旧审计接口与 POSIX 路径脱敏 |
+| `038238e` | 人工复核与版本化输出事务原子性、导出失败目录清理 |
+| `c116034` | report profile 源 PDF SHA-256 身份校验、打印版失败/未生成状态 |
+| `549c6b2` | dashboard 失败/未生成/聚合计数拆分、通用 POSIX 路径脱敏、渲染失败目录清理和 OpenAPI 类型同步 |
+
+故障注入测试确认复核或导出任一步失败时，数据库不会保留半套 snapshot、risk、export、supersede、report status 或 audit 状态。画像解析要求文件名、页数和 SHA-256 同时匹配。
+
+最终独立复审对 `549c6b2` 及此前全部修复做只读核验，结论为 P0、P1、P2 均为 0；聚焦验证覆盖 39 项后端 API、4 项 OpenAPI contract、2 个前端文件的 10 项组件测试和 typecheck。
 
 OpenAPI 由工作树后端实例生成。由于默认 8000 端口已有用户服务，本轮使用独立端口执行等价的 `openapi-typescript` 生成命令；生成结果、前端类型和后端 schema 一致。
 
@@ -156,7 +178,7 @@ Chrome 扩展没有启用本机文件 URL 权限，原生文件选择器不能�
 
 ## 10. 剩余限制与条件化路线图
 
-当前无未解决 P0/P1。以下 P2 或范围外事项不阻塞 Phase 1.7：
+独立复核发现的 6 个 P1 和 4 个 P2 已全部关闭；当前无未解决 P0/P1/P2。以下产品边界或范围外事项不阻塞 Phase 1.7：
 
 - Chrome 文件选择器自动化依赖扩展的文件 URL 权限。
 - Goldwind 工程结果未经过独立 ESG 专家复核。

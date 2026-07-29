@@ -313,7 +313,7 @@ uv run --no-sync python -c "from sqlalchemy.engine import make_url; from src.con
 - Codex 内置浏览器控制在本机发生两次桌面应用闪退。自动页面截图改用独立无头 Edge；人工验收使用普通浏览器，不再启用 Codex 内置浏览器。
 - 外部模型和 OCR/VLM 默认关闭。DeepSeek 只在 `confirm_llm=true` 且用户明确批准后启用；OCR/VLM 本轮未启用。
 
-当前自动门禁（2026-07-29）：后端 766 项测试和 Ruff 通过；前端 30 个测试文件、119 项测试、typecheck 和 production build 通过；Envision v3 内部结构为 `577/499/78/0`，global fallback、新增 false disclosed 和新增 wrong source page 均为 0，audit 为 0 error、0 warning。16 条历史结果差异全部进入最终裁决资产，0 条 pending。Goldwind 52 页真实报告产品 E2E 通过。代码和空测试数据库 head 均为 `0012_chunk_embeddings`。
+当前自动门禁（2026-07-29）：后端 774 项测试和 Ruff 通过；前端 30 个测试文件、119 项测试、typecheck 和 production build 通过；Envision v3 内部结构为 `577/499/78/0`，global fallback、新增 false disclosed 和新增 wrong source page 均为 0，audit 为 0 error、0 warning。16 条历史结果差异全部进入最终裁决资产，0 条 pending。Goldwind 52 页真实报告产品 E2E 通过。代码和空测试数据库 head 均为 `0012_chunk_embeddings`。
 
 DeepSeek 225 条真实评估固定使用 Envision 报告 `report-14864b1a3ef64512b0e5d3676a120bc1` 和 run `run-526bd97aef5d4b9baa14618b719081c9`。最终指标：一致 162/224（72.32%），适用性例外 1，累计定向补跑 18 次；guardrail 后 false disclosed、证据 ID 越界、可比错页、schema 失败和模型失败均为 0。该结果保留为 AI 辅助工程基线，不构成 GRI 专家认证或最终合规结论。本轮 v1.1 冻结没有修改 DeepSeek 模型、Prompt、调用范围或 guardrail。
 
@@ -598,8 +598,9 @@ uv run --no-sync python -m src.tools.evaluate_shadow_rag `
 - 完全扫描且未启用实验 OCR 的 PDF 在 requirement 规则执行前返回 `unsupported_scanned_pdf`；数字文本与少量扫描页混合报告标记为 `supported_with_review`。本轮未运行 OCR/VLM，也未改变 OCR 实验路由。
 - Goldwind 52 页真实 PDF 已通过上传、metadata、499 assessment、577 项范围、页码边界、人工快照、整改任务、四类草稿文件下载和报告审计 E2E。Goldwind 使用 profile 配置进入通用 workflow，没有专用规则分支，也不构成 ESG 专家 gold。
 - 正式输出后的纠正复用 assessment `reopen`：报告进入 `reopened`，新解决型人工快照恢复 gate，N+1 正式版本替代 N，旧快照和文件保持可读。没有新增独立 report reopen API 或 `voided` 操作。
-- 最终门禁：`uv run pytest -q` 为 766 passed，`uv run ruff check .` 通过；前端 30 个测试文件 119 项测试、typecheck 和 production build 通过。空测试数据库从零迁移到 `0012_chunk_embeddings (head)`，health、OpenAPI 和服务重启恢复冒烟通过。
+- 最终门禁：`uv run pytest -q` 为 774 passed，`uv run ruff check .` 通过；前端 30 个测试文件 119 项测试、typecheck 和 production build 通过。空测试数据库从零迁移到 `0012_chunk_embeddings (head)`，health、OpenAPI 和服务重启恢复冒烟通过。
 - Envision v3 重新生成保持 `577/499/78/0`，499 个唯一独立 assessment，global fallback、新增 false disclosed、新增 wrong source page、audit error 和 audit warning 均为 0，16 条最终裁决无 pending。
+- 独立代码复核发现并关闭运行选择、未生成项统计、旧审计接口脱敏、复核事务、导出事务和画像身份校验 6 个 P1，以及打印版空结论、通用 POSIX 路径脱敏、dashboard 计数字段语义和渲染失败目录清理 4 个 P2。复核和导出均增加故障注入回滚测试；报告画像绑定真实源 PDF SHA-256，同名同页但内容不同的文件不得使用内置画像。
 - Chrome 使用隔离 demo 端口完成 Goldwind metadata、八阶段进度、577 项、PDF 第 6 页、人工快照、整改创建/更新、草稿、正式 v1、下载和 12 条审计事件。窄屏无横向溢出，键盘 Tab 顺序可用，console error/warning 为 0。原生文件选择器因 Chrome 扩展文件 URL 权限无法自动赋值，上传改由同一 demo 后端正式 API 完成；产品上传接口和 multipart 路径已有真实 E2E 覆盖。
 - Chrome 验收发现新审计事件缺少中文名称，提交 `8f79a58` 补齐画像、分析启动、人工快照、草稿和正式输出标签及关键 payload 字段，并增加前端回归测试。
 - OpenAPI 生成时默认 8000 端口已有用户服务，因此对独立后端端口执行等价的 `pnpm exec openapi-typescript` 命令；生成类型、后端 schema、组件类型检查和 production build 一致。完整结论见 `docs/product/phase1.7-final-closure-acceptance.md`。

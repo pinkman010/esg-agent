@@ -142,6 +142,8 @@ Phase 1.7 独立产品闭环验收还使用以下本地只读资产：
 
 Envision 是权威主线回归样本；Goldwind 是不同企业、52 页双页拼版报告的产品泛化工程样本。两者都不得覆盖或改写。Goldwind 验收结果不能当作 ESG 专家 gold，也不能替代 Envision 零回归门禁。原始 Goldwind PDF 不提交 Git；缺少该本地资产时，相关真实 PDF E2E 应明确跳过或失败，不能用处理后文本、空白 PDF 或伪造页数替代。
 
+内置 Envision/Goldwind report profile 保存对应原始 PDF 的 SHA-256。运行时只有文件名、页数和 SHA-256 全部一致时才允许应用报告专属候选页路由；哈希缺失或不一致必须明确失败。更新原始 PDF 或 profile 身份字段属于资产基线变更，需要重新审批并重跑双报告门禁。
+
 可用 PowerShell 校验单个文件：
 
 ```powershell

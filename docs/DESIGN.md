@@ -451,11 +451,13 @@ pnpm build
 
 截至 2026-07-29，Phase 1.7 已完成最终闭环与发布就绪验收，建议形成 `v1.2` 候选基线。代码迁移 head、main 数据库和 demo 数据库均为 `0012_chunk_embeddings`；本轮没有 migration 或表结构变化。结构 manifest 为 `gri-requirement-checklist-v3`；产品方法版本为 `envision-method-v1.1`；结果裁决版本为 `envision-result-v1.1`；复核优先级规则为 `risk-v2.1`。
 
-v3 技术结构为 `577/499/78/0`。部分失败、失败项 retry 和服务重启恢复统一通过运行谱系有效视图形成当前产品状态；范围表、dashboard、review、export gate 和 report status 读取同一语义。失败或未生成项独立展示分析状态，不能形成虚假正式结论。Envision v3 gate 的 global fallback、新增 false disclosed 和新增 wrong source page 均为 0，audit 为 0 error、0 warning。后端 766 项测试和 Ruff、前端 30 个测试文件 119 项测试、typecheck 和 production build 全部通过。
+v3 技术结构为 `577/499/78/0`。部分失败、失败项 retry 和服务重启恢复统一通过运行谱系有效视图形成当前产品状态；范围表、dashboard、review、export gate 和 report status 读取同一语义。失败或未生成项独立展示分析状态，不能形成虚假正式结论。dashboard 分别返回失败数、未生成数和聚合分析不完整数；旧失败数字段不扩大语义。Envision v3 gate 的 global fallback、新增 false disclosed 和新增 wrong source page 均为 0，audit 为 0 error、0 warning。后端 774 项测试和 Ruff、前端 30 个测试文件 119 项测试、typecheck 和 production build 全部通过。
 
 报告级审计接口聚合报告级事件和该报告全部 run 的事件，按时间和稳定序号倒序；公开 payload 递归脱敏和截断。审计覆盖上传、metadata、profile 解析、分析、retry、人工快照、适用性、整改、草稿/正式输出和文件下载。前端使用业务中文名称，不展示原始 JSON。
 
-报告 profile 从 metadata 和 `backend/data/reports/profiles/*.json` 解析，校验文件名、报告身份、页数和唯一匹配；没有匹配时进入通用路径，歧义时明确失败。Goldwind 只通过 profile 配置进入同一 workflow，没有专用规则分支。Envision 负责权威零回归，Goldwind 负责独立产品闭环和泛化工程验证。
+报告 profile 从 metadata 和 `backend/data/reports/profiles/*.json` 解析，校验文件名、页数、源 PDF SHA-256 和唯一匹配；没有匹配时进入通用路径，歧义、哈希缺失或身份不一致时明确失败。Goldwind 只通过 profile 配置进入同一 workflow，没有专用规则分支。Envision 负责权威零回归，Goldwind 负责独立产品闭环和泛化工程验证。
+
+人工复核单项操作将 snapshot、change events、风险快照、审计事件和报告状态放入同一数据库事务；版本化输出将新版本、旧版本 supersede、报告状态和审计事件放入同一事务。任一步失败都会回滚数据库变化；格式渲染或导出数据库事务失败还会清理本次新建的派生目录，不留下半完成业务状态。
 
 正式输出后的纠正复用 assessment `reopen`。reopen 快照使报告进入 `reopened`；完成新的解决型人工复核并重新满足有效完整性 gate 后生成 N+1 正式版本，旧正式版本转为 `superseded`，历史快照和文件保持可读。当前没有独立 report reopen API，也没有启用 `voided` 操作。
 
