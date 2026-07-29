@@ -158,7 +158,7 @@ describe("ExportVersions", () => {
     expect(screen.queryByText("高风险")).not.toBeInTheDocument();
   });
 
-  it("shows auditable version metadata without unsupported download controls", async () => {
+  it("shows safe downloadable files with localized names and sizes", async () => {
     const exports = [{
       export_id: "export-2",
       report_id: "report-1",
@@ -176,7 +176,36 @@ describe("ExportVersions", () => {
         analysis_incomplete_total: 0,
         review_scope_statement: "高优先级队列已完成；不代表全部 577 项均已人工确认。",
       },
-      file_manifest: [{ format: "xlsx" }],
+      file_manifest: [
+        {
+          file_id: "file-assessment",
+          filename: "assessment_xlsx.xlsx",
+          format: "assessment_xlsx",
+          size: 12288,
+          sha256: "a".repeat(64),
+        },
+        {
+          file_id: "file-actions",
+          filename: "actions_xlsx.xlsx",
+          format: "actions_xlsx",
+          size: 2048,
+          sha256: "b".repeat(64),
+        },
+        {
+          file_id: "file-pdf",
+          filename: "management-summary.pdf",
+          format: "management_pdf",
+          size: 1024,
+          sha256: "c".repeat(64),
+        },
+        {
+          file_id: "file-html",
+          filename: "print.html",
+          format: "print_html",
+          size: 512,
+          sha256: "d".repeat(64),
+        },
+      ],
       supersedes_export_id: null,
       created_by: "张三",
       created_at: "2026-07-26T08:00:00Z",
@@ -195,7 +224,20 @@ describe("ExportVersions", () => {
     expect(screen.getByText(/创建人：张三/)).toBeInTheDocument();
     expect(screen.getByText(/2026/)).toBeInTheDocument();
     expect(screen.getByText("高优先级队列已完成；不代表全部 577 项均已人工确认。")).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: /下载/ })).not.toBeInTheDocument();
+    expect(screen.getByText("GRI 核查表（XLSX）")).toBeInTheDocument();
+    expect(screen.getByText("整改任务清单（XLSX）")).toBeInTheDocument();
+    expect(screen.getByText("管理层摘要（PDF）")).toBeInTheDocument();
+    expect(screen.getByText("可打印核查表（HTML）")).toBeInTheDocument();
+    expect(screen.getByText("12 KB")).toBeInTheDocument();
+    const links = screen.getAllByRole("link", { name: /下载/ });
+    expect(links).toHaveLength(4);
+    expect(links[0]).toHaveAttribute(
+      "href",
+      "http://localhost:8000/api/exports/export-2/files/file-assessment",
+    );
+    expect(links[0]).toHaveAttribute("download", "assessment_xlsx.xlsx");
+    expect(document.body).not.toHaveTextContent("relative_path");
+    expect(document.body).not.toHaveTextContent("C:\\");
   });
 
   it("shows an explicit empty state", async () => {

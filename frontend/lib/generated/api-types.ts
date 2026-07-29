@@ -549,6 +549,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/exports/{export_id}/files/{file_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download Export File */
+        get: operations["download_export_file_api_exports__export_id__files__file_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/reports/{report_id}/exports": {
         parameters: {
             query?: never;
@@ -1234,8 +1251,21 @@ export interface components {
          * @enum {string}
          */
         EvidenceSourceMethod: "pypdf" | "pdfplumber" | "ocr" | "docling" | "vlm" | "manual";
-        /** ExportVersion */
-        ExportVersion: {
+        /** ExportFileResponse */
+        ExportFileResponse: {
+            /** File Id */
+            file_id: string;
+            /** Filename */
+            filename: string;
+            /** Format */
+            format: string;
+            /** Size */
+            size: number;
+            /** Sha256 */
+            sha256: string;
+        };
+        /** ExportVersionResponse */
+        ExportVersionResponse: {
             /** Export Id */
             export_id: string;
             /** Report Id */
@@ -1264,9 +1294,7 @@ export interface components {
                 [key: string]: unknown;
             };
             /** File Manifest */
-            file_manifest?: {
-                [key: string]: unknown;
-            }[];
+            file_manifest: components["schemas"]["ExportFileResponse"][];
             /** Supersedes Export Id */
             supersedes_export_id?: string | null;
             /** Created By */
@@ -1277,7 +1305,7 @@ export interface components {
         /** GenerateExportRequest */
         GenerateExportRequest: {
             /** Formats */
-            formats: string[];
+            formats: ("assessment_xlsx" | "actions_xlsx" | "management_pdf" | "print_html")[];
             /** Created By */
             created_by: string;
         };
@@ -1464,6 +1492,8 @@ export interface components {
             review_priority: string | null;
             /** Review Status */
             review_status: string | null;
+            /** Applicability Status */
+            applicability_status?: string | null;
             /** Source Pdf Pages */
             source_pdf_pages: number[];
         };
@@ -1603,6 +1633,8 @@ export interface components {
             status?: components["schemas"]["ActionStatus"] | null;
             /** Owner Name */
             owner_name?: string | null;
+            /** Due Date */
+            due_date?: string | null;
             /** Completion Note */
             completion_note?: string | null;
         };
@@ -1918,6 +1950,12 @@ export interface operations {
             query?: {
                 page?: number;
                 page_size?: number;
+                query?: string | null;
+                unit_status?: ("assessed" | "context_incorporated") | null;
+                effective_verdict?: components["schemas"]["AssessmentVerdict"] | null;
+                review_priority?: components["schemas"]["RiskLevel"] | null;
+                review_status?: ("pending_review" | "reviewed_approved" | "reviewed_modified" | "evidence_invalidated" | "reopened") | null;
+                applicability_status?: components["schemas"]["ApplicabilityStatus"] | null;
             };
             header?: never;
             path: {
@@ -2679,6 +2717,38 @@ export interface operations {
             };
         };
     };
+    download_export_file_api_exports__export_id__files__file_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                export_id: string;
+                file_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_versions_api_reports__report_id__exports_get: {
         parameters: {
             query?: never;
@@ -2696,7 +2766,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ExportVersion"][];
+                    "application/json": components["schemas"]["ExportVersionResponse"][];
                 };
             };
             /** @description Validation Error */
@@ -2731,7 +2801,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ExportVersion"];
+                    "application/json": components["schemas"]["ExportVersionResponse"];
                 };
             };
             /** @description Validation Error */
@@ -2766,7 +2836,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ExportVersion"];
+                    "application/json": components["schemas"]["ExportVersionResponse"];
                 };
             };
             /** @description Validation Error */

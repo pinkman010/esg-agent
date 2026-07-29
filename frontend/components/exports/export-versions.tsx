@@ -3,7 +3,26 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FileDown, FileCheck2 } from "lucide-react";
 import { useState } from "react";
-import { ApiError, generateExport, getReportDashboard, listExportVersions } from "@/lib/api";
+import {
+  ApiError,
+  exportFileUrl,
+  generateExport,
+  getReportDashboard,
+  listExportVersions,
+} from "@/lib/api";
+
+const exportFormatLabels: Record<string, string> = {
+  assessment_xlsx: "GRI 核查表（XLSX）",
+  actions_xlsx: "整改任务清单（XLSX）",
+  management_pdf: "管理层摘要（PDF）",
+  print_html: "可打印核查表（HTML）",
+};
+
+function formatFileSize(size: number): string {
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${Math.round(size / 1024)} KB`;
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 function exportGateMessage(error: unknown): string {
   if (error instanceof ApiError) {
@@ -92,6 +111,30 @@ export function ExportVersions({ reportId, createdBy }: { reportId: string; crea
               {item.review_scope?.review_scope_statement ? <p className="mt-1 text-xs text-amber-700">{String(item.review_scope.review_scope_statement)}</p> : null}
             </div>
             <span className="text-xs text-muted-foreground">{item.file_manifest?.length ?? 0} 个文件</span>
+            {item.file_manifest.length > 0 && (
+              <ul className="grid gap-2 border-t border-border pt-3 sm:col-span-2 sm:grid-cols-2">
+                {item.file_manifest.map((file) => {
+                  const label = exportFormatLabels[file.format] ?? file.filename;
+                  return (
+                    <li key={file.file_id} className="flex items-center justify-between gap-3 rounded-md bg-muted/40 px-3 py-2">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium">{label}</p>
+                        <p className="text-xs text-muted-foreground">{formatFileSize(file.size)}</p>
+                      </div>
+                      <a
+                        aria-label={`下载 ${label}`}
+                        className="inline-flex shrink-0 items-center gap-1 rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted"
+                        download={file.filename}
+                        href={exportFileUrl(item.export_id, file.file_id)}
+                      >
+                        <FileDown aria-hidden="true" className="h-3.5 w-3.5" />
+                        下载
+                      </a>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
           </article>
         ))}
       </div>

@@ -115,8 +115,38 @@ export function saveApplicabilityBatch(reportId: string, payload: ApplicabilityB
 export function listReportAssessments(reportId: string, page = 1, pageSize = 50): Promise<AssessmentListResponse> {
   return request<AssessmentListResponse>(`/api/reports/${reportId}/assessments?page=${page}&page_size=${pageSize}`);
 }
-export function listReportScopeItems(reportId: string, page = 1, pageSize = 50): Promise<RequirementScopeListResponse> {
-  return request<RequirementScopeListResponse>(`/api/reports/${reportId}/scope-items?page=${page}&page_size=${pageSize}`);
+export type ReportScopeFilters = {
+  query?: string;
+  unitStatus?: "assessed" | "context_incorporated";
+  effectiveVerdict?: "disclosed" | "partially_disclosed" | "omitted_with_reason" | "not_disclosed" | "unknown";
+  reviewPriority?: "high" | "medium" | "low";
+  reviewStatus?: "pending_review" | "reviewed_approved" | "reviewed_modified" | "evidence_invalidated" | "reopened";
+  applicabilityStatus?: "applicable" | "not_applicable" | "undetermined";
+};
+export function listReportScopeItems(
+  reportId: string,
+  page = 1,
+  pageSize = 50,
+  filters: ReportScopeFilters = {},
+): Promise<RequirementScopeListResponse> {
+  const params = new URLSearchParams({
+    page: String(page),
+    page_size: String(pageSize),
+  });
+  const filterEntries: Array<[string, string | undefined]> = [
+    ["query", filters.query?.trim() || undefined],
+    ["unit_status", filters.unitStatus],
+    ["effective_verdict", filters.effectiveVerdict],
+    ["review_priority", filters.reviewPriority],
+    ["review_status", filters.reviewStatus],
+    ["applicability_status", filters.applicabilityStatus],
+  ];
+  filterEntries.forEach(([name, value]) => {
+    if (value) params.set(name, value);
+  });
+  return request<RequirementScopeListResponse>(
+    `/api/reports/${encodeURIComponent(reportId)}/scope-items?${params.toString()}`,
+  );
 }
 export function saveReviewSnapshot(assessmentId: string, payload: ReviewSnapshotRequest): Promise<ReviewSnapshot> {
   return request<ReviewSnapshot>(`/api/assessments/${assessmentId}/review-decisions`, { method: "POST", body: payload });
@@ -142,8 +172,13 @@ export function updateAction(actionId: string, payload: UpdateActionRequest): Pr
 export function listExportVersions(reportId: string): Promise<ExportVersion[]> {
   return request<ExportVersion[]>(`/api/reports/${reportId}/exports`);
 }
+export function exportFileUrl(exportId: string, fileId: string): string {
+  return apiUrl(
+    `/api/exports/${encodeURIComponent(exportId)}/files/${encodeURIComponent(fileId)}`,
+  );
+}
 export function generateExport(reportId: string, isDraft: boolean, createdBy: string): Promise<ExportVersion> {
-  return request<ExportVersion>(`/api/reports/${reportId}/exports/${isDraft ? "draft" : "formal"}`, { method: "POST", body: { formats: ["assessment_xlsx", "management_pdf", "print_html"], created_by: createdBy } });
+  return request<ExportVersion>(`/api/reports/${reportId}/exports/${isDraft ? "draft" : "formal"}`, { method: "POST", body: { formats: ["assessment_xlsx", "actions_xlsx", "management_pdf", "print_html"], created_by: createdBy } });
 }
 export function listRunAssessments(runId: string): Promise<DisclosureAssessment[]> { return request<DisclosureAssessment[]>(`/api/runs/${runId}/assessments`); }
 export function listRunRecommendations(runId: string): Promise<Recommendation[]> { return request<Recommendation[]>(`/api/runs/${runId}/recommendations`); }
