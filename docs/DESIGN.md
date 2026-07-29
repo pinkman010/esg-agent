@@ -247,7 +247,7 @@ requirement 分析失败或结果未生成在运行维度单独计数，等同�
 
 ### 8.1 单用户身份
 
-第一版不建设账号系统。用户首次执行复核时填写复核人名称，前端本地保存便于后续默认填充，服务端每次写操作仍显式接收并保存复核人。
+第一版不建设账号系统。用户每次进入复核工作台时均需重新填写复核人名称，前端不通过 localStorage、Cookie、sessionStorage 或 URL 参数跨报告回填身份；服务端每次写操作仍显式接收并保存本次复核人。
 
 ### 8.2 可编辑内容
 
@@ -469,11 +469,13 @@ v3 技术结构为 `577/499/78/0`。部分失败、失败项 retry 和服务重�
 
 项目最终只在本机部署验证，使用一套代码、Alembic migration、GRI 规则、report profile 和只读原始资产。业务数据按用途分为三个 PostgreSQL 数据库：
 
-- `esg_agent`：开发、回归、正式验收和长期保留，禁止自动重置；
-- `esg_agent_demo`：产品演示数据；维护人员可在需要时显式重建，不作为普通演示前提；
+- `esg_agent`：开发、长期回归和工程审计数据，允许保留 regeneration 技术记录，禁止自动重置；
+- `esg_agent_demo`：普通产品运行、产品验收和演示数据；维护人员可在需要时显式重建，不作为普通演示前提；
 - `esg_agent_test`：自动测试，测试过程允许清理。
 
-演示环境使用 `APP_ENV=demo`，上传和派生文件只能写入 `backend/data/runtime/demo/`。现有 `esg_agent` 继续使用原运行时目录，不迁移已有文件或数据库路径引用。`backend/data/reports/`、`backend/data/standards/` 和 `backend/data/manifests/` 为共享只读资产，不随演示库重置。
+`main`、`demo`、`test` 表示运行环境，不表示用户角色。普通产品入口不以 `esg_agent` 长期回归库作为展示数据库；regeneration 记录属于工程审计资产，不进入 demo 数据清理或产品验收前台。演示环境使用 `APP_ENV=demo`，上传和派生文件只能写入 `backend/data/runtime/demo/`。现有 `esg_agent` 继续使用原运行时目录，不迁移已有文件或数据库路径引用。`backend/data/reports/`、`backend/data/standards/` 和 `backend/data/manifests/` 为共享只读资产，不随演示库重置。
+
+本补丁不新增 report visibility 字段。未来出现多租户或多个正式工作区时，再单独设计数据可见性、权限和工作区归属模型。
 
 重复上传默认以文件哈希返回 `409 duplicate_report`，响应给出已有报告 ID 和状态；同一哈希已有多份历史时按 `created_at DESC, report_id DESC` 返回最新报告，避免“查看已有结果”回到旧规则版本。前端提供“查看已有结果”和“重新上传并分析”两个产品选项；用户明确选择后，以 `duplicate_policy=create_new` 再次上传并创建新的 `report_id`、metadata 确认和分析 run，已有报告、复核、整改任务和输出版本保持不变。`file_hash` 是重复提醒依据，不是报告唯一键。
 

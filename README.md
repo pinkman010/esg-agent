@@ -75,8 +75,19 @@ esg-agent/
 ```powershell
 docker compose up -d postgres
 
+$demoDbExists = docker compose exec -T postgres `
+  psql -U esg_agent -d postgres -tAc `
+  "SELECT 1 FROM pg_database WHERE datname='esg_agent_demo'"
+if ($demoDbExists.Trim() -ne "1") {
+  docker compose exec -T postgres createdb -U esg_agent esg_agent_demo
+}
+
 cd backend
 uv sync
+$env:APP_ENV="demo"
+$env:DATABASE_URL="postgresql+psycopg://esg_agent:esg_agent@localhost:5432/esg_agent_demo"
+$env:UPLOAD_DIR="backend/data/runtime/demo/uploads"
+$env:DERIVED_DIR="backend/data/runtime/demo/derived"
 uv run alembic upgrade head
 uv run uvicorn src.main:app --reload --port 8000
 
@@ -85,7 +96,7 @@ pnpm install
 pnpm dev
 ```
 
-前端默认访问 `http://localhost:3000`，后端 OpenAPI 默认访问 `http://localhost:8000/docs`。数据库 head 为 `0012_chunk_embeddings`。
+前端默认访问 `http://localhost:3000`，后端 OpenAPI 默认访问 `http://localhost:8000/docs`。数据库 head 为 `0012_chunk_embeddings`。普通产品运行和演示统一使用 `APP_ENV=demo`、`esg_agent_demo` 与 demo runtime；`esg_agent` 保留给开发和长期回归，其中允许存在 regeneration 技术记录。不得通过删除 `esg_agent` 中的历史记录改善首页展示。
 
 ## 验证命令
 

@@ -147,6 +147,15 @@ pnpm dev
 在启动 demo 后端、执行 Alembic 或运行重置工具前，先在同一个 PowerShell 终端加载演示配置：
 
 ```powershell
+docker compose up -d postgres
+
+$demoDbExists = docker compose exec -T postgres `
+  psql -U esg_agent -d postgres -tAc `
+  "SELECT 1 FROM pg_database WHERE datname='esg_agent_demo'"
+if ($demoDbExists.Trim() -ne "1") {
+  docker compose exec -T postgres createdb -U esg_agent esg_agent_demo
+}
+
 $env:APP_ENV="demo"
 $env:DATABASE_URL="postgresql+psycopg://esg_agent:esg_agent@localhost:5432/esg_agent_demo"
 $env:UPLOAD_DIR="backend/data/runtime/demo/uploads"
@@ -263,7 +272,17 @@ cd backend
 uv run --no-sync python -c "from sqlalchemy.engine import make_url; from src.config.settings import get_settings; print(make_url(get_settings().database_url).database)"
 ```
 
-命令必须输出 `esg_agent_demo`。再访问 `http://localhost:8000/api/health`，应返回 `{"status":"ok"}`。任一结果不符时停止写入操作，检查启动终端中的环境变量。
+命令必须输出 `esg_agent_demo`。再检查后端运行环境身份和报告审计路由：
+
+```powershell
+$health = Invoke-RestMethod -Uri "http://localhost:8000/api/health"
+$openapi = Invoke-RestMethod -Uri "http://localhost:8000/openapi.json"
+
+$health.app_env
+$openapi.paths.PSObject.Properties.Name -contains "/api/reports/{report_id}/audit"
+```
+
+普通产品预期依次输出 `demo` 和 `True`。任一结果不符时停止产品验收，不继续上传、复核或生成输出；先重启当前代码对应的后端并检查启动终端中的环境变量。
 
 前端演示主路径：
 
@@ -274,7 +293,7 @@ uv run --no-sync python -c "from sqlalchemy.engine import make_url; from src.con
 5. 在报告总览核对 577 项范围、披露结论、复核优先级、适用性和规则/AI/人工分层。
 6. 验证完整核查范围首页、末页、上下文项和复核详情跳转。
 7. 在三栏工作台验证队列、规则/AI/人工三层、PDF 页图、缩放、翻页、重试和追加式人工快照。
-8. 创建并更新整改任务，确认关联 requirement、负责人、截止日期和变更说明。
+8. 创建并更新整改任务，确认关联核查项、负责人、截止日期和变更说明。
 9. 生成草稿并检查输出门禁、复核范围和版本信息；页面不得声称单文件下载或完整 `actions_xlsx` 已实现。
 10. 再次上传相同 PDF，分别验证“查看已有结果”和“重新上传并分析”两条路径。
 
