@@ -541,6 +541,17 @@ class VersionedExportService:
             self.repository.mark_export_superseded(previous.export_id)
         if not is_draft:
             self.repository.update_report_status(report_id, ReportStatus.FORMALLY_EXPORTED)
+        self.repository.create_audit_event(
+            run.run_id,
+            "draft_export_created" if is_draft else "formal_export_created",
+            {
+                "report_id": report_id,
+                "export_id": export.export_id,
+                "version_number": export.version_number,
+                "formats": list(formats),
+                "supersedes_export_id": export.supersedes_export_id,
+            },
+        )
         return export
 
     def _complete_scope_rows(

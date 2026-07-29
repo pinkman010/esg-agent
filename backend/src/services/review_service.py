@@ -131,6 +131,18 @@ class ReviewService:
         if not commit:
             risk_kwargs["commit"] = False
         calculate_and_store_risk(self.repository, effective, **risk_kwargs)
+        self.repository.create_audit_event(
+            assessment.run_id,
+            "review_snapshot_created",
+            {
+                "report_id": assessment.report_id,
+                "assessment_id": assessment.assessment_id,
+                "snapshot_id": saved.snapshot_id,
+                "operation_type": saved.operation_type.value,
+                "sequence": saved.sequence,
+            },
+            commit=commit,
+        )
         if advance_report_status:
             if operation_type is ReviewOperation.REOPEN:
                 if commit:
