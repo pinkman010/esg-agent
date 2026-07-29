@@ -115,7 +115,6 @@ export function AssessmentTable({ reportId }: { reportId: string }) {
               <option value="">全部</option>
               <option value="disclosed">已披露</option>
               <option value="partially_disclosed">部分披露</option>
-              <option value="omitted_with_reason">有理由省略</option>
               <option value="not_disclosed">未披露</option>
               <option value="unknown">待确认</option>
             </select>
@@ -145,7 +144,8 @@ export function AssessmentTable({ reportId }: { reportId: string }) {
             <select className="mt-1 block h-10 w-full rounded-md border border-border px-2 text-sm" value={filters.applicabilityStatus ?? ""} onChange={(event) => updateFilter("applicabilityStatus", event.target.value ? event.target.value as ReportScopeFilters["applicabilityStatus"] : undefined)}>
               <option value="">全部</option>
               <option value="applicable">适用</option>
-              <option value="not_applicable">不适用</option>
+              <option value="not_applicable_claimed">不适用（企业声明）</option>
+              <option value="not_applicable_confirmed">不适用（人工确认）</option>
               <option value="undetermined">待判定</option>
             </select>
           </label>

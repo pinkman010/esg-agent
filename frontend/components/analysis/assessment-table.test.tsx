@@ -133,6 +133,21 @@ describe("AssessmentTable", () => {
     renderWithQuery(<AssessmentTable reportId="report-1" />);
     await screen.findByRole("link", { name: "GRI 2-1-a" });
 
+    expect(Array.from((screen.getByLabelText("当前结论") as HTMLSelectElement).options).map((option) => option.value)).toEqual([
+      "",
+      "disclosed",
+      "partially_disclosed",
+      "not_disclosed",
+      "unknown",
+    ]);
+    expect(Array.from((screen.getByLabelText("适用性") as HTMLSelectElement).options).map((option) => option.value)).toEqual([
+      "",
+      "applicable",
+      "not_applicable_claimed",
+      "not_applicable_confirmed",
+      "undetermined",
+    ]);
+
     fireEvent.click(screen.getByRole("button", { name: "下一页" }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(
       expect.stringContaining("page=2"),

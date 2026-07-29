@@ -60,6 +60,8 @@ def update_action(action_id: str, request: UpdateActionRequest, session: Session
     if existing is None:
         raise HTTPException(status_code=404, detail="action not found")
     updates = request.model_dump(exclude_unset=True)
+    if updates.get("status") is None:
+        updates.pop("status", None)
     requested_status = updates.get("status")
     if (
         "status" in updates

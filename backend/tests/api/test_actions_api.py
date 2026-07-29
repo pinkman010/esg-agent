@@ -67,6 +67,10 @@ async def test_actions_api_updates_modifies_and_clears_due_date(
         f"/api/actions/{action_id}",
         json={"owner_name": "李四"},
     )
+    legacy_null_status = await api_client.patch(
+        f"/api/actions/{action_id}",
+        json={"status": None, "owner_name": "王五"},
+    )
     cleared = await api_client.patch(
         f"/api/actions/{action_id}",
         json={"due_date": None},
@@ -78,6 +82,10 @@ async def test_actions_api_updates_modifies_and_clears_due_date(
     assert modified.json()["due_date"] == "2026-09-01"
     assert owner_only.json()["due_date"] == "2026-09-01"
     assert owner_only.json()["owner_name"] == "李四"
+    assert legacy_null_status.status_code == 200
+    assert legacy_null_status.json()["status"] == "open"
+    assert legacy_null_status.json()["owner_name"] == "王五"
+    assert legacy_null_status.json()["due_date"] == "2026-09-01"
     assert cleared.json()["due_date"] is None
     assert listed.json()[0]["due_date"] is None
 

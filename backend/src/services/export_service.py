@@ -621,4 +621,6 @@ def _xlsx_value(value):
         return ""
     if isinstance(value, (list, dict)):
         return json.dumps(value, ensure_ascii=False)
+    if isinstance(value, str) and value.startswith(("=", "+", "-", "@")):
+        return f"'{value}"
     return value

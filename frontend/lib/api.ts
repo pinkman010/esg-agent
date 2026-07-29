@@ -25,6 +25,7 @@ import type {
   ReviewDecision,
   ReviewDecisionRequest,
 } from "./types";
+import type { operations } from "./generated/api-types";
 
 const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000").replace(/\/$/, "");
 
@@ -115,13 +116,17 @@ export function saveApplicabilityBatch(reportId: string, payload: ApplicabilityB
 export function listReportAssessments(reportId: string, page = 1, pageSize = 50): Promise<AssessmentListResponse> {
   return request<AssessmentListResponse>(`/api/reports/${reportId}/assessments?page=${page}&page_size=${pageSize}`);
 }
+type ReportScopeQuery = NonNullable<
+  operations["list_scope_items_api_reports__report_id__scope_items_get"]["parameters"]["query"]
+>;
+
 export type ReportScopeFilters = {
   query?: string;
-  unitStatus?: "assessed" | "context_incorporated";
-  effectiveVerdict?: "disclosed" | "partially_disclosed" | "omitted_with_reason" | "not_disclosed" | "unknown";
-  reviewPriority?: "high" | "medium" | "low";
-  reviewStatus?: "pending_review" | "reviewed_approved" | "reviewed_modified" | "evidence_invalidated" | "reopened";
-  applicabilityStatus?: "applicable" | "not_applicable" | "undetermined";
+  unitStatus?: NonNullable<ReportScopeQuery["unit_status"]>;
+  effectiveVerdict?: NonNullable<ReportScopeQuery["effective_verdict"]>;
+  reviewPriority?: NonNullable<ReportScopeQuery["review_priority"]>;
+  reviewStatus?: NonNullable<ReportScopeQuery["review_status"]>;
+  applicabilityStatus?: NonNullable<ReportScopeQuery["applicability_status"]>;
 };
 export function listReportScopeItems(
   reportId: string,

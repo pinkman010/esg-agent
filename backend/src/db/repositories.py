@@ -629,7 +629,7 @@ class Repository:
             raise ValueError(
                 f"unsupported action field: {sorted(unknown_fields)[0]}"
             )
-        if "status" in updates:
+        if "status" in updates and updates["status"] is not None:
             status = updates["status"]
             record.status = (
                 status.value

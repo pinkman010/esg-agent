@@ -358,12 +358,12 @@ async def test_versioned_export_generates_actions_xlsx(
         "/api/reports/report-1/actions",
         json={
             "assessment_id": "assessment-1",
-            "title": "补充能源披露",
+            "title": '=HYPERLINK("https://example.invalid","打开")',
             "priority": "high",
-            "owner_name": "张三",
+            "owner_name": "+1+1",
             "due_date": "2026-08-31",
-            "recommendation_text": "补充报告期能源消费数据。",
-            "created_by": "李四",
+            "recommendation_text": "@SUM(1,1)",
+            "created_by": "-1+1",
         },
     )
 
@@ -406,17 +406,19 @@ async def test_versioned_export_generates_actions_xlsx(
     assert row[:7] == [
         created.json()["action_id"],
         "GRI 302-1-a",
-        "补充能源披露",
+        '\'=HYPERLINK("https://example.invalid","打开")',
         "high",
         "open",
-        "张三",
+        "'+1+1",
         "2026-08-31",
     ]
     assert row[7:10] == [
-        "补充报告期能源消费数据。",
+        "'@SUM(1,1)",
         None,
-        "李四",
+        "'-1+1",
     ]
+    for column in ("C", "F", "H", "J"):
+        assert sheet[f"{column}3"].data_type == "s"
     workbook.close()
 
 
