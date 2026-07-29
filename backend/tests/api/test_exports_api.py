@@ -689,6 +689,102 @@ async def test_risk_v2_1_formal_export_blocks_incomplete_analysis(api_client, ap
     }
 
 
+def seed_partial_retry_v3_export_scope(session):
+    repo = Repository(session)
+    repo.create_report(
+        Report(
+            report_id="report-v3-partial-export",
+            original_filename="envision.pdf",
+            stored_path="x",
+            file_hash="hash-v3-partial-export",
+            status=ReportStatus.PARTIALLY_COMPLETED,
+        )
+    )
+    backend_root = Path(__file__).resolve().parents[2]
+    requirements = GRIAdapter(
+        backend_root / "data/manifests/gri_requirement_checklist_v3.json"
+    ).load_requirements()
+    failed_requirement_id = requirements[-1].requirement_id
+    repo.create_run(
+        AnalysisRun(
+            run_id="run-v3-partial-parent",
+            report_id="report-v3-partial-export",
+            status=RunStatus.PARTIALLY_COMPLETED,
+            risk_rule_version="risk-v2.1",
+            eligible_requirement_count=499,
+            succeeded_requirement_count=498,
+            failed_requirement_count=1,
+            failure_summary={
+                "failed_requirement_ids": [failed_requirement_id],
+            },
+        )
+    )
+    session.add_all(
+        [
+            AssessmentRecord(
+                assessment_id=f"assessment-v3-partial-{index:03d}",
+                run_id="run-v3-partial-parent",
+                report_id="report-v3-partial-export",
+                standard_id=requirement.standard_id,
+                standard_version=requirement.standard_version,
+                disclosure_id=requirement.disclosure_id,
+                requirement_id=requirement.requirement_id,
+                verdict="unknown",
+                rationale="待核实",
+                missing_items=[],
+                model_called=False,
+                review_status="needs_manual_review",
+            )
+            for index, requirement in enumerate(requirements[:-1], start=1)
+        ]
+    )
+    session.commit()
+    repo.create_run(
+        AnalysisRun(
+            run_id="run-v3-partial-retry",
+            report_id="report-v3-partial-export",
+            status=RunStatus.PARTIALLY_COMPLETED,
+            parent_run_id="run-v3-partial-parent",
+            risk_rule_version="risk-v2.1",
+            eligible_requirement_count=1,
+            succeeded_requirement_count=0,
+            failed_requirement_count=1,
+            failure_summary={
+                "retry_requirement_ids": [failed_requirement_id],
+                "failed_requirement_ids": [failed_requirement_id],
+            },
+        )
+    )
+
+
+async def test_v3_retry_export_uses_effective_lineage_and_blocks_formal(
+    api_client,
+    api_session,
+):
+    seed_partial_retry_v3_export_scope(api_session)
+
+    draft = await api_client.post(
+        "/api/reports/report-v3-partial-export/exports/draft",
+        json={"formats": ["assessment_xlsx"], "created_by": "张三"},
+    )
+    formal = await api_client.post(
+        "/api/reports/report-v3-partial-export/exports/formal",
+        json={"formats": ["assessment_xlsx"], "created_by": "张三"},
+    )
+
+    assert draft.status_code == 200
+    review_scope = draft.json()["review_scope"]
+    assert review_scope["eligible_requirement_total"] == 499
+    assert review_scope["standard_unit_total"] == 577
+    assert review_scope["analysis_incomplete_total"] == 1
+    assert review_scope["high_priority_total"] == 499
+    assert formal.status_code == 409
+    assert formal.json()["detail"] == {
+        "code": "analysis_incomplete",
+        "remaining": 1,
+    }
+
+
 def seed_complete_v3_export_scope(session):
     repo = Repository(session)
     repo.create_report(

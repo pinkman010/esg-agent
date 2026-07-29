@@ -552,6 +552,115 @@ async def test_scope_items_exposes_complete_577_unit_range_without_fake_context_
     assert dashboard.json()["standard_unit_count"] == 577
 
 
+def seed_partial_retry_scope(session):
+    repo = Repository(session)
+    repo.create_report(
+        Report(
+            report_id="report-partial-retry",
+            original_filename="partial.pdf",
+            stored_path="x",
+            file_hash="hash-partial-retry",
+            status=ReportStatus.PARTIALLY_COMPLETED,
+        )
+    )
+    backend_root = Path(__file__).resolve().parents[2]
+    requirements = GRIAdapter(
+        backend_root / "data/manifests/gri_requirement_checklist_v3.json"
+    ).load_requirements()
+    failed_requirement_id = requirements[-1].requirement_id
+    repo.create_run(
+        AnalysisRun(
+            run_id="run-partial-parent",
+            report_id="report-partial-retry",
+            status=RunStatus.PARTIALLY_COMPLETED,
+            eligible_requirement_count=499,
+            succeeded_requirement_count=498,
+            failed_requirement_count=1,
+            failure_summary={
+                "failed_requirement_ids": [failed_requirement_id],
+            },
+        )
+    )
+    session.add_all(
+        [
+            AssessmentRecord(
+                assessment_id=f"assessment-partial-{index:03d}",
+                run_id="run-partial-parent",
+                report_id="report-partial-retry",
+                standard_id=requirement.standard_id,
+                standard_version=requirement.standard_version,
+                disclosure_id=requirement.disclosure_id,
+                requirement_id=requirement.requirement_id,
+                verdict="unknown",
+                rationale="待核实",
+                missing_items=[],
+                model_called=False,
+                review_status="needs_manual_review",
+            )
+            for index, requirement in enumerate(requirements[:-1], start=1)
+        ]
+    )
+    session.commit()
+    repo.create_run(
+        AnalysisRun(
+            run_id="run-partial-retry",
+            report_id="report-partial-retry",
+            status=RunStatus.PARTIALLY_COMPLETED,
+            parent_run_id="run-partial-parent",
+            eligible_requirement_count=1,
+            succeeded_requirement_count=0,
+            failed_requirement_count=1,
+            failure_summary={
+                "retry_requirement_ids": [failed_requirement_id],
+                "failed_requirement_ids": [failed_requirement_id],
+            },
+        )
+    )
+    return failed_requirement_id
+
+
+async def test_partial_retry_exposes_complete_scope_and_parent_assessments(
+    api_client,
+    api_session,
+):
+    failed_requirement_id = seed_partial_retry_scope(api_session)
+
+    scope = await api_client.get(
+        "/api/reports/report-partial-retry/scope-items",
+        params={"query": failed_requirement_id},
+    )
+    assessments = await api_client.get(
+        "/api/reports/report-partial-retry/assessments",
+        params={"page_size": 100},
+    )
+    review_queue = await api_client.get(
+        "/api/reports/report-partial-retry/review-queue",
+        params={"page_size": 100},
+    )
+    dashboard = await api_client.get(
+        "/api/reports/report-partial-retry/dashboard"
+    )
+
+    assert scope.status_code == 200
+    assert scope.json()["total"] == 1
+    failed = scope.json()["items"][0]
+    assert failed["requirement_id"] == failed_requirement_id
+    assert failed["analysis_status"] == "failed"
+    assert failed["source_run_id"] is None
+    assert failed["failure_code"] == "assessment_failed"
+    assert failed["assessment_id"] is None
+    assert failed["effective_verdict"] is None
+    assert assessments.status_code == 200
+    assert assessments.json()["total"] == 498
+    assert review_queue.status_code == 200
+    assert review_queue.json()["total"] == 498
+    assert dashboard.status_code == 200
+    assert dashboard.json()["run_id"] == "run-partial-retry"
+    assert dashboard.json()["verdict_counts"] == {"unknown": 498}
+    assert dashboard.json()["failed_requirement_count"] == 1
+    assert dashboard.json()["high_priority_total"] == 499
+
+
 async def test_scope_items_searches_ids_and_text_before_pagination(
     api_client,
     api_session,

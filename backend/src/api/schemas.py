@@ -132,6 +132,10 @@ class RequirementScopeItemResponse(BaseModel):
     review_status: str | None
     applicability_status: str | None = None
     source_pdf_pages: list[int]
+    analysis_status: Literal["succeeded", "failed", "not_generated"] | None
+    source_run_id: str | None
+    failure_code: str | None
+    failure_message: str | None
 
 
 class RequirementScopeListResponse(BaseModel):

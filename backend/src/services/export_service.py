@@ -15,6 +15,7 @@ from src.db.repositories import Repository, new_id
 from src.domain.enums import ReportStatus, RiskLevel
 from src.domain.models import ExportVersion, ImprovementAction
 from src.services.analysis_runner import GRI_REQUIREMENTS_PATH
+from src.services.effective_run_view_service import EffectiveRunViewService
 from src.services.presentation_localization import localize_missing_items, localize_rationale
 from src.services.requirement_scope_service import RequirementScopeService
 from src.standards.gri import GRIAdapter
@@ -165,9 +166,22 @@ def resolve_export_file(
 
 
 def assessments_rows(repository: Repository, run_id: str) -> list[dict]:
+    return assessment_rows_from_assessments(
+        repository,
+        repository.list_assessments_by_run(run_id),
+    )
+
+
+def assessment_rows_from_assessments(
+    repository: Repository,
+    assessments: list,
+) -> list[dict]:
     rows = []
-    for assessment in repository.list_assessments_by_run(run_id):
-        task = repository.get_disclosure_task(run_id, assessment.requirement_id)
+    for assessment in assessments:
+        task = repository.get_disclosure_task(
+            assessment.run_id,
+            assessment.requirement_id,
+        )
         ai_suggestion = repository.get_latest_ai_suggestion(assessment.assessment_id)
         first_evidence = assessment.evidence[0] if assessment.evidence else None
         source_pdf_page = first_evidence.source_pdf_page if first_evidence else None
@@ -318,7 +332,37 @@ class VersionedExportService:
         run = self.repository.latest_run_for_report(report_id)
         if run is None:
             raise ValueError("report has no analysis run")
-        assessments = self.repository.list_assessments_by_run(run.run_id)
+        adapter = GRIAdapter(GRI_REQUIREMENTS_PATH)
+        scope_summary = adapter.get_scope_summary()
+        effective_view_service = EffectiveRunViewService(self.repository)
+        uses_complete_scope = (
+            effective_view_service.lineage_contains_eligible_count(
+                latest_run=run,
+                eligible_count=scope_summary["independent_assessment_count"],
+            )
+        )
+        effective_incomplete_total = 0
+        if uses_complete_scope:
+            independent_ids = {
+                requirement.requirement_id
+                for requirement in adapter.load_requirements()
+            }
+            effective_view = effective_view_service.build(
+                report_id=report_id,
+                independent_requirement_ids=independent_ids,
+            )
+            assessments = [
+                effective.assessment
+                for effective in (
+                    effective_view.assessments_by_requirement.values()
+                )
+            ]
+            effective_incomplete_total = (
+                len(effective_view.failed_requirement_ids)
+                + len(effective_view.not_generated_requirement_ids)
+            )
+        else:
+            assessments = self.repository.list_assessments_by_run(run.run_id)
         ids = [item.assessment_id for item in assessments]
         risks = self.repository.latest_risks_for_assessments(ids)
         snapshots = self.repository.latest_snapshots_for_assessments(ids)
@@ -351,9 +395,16 @@ class VersionedExportService:
         ]
         uses_current_risk_rule = run.risk_rule_version == CURRENT_RISK_RULE_VERSION
         eligible_total = (
-            run.eligible_requirement_count if uses_current_risk_rule else len(assessments)
+            scope_summary["independent_assessment_count"]
+            if uses_complete_scope
+            else run.eligible_requirement_count
+            if uses_current_risk_rule
+            else len(assessments)
         )
         analysis_incomplete_total = (
+            effective_incomplete_total
+            if uses_complete_scope
+            else
             max(
                 run.failed_requirement_count,
                 eligible_total - run.succeeded_requirement_count,
@@ -363,19 +414,19 @@ class VersionedExportService:
             if uses_current_risk_rule
             else run.failed_requirement_count
         )
-        adapter = GRIAdapter(GRI_REQUIREMENTS_PATH)
-        scope_summary = adapter.get_scope_summary()
-        uses_complete_scope = (
-            run.eligible_requirement_count
-            == scope_summary["independent_assessment_count"]
-            or len(assessments) == scope_summary["independent_assessment_count"]
-        )
         standard_unit_total = (
             scope_summary["standard_unit_count"]
             if uses_complete_scope
             else eligible_total
         )
-        high_priority_unresolved = len(high_ids) - len(reviewed_high)
+        high_priority_total = (
+            len(high_ids) + analysis_incomplete_total
+            if uses_complete_scope
+            else len(high_ids)
+        )
+        high_priority_unresolved = (
+            high_priority_total - len(reviewed_high)
+        )
         review_scope_statement = (
             f"当前仍有高复核优先级未处理 {high_priority_unresolved} 条、"
             f"分析失败或未生成结果 {analysis_incomplete_total} 条；"
@@ -407,7 +458,10 @@ class VersionedExportService:
         previous = None if is_draft else self.repository.latest_formal_export(report_id)
         destination = self.output_root / "exports" / report_id / export_id
         destination.mkdir(parents=True, exist_ok=True)
-        assessment_rows = assessments_rows(self.repository, run.run_id)
+        assessment_rows = assessment_rows_from_assessments(
+            self.repository,
+            assessments,
+        )
         rows = (
             self._complete_scope_rows(
                 report_id=report_id,
@@ -457,9 +511,9 @@ class VersionedExportService:
                 engine_version=run.engine_version,
                 risk_rule_version=run.risk_rule_version,
                 review_scope={
-                    "high_risk_total": len(high_ids),
+                    "high_risk_total": high_priority_total,
                     "high_risk_reviewed": len(reviewed_high),
-                    "high_priority_total": len(high_ids),
+                    "high_priority_total": high_priority_total,
                     "high_priority_reviewed": len(reviewed_high),
                     "high_priority_unresolved": high_priority_unresolved,
                     "medium_priority_total": len(medium_ids),
@@ -471,7 +525,11 @@ class VersionedExportService:
                     "standard_unit_total": standard_unit_total,
                     "human_reviewed_total": len(reviewed_ids.intersection(ids)),
                     "review_scope_statement": review_scope_statement,
-                    "system_pending_count": len(assessments) - len(snapshots),
+                    "system_pending_count": (
+                        eligible_total - len(snapshots)
+                        if uses_complete_scope
+                        else len(assessments) - len(snapshots)
+                    ),
                     "draft_label": is_draft,
                 },
                 file_manifest=manifest,

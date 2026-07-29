@@ -1,7 +1,13 @@
 import pytest
 
 from src.db.repositories import Repository
-from src.domain.enums import AssessmentVerdict, EvidenceSourceMethod, ReviewStatus, RunStatus
+from src.domain.enums import (
+    AssessmentVerdict,
+    EvidenceSourceMethod,
+    ReportStatus,
+    ReviewStatus,
+    RunStatus,
+)
 from src.domain.models import AnalysisRun, DisclosureAssessment, EvidenceItem, Report
 from src.services.risk_service import calculate_and_store_risk
 from src.services.review_service import ReviewService
@@ -183,6 +189,90 @@ async def test_batch_applicability_review_appends_auditable_snapshots(api_client
     assert first_history.json()[0]["is_batch_operation"] is True
     assert second_history.json()[0]["is_batch_operation"] is True
     assert first_history.json()[0]["batch_id"] == second_history.json()[0]["batch_id"]
+
+
+def seed_retry_parent_applicability_item(session):
+    repo = Repository(session)
+    repo.create_report(
+        Report(
+            report_id="report-retry-batch",
+            original_filename="report.pdf",
+            stored_path="x",
+            file_hash="hash-retry-batch",
+            status=ReportStatus.PARTIALLY_COMPLETED,
+        )
+    )
+    repo.create_run(
+        AnalysisRun(
+            run_id="run-retry-batch-a-parent",
+            report_id="report-retry-batch",
+            status=RunStatus.PARTIALLY_COMPLETED,
+            risk_rule_version="risk-v2.1",
+            eligible_requirement_count=499,
+            succeeded_requirement_count=1,
+            failed_requirement_count=498,
+            failure_summary={"failed_requirement_ids": ["GRI 2-1-b"]},
+        )
+    )
+    assessment = DisclosureAssessment(
+        assessment_id="assessment-retry-batch-parent",
+        run_id="run-retry-batch-a-parent",
+        report_id="report-retry-batch",
+        standard_id="GRI",
+        standard_version="2021",
+        disclosure_id="GRI 2-1",
+        requirement_id="GRI 2-1-a",
+        verdict=AssessmentVerdict.UNKNOWN,
+        rationale="No valid evidence was found.",
+        review_status=ReviewStatus.NEEDS_MANUAL_REVIEW,
+    )
+    repo.save_assessment(assessment)
+    calculate_and_store_risk(
+        repo,
+        assessment,
+        trigger_event="analysis_completed",
+        risk_rule_version="risk-v2.1",
+    )
+    repo.create_run(
+        AnalysisRun(
+            run_id="run-retry-batch-z-child",
+            report_id="report-retry-batch",
+            status=RunStatus.PARTIALLY_COMPLETED,
+            parent_run_id="run-retry-batch-a-parent",
+            risk_rule_version="risk-v2.1",
+            eligible_requirement_count=1,
+            failed_requirement_count=1,
+            failure_summary={
+                "retry_requirement_ids": ["GRI 2-1-b"],
+                "failed_requirement_ids": ["GRI 2-1-b"],
+            },
+        )
+    )
+
+
+async def test_batch_applicability_accepts_effective_parent_assessment_after_retry(
+    api_client,
+    api_session,
+):
+    seed_retry_parent_applicability_item(api_session)
+
+    response = await api_client.post(
+        "/api/reports/report-retry-batch/applicability-decisions",
+        json={
+            "assessment_ids": ["assessment-retry-batch-parent"],
+            "reviewed_applicability_status": "applicable",
+            "reviewer_name": "张三",
+            "reviewer_note": "确认该要求适用",
+        },
+    )
+    history = await api_client.get(
+        "/api/assessments/assessment-retry-batch-parent/review-history"
+    )
+
+    assert response.status_code == 200
+    assert response.json()["updated_count"] == 1
+    assert history.status_code == 200
+    assert history.json()[0]["reviewed_applicability_status"] == "applicable"
 
 
 async def test_batch_applicability_review_rejects_stale_page_before_any_write(

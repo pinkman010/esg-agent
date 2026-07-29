@@ -3,7 +3,10 @@ from typing import Any
 from src.db.repositories import Repository, new_id
 from src.domain.enums import ApplicabilityStatus, AssessmentVerdict, ReportStatus, ReviewOperation, RiskLevel
 from src.domain.models import ReviewChangeEvent, ReviewSnapshot
+from src.services.analysis_runner import GRI_REQUIREMENTS_PATH
+from src.services.effective_run_view_service import EffectiveRunViewService
 from src.services.risk_service import calculate_and_store_risk
+from src.standards.gri import GRIAdapter
 
 
 class ReviewService:
@@ -184,6 +187,26 @@ class ReviewService:
         run = self.repository.latest_run_for_report(report_id)
         if run is None:
             raise LookupError("report has no analysis run")
+        effective_view_service = EffectiveRunViewService(self.repository)
+        effective_assessment_ids: set[str] | None = None
+        if effective_view_service.lineage_contains_eligible_count(
+            latest_run=run,
+            eligible_count=499,
+        ):
+            adapter = GRIAdapter(GRI_REQUIREMENTS_PATH)
+            effective_view = effective_view_service.build(
+                report_id=report_id,
+                independent_requirement_ids={
+                    requirement.requirement_id
+                    for requirement in adapter.load_requirements()
+                },
+            )
+            effective_assessment_ids = {
+                effective.assessment.assessment_id
+                for effective in (
+                    effective_view.assessments_by_requirement.values()
+                )
+            }
 
         assessments = []
         for assessment_id in assessment_ids:
@@ -191,7 +214,11 @@ class ReviewService:
             if (
                 assessment is None
                 or assessment.report_id != report_id
-                or assessment.run_id != run.run_id
+                or (
+                    assessment.assessment_id not in effective_assessment_ids
+                    if effective_assessment_ids is not None
+                    else assessment.run_id != run.run_id
+                )
             ):
                 raise ValueError(
                     f"assessment is not in the latest report run: {assessment_id}"
@@ -251,7 +278,36 @@ class ReviewService:
         *,
         commit: bool = True,
     ) -> None:
-        assessments = self.repository.list_assessments_by_run(run_id)
+        latest_run = self.repository.latest_run_for_report(report_id)
+        effective_view_service = EffectiveRunViewService(self.repository)
+        if (
+            latest_run is not None
+            and effective_view_service.lineage_contains_eligible_count(
+                latest_run=latest_run,
+                eligible_count=499,
+            )
+        ):
+            adapter = GRIAdapter(GRI_REQUIREMENTS_PATH)
+            effective_view = effective_view_service.build(
+                report_id=report_id,
+                independent_requirement_ids={
+                    requirement.requirement_id
+                    for requirement in adapter.load_requirements()
+                },
+            )
+            if (
+                effective_view.failed_requirement_ids
+                or effective_view.not_generated_requirement_ids
+            ):
+                return
+            assessments = [
+                effective.assessment
+                for effective in (
+                    effective_view.assessments_by_requirement.values()
+                )
+            ]
+        else:
+            assessments = self.repository.list_assessments_by_run(run_id)
         assessment_ids = [item.assessment_id for item in assessments]
         risks = self.repository.latest_risks_for_assessments(assessment_ids)
         snapshots = self.repository.latest_snapshots_for_assessments(assessment_ids)

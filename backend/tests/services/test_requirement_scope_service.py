@@ -7,18 +7,30 @@ from src.standards.gri import GRIAdapter
 
 
 class FakeRepository:
-    def __init__(self, assessments, *, include_run=True):
+    def __init__(
+        self,
+        assessments,
+        *,
+        include_run=True,
+        failure_summary=None,
+    ):
         self.assessments = assessments
         self.include_run = include_run
+        self.run = AnalysisRun(
+            run_id="run-scope",
+            report_id="report-scope",
+            status=RunStatus.COMPLETED,
+            failure_summary=failure_summary or {},
+        )
 
     def latest_run_for_report(self, report_id):
         if not self.include_run:
             return None
-        return AnalysisRun(
-            run_id="run-scope",
-            report_id=report_id,
-            status=RunStatus.COMPLETED,
-        )
+        assert report_id == self.run.report_id
+        return self.run
+
+    def get_run(self, run_id):
+        return self.run if run_id == self.run.run_id else None
 
     def list_assessments_by_run(self, run_id):
         assert run_id == "run-scope"
@@ -74,8 +86,12 @@ def test_scope_service_merges_499_assessments_into_577_standard_units():
     assert len(context) == 78
     assert all(item["assessment_id"] for item in assessed)
     assert all(item["effective_verdict"] == "unknown" for item in assessed)
+    assert all(item["analysis_status"] == "succeeded" for item in assessed)
+    assert all(item["source_run_id"] == "run-scope" for item in assessed)
     assert all(item["assessment_id"] is None for item in context)
     assert all(item["effective_verdict"] is None for item in context)
+    assert all(item["analysis_status"] is None for item in context)
+    assert all(item["source_run_id"] is None for item in context)
     assert all(item["review_priority"] is None for item in context)
     assert all(item["review_status"] is None for item in context)
     assert all(item["applicability_status"] is None for item in context)
@@ -95,19 +111,35 @@ def test_scope_service_without_run_returns_structure_without_fake_assessments():
 
     assert len(items) == 577
     assert all(item["assessment_id"] is None for item in items)
+    assert sum(item["analysis_status"] == "not_generated" for item in items) == 499
+    assert sum(item["analysis_status"] is None for item in items) == 78
 
 
-def test_scope_service_rejects_run_assessment_count_mismatch():
+def test_scope_service_returns_complete_range_for_partial_run():
     module = importlib.import_module("src.services.requirement_scope_service")
     adapter = _adapter()
+    assessments = _assessments(adapter)[:-1]
+    failed_requirement_id = adapter.load_requirements()[-1].requirement_id
     service = module.RequirementScopeService(
-        FakeRepository(_assessments(adapter)[:-1]),
+        FakeRepository(
+            assessments,
+            failure_summary={
+                "failed_requirement_ids": [failed_requirement_id],
+            },
+        ),
         adapter,
     )
 
-    try:
-        service.list_items("report-scope")
-    except ValueError as exc:
-        assert "499 independent assessments" in str(exc)
-    else:
-        raise AssertionError("scope mismatch should fail explicitly")
+    items = service.list_items("report-scope")
+
+    assert len(items) == 577
+    failed = next(
+        item for item in items if item["requirement_id"] == failed_requirement_id
+    )
+    assert failed["unit_status"] == "assessed"
+    assert failed["analysis_status"] == "failed"
+    assert failed["failure_code"] == "assessment_failed"
+    assert failed["failure_message"] == "该核查项分析失败，可通过失败重试恢复。"
+    assert failed["assessment_id"] is None
+    assert failed["effective_verdict"] is None
+    assert failed["source_run_id"] is None
