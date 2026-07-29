@@ -90,6 +90,7 @@ backend/data/runtime/exports/*
 .superpowers/
 .agents/
 .playwright-mcp/
+.worktrees/
 
 # 项目临时文件
 tmp/
