@@ -332,3 +332,97 @@ async def test_product_closure_from_upload_to_formal_export(api_client, api_sess
     assert current_snapshot.model_dump(
         mode="json"
     ) == baseline_snapshot.model_dump(mode="json")
+
+    reopened = await api_client.post(
+        "/api/assessments/assessment-e2e/review-decisions",
+        json={
+            "operation_type": "reopen",
+            "reviewer_name": "王五",
+            "reason_code": "post_export_correction",
+            "reviewer_note": "正式输出后发现需要重新核实证据。",
+            "expected_previous_snapshot_id": reviewed.json()["snapshot_id"],
+        },
+    )
+    report_after_reopen = await api_client.get(f"/api/reports/{report_id}")
+    blocked_after_reopen = await api_client.post(
+        f"/api/reports/{report_id}/exports/formal",
+        json={"formats": ["assessment_xlsx"], "created_by": "王五"},
+    )
+    corrected = await api_client.post(
+        "/api/assessments/assessment-e2e/review-decisions",
+        json={
+            "operation_type": "modify",
+            "reviewer_name": "王五",
+            "reason_code": "post_export_correction_completed",
+            "reviewer_note": "重新核实后完成纠正。",
+            "reviewed_verdict": "partially_disclosed",
+            "rationale": "人工重新核实后确认部分披露。",
+            "missing_items": ["仍需补充法定名称出处"],
+            "expected_previous_snapshot_id": reopened.json()["snapshot_id"],
+        },
+    )
+    second_formal = await api_client.post(
+        f"/api/reports/{report_id}/exports/formal",
+        json={
+            "formats": [
+                "assessment_xlsx",
+                "actions_xlsx",
+                "management_pdf",
+                "print_html",
+            ],
+            "created_by": "王五",
+        },
+    )
+    versions = await api_client.get(f"/api/reports/{report_id}/exports")
+    history = await api_client.get(
+        "/api/assessments/assessment-e2e/review-history"
+    )
+    first_formal_downloads = []
+    for item in formal.json()["file_manifest"]:
+        response = await api_client.get(
+            f"/api/exports/{formal.json()['export_id']}"
+            f"/files/{item['file_id']}"
+        )
+        first_formal_downloads.append((item, response))
+    second_formal_downloads = []
+    for item in second_formal.json()["file_manifest"]:
+        response = await api_client.get(
+            f"/api/exports/{second_formal.json()['export_id']}"
+            f"/files/{item['file_id']}"
+        )
+        second_formal_downloads.append((item, response))
+
+    assert reopened.status_code == 200
+    assert report_after_reopen.json()["status"] == "reopened"
+    assert blocked_after_reopen.status_code == 409
+    assert blocked_after_reopen.json()["detail"]["code"] == (
+        "high_risk_review_incomplete"
+    )
+    assert corrected.status_code == 200
+    assert second_formal.status_code == 200
+    assert second_formal.json()["version_number"] == 2
+    assert second_formal.json()["supersedes_export_id"] == formal.json()[
+        "export_id"
+    ]
+    formal_versions = {
+        item["version_number"]: item
+        for item in versions.json()
+        if not item["is_draft"]
+    }
+    assert formal_versions[1]["status"] == "superseded"
+    assert formal_versions[2]["status"] == "formal"
+    assert len(history.json()) == 3
+    first_snapshot = next(
+        item
+        for item in history.json()
+        if item["snapshot_id"] == reviewed.json()["snapshot_id"]
+    )
+    assert first_snapshot == reviewed.json()
+    assert {
+        item["operation_type"]
+        for item in history.json()
+    } == {"modify", "reopen"}
+    for item, response in first_formal_downloads + second_formal_downloads:
+        assert response.status_code == 200
+        assert len(response.content) == item["size"]
+        assert sha256(response.content).hexdigest() == item["sha256"]
