@@ -12,6 +12,28 @@ describe("ReportAuditTimeline", () => {
     const fetchMock = vi.fn(() => Promise.resolve(new Response(JSON.stringify({
       items: [
         {
+          audit_event_id: 5,
+          run_id: "run-2",
+          event_type: "formal_export_created",
+          payload: {
+            export_id: "export-2",
+            version_number: 1,
+            supersedes_export_id: null,
+          },
+          created_at: "2026-07-29T05:00:00Z",
+        },
+        {
+          audit_event_id: 4,
+          run_id: "run-2",
+          event_type: "review_snapshot_created",
+          payload: {
+            snapshot_id: "snapshot-1",
+            assessment_id: "assessment-1",
+            operation_type: "approve",
+          },
+          created_at: "2026-07-29T04:00:00Z",
+        },
+        {
           audit_event_id: 3,
           run_id: "run-2",
           event_type: "analysis_retry_created",
@@ -32,7 +54,7 @@ describe("ReportAuditTimeline", () => {
           created_at: "2026-07-29T02:00:00Z",
         },
       ],
-      total: 2,
+      total: 4,
       offset: 0,
       limit: 20,
     }), {
@@ -47,6 +69,12 @@ describe("ReportAuditTimeline", () => {
 
     expect(await screen.findByText("失败项目重跑已创建")).toBeInTheDocument();
     expect(screen.getByText("分析执行失败")).toBeInTheDocument();
+    expect(screen.getByText("人工复核快照已保存")).toBeInTheDocument();
+    expect(screen.getByText("正式输出已生成")).toBeInTheDocument();
+    expect(screen.getByText("快照")).toBeInTheDocument();
+    expect(screen.getByText("操作类型")).toBeInTheDocument();
+    expect(screen.getByText("版本号")).toBeInTheDocument();
+    expect(screen.getByText("替代的输出版本")).toBeInTheDocument();
     expect(screen.getByText("重跑项目数")).toBeInTheDocument();
     expect(screen.getByText("2")).toBeInTheDocument();
     expect(screen.getByText("GRI 2-1-a")).toBeInTheDocument();
