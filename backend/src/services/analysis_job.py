@@ -1,16 +1,40 @@
 import logging
+import re
 
 from src.config.settings import get_settings
 from src.db.repositories import Repository
 from src.db.session import SessionLocal
-from src.domain.enums import ReportStatus, RunStatus
+from src.domain.enums import RunStatus
 from src.domain.models import AnalysisStageEvent
-from src.services.analysis_runner import execute_analysis
+from src.services.analysis_runner import (
+    execute_analysis,
+    resolve_effective_report_status,
+)
 
 
 logger = logging.getLogger(__name__)
 
 INTERRUPTED_ANALYSIS_REASON = "分析服务重启，任务已中断"
+_WINDOWS_PATH = re.compile(r"(?i)\b[a-z]:\\[^\s]+")
+_CONNECTION_URL = re.compile(
+    r"(?i)\b(?:postgresql|postgres|mysql|mariadb|mongodb|redis)://[^\s]+"
+)
+_BEARER_TOKEN = re.compile(r"(?i)authorization:\s*bearer\s+[^\s]+")
+_NAMED_SECRET = re.compile(
+    r"(?i)\b(?:api[_-]?key|access[_-]?token|secret)\s*[:=]\s*[^\s]+"
+)
+_MAX_SAFE_ERROR_LENGTH = 500
+
+
+def safe_analysis_error(error_message: str) -> str:
+    message = " ".join(str(error_message).split())
+    message = _WINDOWS_PATH.sub("[path redacted]", message)
+    message = _CONNECTION_URL.sub("[connection redacted]", message)
+    message = _BEARER_TOKEN.sub("Authorization: Bearer [redacted]", message)
+    message = _NAMED_SECRET.sub("[secret redacted]", message)
+    if len(message) > _MAX_SAFE_ERROR_LENGTH:
+        return message[: _MAX_SAFE_ERROR_LENGTH - 3] + "..."
+    return message
 
 
 def _persist_analysis_failure(
@@ -20,7 +44,30 @@ def _persist_analysis_failure(
     run_id: str,
     error_message: str,
     audit_event_type: str = "analysis_failed",
+    error_code: str = "analysis_execution_failed",
 ) -> None:
+    safe_error_message = safe_analysis_error(error_message)
+    run = repository.get_run(run_id)
+    if run is None:
+        raise ValueError(f"run not found: {run_id}")
+    failure_summary = dict(run.failure_summary)
+    retry_ids = failure_summary.get("retry_requirement_ids", [])
+    if (
+        isinstance(retry_ids, list)
+        and retry_ids
+        and not failure_summary.get("failed_requirement_ids")
+    ):
+        failure_summary["failed_requirement_ids"] = retry_ids
+    failure_summary["error_code"] = error_code
+    updated_run = repository.update_run_status(
+        run_id,
+        RunStatus.FAILED,
+        error_message=safe_error_message,
+        failed_requirement_count=len(
+            failure_summary.get("failed_requirement_ids", [])
+        ),
+        failure_summary=failure_summary,
+    )
     repository.append_analysis_stage_event(
         AnalysisStageEvent(
             run_id=run_id,
@@ -28,19 +75,25 @@ def _persist_analysis_failure(
             status="failed",
             completed_units=0,
             total_units=1,
-            error_summary=error_message,
+            error_summary=safe_error_message,
         )
     )
     repository.create_audit_event(
         run_id,
         audit_event_type,
-        {"report_id": report_id, "error": error_message},
+        {
+            "report_id": report_id,
+            "error_code": error_code,
+            "error": safe_error_message,
+        },
     )
-    repository.update_report_status(report_id, ReportStatus.ANALYSIS_FAILED)
-    repository.update_run_status(
-        run_id,
-        RunStatus.FAILED,
-        error_message=error_message,
+    repository.update_report_status(
+        report_id,
+        resolve_effective_report_status(
+            repository,
+            report_id=report_id,
+            run_result=updated_run,
+        ),
     )
 
 
@@ -107,6 +160,7 @@ def recover_interrupted_analysis_runs() -> int:
                 run_id=run.run_id,
                 error_message=INTERRUPTED_ANALYSIS_REASON,
                 audit_event_type="analysis_interrupted_by_restart",
+                error_code="analysis_interrupted_by_restart",
             )
         if active_runs:
             logger.warning("recovered %d interrupted analysis run(s)", len(active_runs))

@@ -7,6 +7,7 @@ from src.domain.enums import ReportStatus, RunStatus
 from src.domain.models import AnalysisRun, Report
 from src.services.document_parser import DocumentParser
 from src.services.ai_assessment_service import AIAssessmentService
+from src.services.effective_run_view_service import EffectiveRunViewService
 from src.services.ocr import run_ocr_for_pages
 from src.standards.gri import GRIAdapter
 from src.workflows.single_report_workflow import SingleReportWorkflow
@@ -18,6 +19,46 @@ GRI_REQUIREMENTS_PATH = DATA_ROOT / "manifests" / "gri_requirement_checklist_v3.
 GRI_REQUIREMENT_PACK_PATH = DATA_ROOT / "manifests" / "gri_requirement_pack.json"
 ENVISION_2024_PROFILE_PATH = DATA_ROOT / "reports" / "profiles" / "envision_2024.json"
 GRI_REQUIREMENTS_LIMIT = None
+
+
+def resolve_effective_report_status(
+    repo: Repository,
+    *,
+    report_id: str,
+    run_result: AnalysisRun,
+    independent_requirement_ids: set[str] | None = None,
+) -> ReportStatus:
+    if independent_requirement_ids is None:
+        independent_requirement_ids = {
+            requirement.requirement_id
+            for requirement in GRIAdapter(GRI_REQUIREMENTS_PATH).load_requirements()
+        }
+    service = EffectiveRunViewService(repo)
+    latest_run = repo.latest_run_for_report(report_id)
+    if (
+        latest_run is not None
+        and service.lineage_contains_eligible_count(
+            latest_run=latest_run,
+            eligible_count=499,
+        )
+    ):
+        view = service.build(
+            report_id=report_id,
+            independent_requirement_ids=independent_requirement_ids,
+        )
+        if not (
+            view.failed_requirement_ids
+            or view.not_generated_requirement_ids
+        ):
+            return ReportStatus.ANALYSIS_COMPLETED
+        if view.assessments_by_requirement:
+            return ReportStatus.PARTIALLY_COMPLETED
+        return ReportStatus.ANALYSIS_FAILED
+    if run_result.status is RunStatus.COMPLETED:
+        return ReportStatus.ANALYSIS_COMPLETED
+    if run_result.status is RunStatus.PARTIALLY_COMPLETED:
+        return ReportStatus.PARTIALLY_COMPLETED
+    return ReportStatus.ANALYSIS_FAILED
 
 
 def execute_analysis(
@@ -85,11 +126,10 @@ def execute_analysis(
         run_id=run_id,
         requirement_ids=requirement_ids,
     )
-    if result.status is RunStatus.COMPLETED:
-        report_status = ReportStatus.ANALYSIS_COMPLETED
-    elif result.status is RunStatus.PARTIALLY_COMPLETED:
-        report_status = ReportStatus.PARTIALLY_COMPLETED
-    else:
-        report_status = ReportStatus.ANALYSIS_FAILED
+    report_status = resolve_effective_report_status(
+        repo,
+        report_id=report.report_id,
+        run_result=result,
+    )
     repo.update_report_status(report.report_id, report_status)
     return result

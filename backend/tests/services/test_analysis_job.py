@@ -5,8 +5,13 @@ from sqlalchemy.orm import sessionmaker
 
 from src.db.base import Base
 from src.db.repositories import Repository
-from src.domain.enums import ReportStatus, RunStatus
-from src.domain.models import AnalysisRun, Report
+from src.domain.enums import (
+    AssessmentVerdict,
+    ReportStatus,
+    ReviewStatus,
+    RunStatus,
+)
+from src.domain.models import AnalysisRun, DisclosureAssessment, Report
 from src.services import analysis_job
 from tests.database import make_test_engine, reset_database
 
@@ -102,6 +107,134 @@ def test_execute_analysis_job_persists_terminal_failure_in_its_own_session(
         assert result_stage.status == "failed"
         assert result_stage.error_summary == "job exploded"
         assert repo.count_audit_events("run-job") == 1
+    finally:
+        session.close()
+
+
+def test_retry_job_failure_preserves_effective_partial_report_status(
+    job_session_factory,
+    monkeypatch,
+):
+    session = job_session_factory()
+    try:
+        repo = Repository(session)
+        repo.create_report(
+            Report(
+                report_id="report-retry-job",
+                original_filename="report.pdf",
+                stored_path="backend/data/runtime/uploads/report.pdf",
+                file_hash="hash-retry-job",
+                status=ReportStatus.ANALYZING,
+            )
+        )
+        repo.create_run(
+            AnalysisRun(
+                run_id="run-retry-job-parent",
+                report_id="report-retry-job",
+                status=RunStatus.PARTIALLY_COMPLETED,
+                eligible_requirement_count=499,
+                succeeded_requirement_count=1,
+                failed_requirement_count=1,
+                failure_summary={"failed_requirement_ids": ["GRI 2-1-b"]},
+            )
+        )
+        repo.save_assessment(
+            DisclosureAssessment(
+                assessment_id="assessment-retry-job-parent",
+                run_id="run-retry-job-parent",
+                report_id="report-retry-job",
+                standard_id="GRI",
+                standard_version="2021",
+                disclosure_id="GRI 2-1",
+                requirement_id="GRI 2-1-a",
+                verdict=AssessmentVerdict.UNKNOWN,
+                rationale="No evidence.",
+                review_status=ReviewStatus.NEEDS_MANUAL_REVIEW,
+            )
+        )
+        repo.create_run(
+            AnalysisRun(
+                run_id="run-retry-job-z-child",
+                report_id="report-retry-job",
+                status=RunStatus.PENDING,
+                parent_run_id="run-retry-job-parent",
+                eligible_requirement_count=1,
+                failure_summary={
+                    "retry_requirement_ids": ["GRI 2-1-b"],
+                },
+            )
+        )
+    finally:
+        session.close()
+
+    monkeypatch.setattr(
+        analysis_job,
+        "execute_analysis",
+        lambda *args, **kwargs: (_ for _ in ()).throw(
+            RuntimeError("retry exploded")
+        ),
+    )
+
+    analysis_job.execute_analysis_job(
+        report_id="report-retry-job",
+        run_id="run-retry-job-z-child",
+        confirm_llm=False,
+        requirement_ids={"GRI 2-1-b"},
+    )
+
+    session = job_session_factory()
+    try:
+        repo = Repository(session)
+        child = repo.get_run("run-retry-job-z-child")
+        assert child.status is RunStatus.FAILED
+        assert child.failure_summary["failed_requirement_ids"] == ["GRI 2-1-b"]
+        assert child.failure_summary["error_code"] == "analysis_execution_failed"
+        assert (
+            repo.get_report("report-retry-job").status
+            is ReportStatus.PARTIALLY_COMPLETED
+        )
+    finally:
+        session.close()
+
+
+def test_analysis_job_sanitizes_paths_and_credentials_from_failure(
+    job_session_factory,
+    monkeypatch,
+):
+    _create_report_and_run(
+        job_session_factory,
+        report_id="report-safe-error",
+        run_id="run-safe-error",
+        report_status=ReportStatus.ANALYZING,
+        run_status=RunStatus.RUNNING,
+    )
+    monkeypatch.setattr(
+        analysis_job,
+        "execute_analysis",
+        lambda *args, **kwargs: (_ for _ in ()).throw(
+            RuntimeError(
+                "failed at C:\\private\\report.pdf "
+                "Authorization: Bearer secret-token"
+            )
+        ),
+    )
+
+    analysis_job.execute_analysis_job(
+        report_id="report-safe-error",
+        run_id="run-safe-error",
+        confirm_llm=False,
+    )
+
+    session = job_session_factory()
+    try:
+        repo = Repository(session)
+        run = repo.get_run("run-safe-error")
+        serialized = str(repo.list_audit_runs())
+        assert "C:\\private" not in run.error_message
+        assert "secret-token" not in run.error_message
+        assert "C:\\private" not in serialized
+        assert "secret-token" not in serialized
+        assert run.failure_summary["error_code"] == "analysis_execution_failed"
     finally:
         session.close()
 
