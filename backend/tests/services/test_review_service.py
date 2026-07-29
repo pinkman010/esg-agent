@@ -143,6 +143,30 @@ def test_review_service_recalculates_risk_v2_1_with_independent_applicability(se
     assert risk.risk_level.value == "low"
 
 
+def test_review_service_rolls_back_snapshot_risk_and_status_when_audit_fails(
+    service_context,
+    monkeypatch,
+):
+    service, repo = service_context
+
+    def fail_audit(*args, **kwargs):
+        raise RuntimeError("injected audit failure")
+
+    monkeypatch.setattr(repo, "create_audit_event", fail_audit)
+
+    with pytest.raises(RuntimeError, match="injected audit failure"):
+        service.record(
+            "assessment-1",
+            operation_type=ReviewOperation.APPROVE,
+            reviewer_name="张三",
+            reason_code="system_result_confirmed",
+        )
+
+    assert repo.list_review_snapshots("assessment-1") == []
+    assert repo.latest_risks_for_assessments(["assessment-1"]) == {}
+    assert repo.get_report("report-1").status is ReportStatus.UPLOADED
+
+
 def test_review_service_does_not_complete_report_with_retry_lineage_gaps(
     service_context,
 ):

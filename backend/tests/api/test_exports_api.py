@@ -15,6 +15,7 @@ from src.domain.enums import AISuggestionStatus, AssessmentVerdict, EvidenceSour
 from src.domain.models import AnalysisRun, DisclosureAssessment, DisclosureTask, EvidenceItem, Report, ReviewDecision
 from src.services.risk_service import calculate_and_store_risk
 from src.services.review_service import ReviewService
+from src.services.export_service import VersionedExportService
 from src.standards.gri import GRIAdapter
 
 pytestmark = pytest.mark.anyio
@@ -514,6 +515,49 @@ async def test_versioned_draft_and_formal_exports(api_client, api_session):
     first_formal = next(item for item in listed.json() if item["export_id"] == formal.json()["export_id"])
     assert first_formal["status"] == "superseded"
     assert Repository(api_session).get_report("report-1").status is ReportStatus.FORMALLY_EXPORTED
+
+
+async def test_versioned_export_rolls_back_database_and_files_when_audit_fails(
+    api_session,
+    tmp_path,
+    monkeypatch,
+):
+    seed_export_data(api_session)
+    repo = Repository(api_session)
+    ReviewService(repo).record(
+        "assessment-1",
+        operation_type=ReviewOperation.APPROVE,
+        reviewer_name="张三",
+        reason_code="system_result_confirmed",
+    )
+    service = VersionedExportService(repo, tmp_path)
+    first = service.generate(
+        "report-1",
+        is_draft=False,
+        formats=["assessment_xlsx"],
+        created_by="张三",
+    )
+    export_root = tmp_path / "exports" / "report-1"
+    existing_directories = {path.name for path in export_root.iterdir()}
+
+    def fail_audit(*args, **kwargs):
+        raise RuntimeError("injected export audit failure")
+
+    monkeypatch.setattr(repo, "create_audit_event", fail_audit)
+
+    with pytest.raises(RuntimeError, match="injected export audit failure"):
+        service.generate(
+            "report-1",
+            is_draft=False,
+            formats=["assessment_xlsx"],
+            created_by="李四",
+        )
+
+    versions = repo.list_export_versions("report-1")
+    assert [item.export_id for item in versions] == [first.export_id]
+    assert versions[0].status == "formal"
+    assert repo.get_report("report-1").status is ReportStatus.FORMALLY_EXPORTED
+    assert {path.name for path in export_root.iterdir()} == existing_directories
 
 
 def seed_risk_v2_1_export_scope(session):

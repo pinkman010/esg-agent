@@ -2,6 +2,7 @@ import csv
 import html
 import io
 import json
+import shutil
 from dataclasses import dataclass
 from hashlib import sha256
 from pathlib import Path
@@ -499,8 +500,7 @@ class VersionedExportService:
             for item in formats
         ]
         digest = sha256("".join(item["sha256"] for item in manifest).encode()).hexdigest()
-        export = self.repository.save_export_version(
-            ExportVersion(
+        export_version = ExportVersion(
                 export_id=export_id,
                 report_id=report_id,
                 run_id=run.run_id,
@@ -536,22 +536,39 @@ class VersionedExportService:
                 supersedes_export_id=previous.export_id if previous else None,
                 created_by=created_by,
             )
-        )
-        if previous:
-            self.repository.mark_export_superseded(previous.export_id)
-        if not is_draft:
-            self.repository.update_report_status(report_id, ReportStatus.FORMALLY_EXPORTED)
-        self.repository.create_audit_event(
-            run.run_id,
-            "draft_export_created" if is_draft else "formal_export_created",
-            {
-                "report_id": report_id,
-                "export_id": export.export_id,
-                "version_number": export.version_number,
-                "formats": list(formats),
-                "supersedes_export_id": export.supersedes_export_id,
-            },
-        )
+        try:
+            export = self.repository.save_export_version(
+                export_version,
+                commit=False,
+            )
+            if previous:
+                self.repository.mark_export_superseded(
+                    previous.export_id,
+                    commit=False,
+                )
+            if not is_draft:
+                self.repository.update_report_status(
+                    report_id,
+                    ReportStatus.FORMALLY_EXPORTED,
+                    commit=False,
+                )
+            self.repository.create_audit_event(
+                run.run_id,
+                "draft_export_created" if is_draft else "formal_export_created",
+                {
+                    "report_id": report_id,
+                    "export_id": export.export_id,
+                    "version_number": export.version_number,
+                    "formats": list(formats),
+                    "supersedes_export_id": export.supersedes_export_id,
+                },
+                commit=False,
+            )
+            self.repository.session.commit()
+        except Exception:
+            self.repository.session.rollback()
+            shutil.rmtree(destination, ignore_errors=True)
+            raise
         return export
 
     def _complete_scope_rows(

@@ -100,67 +100,61 @@ class ReviewService:
             for field, value in values.items()
             if self._json_value(previous_values[field]) != self._json_value(value)
         ]
-        saved = (
-            self.repository.save_review_snapshot(snapshot, changes)
-            if commit
-            else self.repository.save_review_snapshot(
+        try:
+            saved = self.repository.save_review_snapshot(
                 snapshot,
                 changes,
                 commit=False,
             )
-        )
-        effective = assessment.model_copy(
-            update={
-                "verdict": values["reviewed_verdict"] or assessment.verdict,
-                "rationale": values["rationale"] or assessment.rationale,
-                "missing_items": values["missing_items"] if values["missing_items"] is not None else assessment.missing_items,
-                "evidence": [] if operation_type is ReviewOperation.INVALIDATE_EVIDENCE else assessment.evidence,
-            }
-        )
-        run = self.repository.get_run(assessment.run_id)
-        risk_rule_version = run.risk_rule_version if run else "risk-v1"
-        risk_kwargs = {
-            "trigger_event": f"review_{operation_type.value}",
-            "snapshot_id": saved.snapshot_id,
-            "risk_rule_version": risk_rule_version,
-            "applicability_status": values["reviewed_applicability_status"],
-            "evidence_invalidated": operation_type
-            is ReviewOperation.INVALIDATE_EVIDENCE,
-            "reopened": operation_type is ReviewOperation.REOPEN,
-        }
-        if not commit:
-            risk_kwargs["commit"] = False
-        calculate_and_store_risk(self.repository, effective, **risk_kwargs)
-        self.repository.create_audit_event(
-            assessment.run_id,
-            "review_snapshot_created",
-            {
-                "report_id": assessment.report_id,
-                "assessment_id": assessment.assessment_id,
-                "snapshot_id": saved.snapshot_id,
-                "operation_type": saved.operation_type.value,
-                "sequence": saved.sequence,
-            },
-            commit=commit,
-        )
-        if advance_report_status:
-            if operation_type is ReviewOperation.REOPEN:
-                if commit:
-                    self.repository.update_report_status(
-                        assessment.report_id,
-                        ReportStatus.REOPENED,
-                    )
-                else:
+            effective = assessment.model_copy(
+                update={
+                    "verdict": values["reviewed_verdict"] or assessment.verdict,
+                    "rationale": values["rationale"] or assessment.rationale,
+                    "missing_items": (
+                        values["missing_items"]
+                        if values["missing_items"] is not None
+                        else assessment.missing_items
+                    ),
+                    "evidence": (
+                        []
+                        if operation_type is ReviewOperation.INVALIDATE_EVIDENCE
+                        else assessment.evidence
+                    ),
+                }
+            )
+            run = self.repository.get_run(assessment.run_id)
+            risk_rule_version = run.risk_rule_version if run else "risk-v1"
+            calculate_and_store_risk(
+                self.repository,
+                effective,
+                trigger_event=f"review_{operation_type.value}",
+                snapshot_id=saved.snapshot_id,
+                risk_rule_version=risk_rule_version,
+                applicability_status=values["reviewed_applicability_status"],
+                evidence_invalidated=(
+                    operation_type is ReviewOperation.INVALIDATE_EVIDENCE
+                ),
+                reopened=operation_type is ReviewOperation.REOPEN,
+                commit=False,
+            )
+            self.repository.create_audit_event(
+                assessment.run_id,
+                "review_snapshot_created",
+                {
+                    "report_id": assessment.report_id,
+                    "assessment_id": assessment.assessment_id,
+                    "snapshot_id": saved.snapshot_id,
+                    "operation_type": saved.operation_type.value,
+                    "sequence": saved.sequence,
+                },
+                commit=False,
+            )
+            if advance_report_status:
+                if operation_type is ReviewOperation.REOPEN:
                     self.repository.update_report_status(
                         assessment.report_id,
                         ReportStatus.REOPENED,
                         commit=False,
-                    )
-            else:
-                if commit:
-                    self._advance_report_status(
-                        assessment.report_id,
-                        assessment.run_id,
                     )
                 else:
                     self._advance_report_status(
@@ -168,6 +162,12 @@ class ReviewService:
                         assessment.run_id,
                         commit=False,
                     )
+            if commit:
+                self.repository.session.commit()
+        except Exception:
+            if commit:
+                self.repository.session.rollback()
+            raise
         return saved
 
     def record_applicability_batch(

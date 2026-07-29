@@ -647,7 +647,12 @@ class Repository:
         self.session.refresh(record)
         return self._action_from_record(record)
 
-    def save_export_version(self, export: ExportVersion) -> ExportVersion:
+    def save_export_version(
+        self,
+        export: ExportVersion,
+        *,
+        commit: bool = True,
+    ) -> ExportVersion:
         record = ExportVersionRecord(
             export_id=export.export_id,
             report_id=export.report_id,
@@ -665,7 +670,10 @@ class Repository:
             created_by=export.created_by,
         )
         self.session.add(record)
-        self.session.commit()
+        if commit:
+            self.session.commit()
+        else:
+            self.session.flush()
         self.session.refresh(record)
         return self._export_from_record(record)
 
@@ -699,11 +707,19 @@ class Repository:
         )
         return self._export_from_record(record) if record else None
 
-    def mark_export_superseded(self, export_id: str) -> None:
+    def mark_export_superseded(
+        self,
+        export_id: str,
+        *,
+        commit: bool = True,
+    ) -> None:
         record = self.session.get(ExportVersionRecord, export_id)
         if record:
             record.status = "superseded"
-            self.session.commit()
+            if commit:
+                self.session.commit()
+            else:
+                self.session.flush()
 
     def save_assessment_risk(
         self,
