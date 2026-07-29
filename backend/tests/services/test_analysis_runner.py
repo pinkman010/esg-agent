@@ -1,5 +1,6 @@
 from src.domain.enums import AssessmentVerdict, ReportStatus, RunStatus
-from src.domain.models import AnalysisRun, DisclosureAssessment
+from src.config.settings import Settings
+from src.domain.models import AnalysisRun, DisclosureAssessment, Report
 from src.services import analysis_runner
 
 
@@ -114,3 +115,74 @@ def test_legacy_run_status_mapping_remains_unchanged():
     )
 
     assert status is ReportStatus.ANALYSIS_FAILED
+
+
+def test_execute_analysis_resolves_goldwind_profile_and_audits_selection(
+    monkeypatch,
+):
+    captured: dict[str, object] = {}
+
+    class FakeWorkflow:
+        def __init__(self, repository, *args, report_profile_path=None, **kwargs):
+            captured["report_profile_path"] = report_profile_path
+
+        def run(self, report_id, pdf_path, source_file_hash, **kwargs):
+            return AnalysisRun(
+                run_id=kwargs["run_id"],
+                report_id=report_id,
+                status=RunStatus.COMPLETED,
+                eligible_requirement_count=1,
+                succeeded_requirement_count=1,
+            )
+
+    class ExecuteRepository:
+        def __init__(self):
+            self.latest_run = None
+            self.audit_events = []
+            self.report_status = None
+
+        def create_audit_event(self, run_id, event_type, payload):
+            self.audit_events.append((run_id, event_type, payload))
+
+        def latest_run_for_report(self, report_id):
+            return self.latest_run
+
+        def update_report_status(self, report_id, status):
+            self.report_status = status
+
+    monkeypatch.setattr(analysis_runner, "SingleReportWorkflow", FakeWorkflow)
+    repository = ExecuteRepository()
+    report = Report(
+        report_id="report-goldwind",
+        original_filename="Goldwind 2024-zh.pdf",
+        stored_path="data/reports/Goldwind 2024-zh.pdf",
+        file_hash="hash-goldwind",
+        page_count=52,
+    )
+
+    result = analysis_runner.execute_analysis(
+        repository,
+        report,
+        Settings(app_env="test"),
+        run_id="run-goldwind",
+        confirm_llm=False,
+    )
+
+    assert result.status is RunStatus.COMPLETED
+    assert captured["report_profile_path"] == (
+        analysis_runner.DATA_ROOT
+        / "reports"
+        / "profiles"
+        / "goldwind_2024.json"
+    )
+    assert repository.audit_events == [
+        (
+            "run-goldwind",
+            "report_profile_resolved",
+            {
+                "report_id": "report-goldwind",
+                "matched": True,
+                "profile_id": "goldwind_2024",
+            },
+        )
+    ]

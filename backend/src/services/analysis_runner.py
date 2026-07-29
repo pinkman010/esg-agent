@@ -5,6 +5,8 @@ from src.config.settings import Settings
 from src.db.repositories import Repository
 from src.domain.enums import ReportStatus, RunStatus
 from src.domain.models import AnalysisRun, Report
+from src.reports.profile import load_report_profile
+from src.reports.profile_resolver import ReportProfileResolver
 from src.services.document_parser import DocumentParser
 from src.services.ai_assessment_service import AIAssessmentService
 from src.services.effective_run_view_service import EffectiveRunViewService
@@ -17,7 +19,7 @@ from src.tools.llm_client import LLMClient
 DATA_ROOT = Path(__file__).resolve().parents[2] / "data"
 GRI_REQUIREMENTS_PATH = DATA_ROOT / "manifests" / "gri_requirement_checklist_v3.json"
 GRI_REQUIREMENT_PACK_PATH = DATA_ROOT / "manifests" / "gri_requirement_pack.json"
-ENVISION_2024_PROFILE_PATH = DATA_ROOT / "reports" / "profiles" / "envision_2024.json"
+REPORT_PROFILE_ROOT = DATA_ROOT / "reports" / "profiles"
 GRI_REQUIREMENTS_LIMIT = None
 
 
@@ -83,10 +85,25 @@ def execute_analysis(
             ocr_lang=settings.ocr_lang,
         )
 
-    profile_path = (
-        ENVISION_2024_PROFILE_PATH
-        if ENVISION_2024_PROFILE_PATH.exists() and Path(report.original_filename).name == "Envision Energy 2024-zh.pdf"
+    if report.page_count is None:
+        raise ValueError("report page count is required before analysis")
+    profile_path = ReportProfileResolver(REPORT_PROFILE_ROOT).resolve(
+        original_filename=report.original_filename,
+        page_count=report.page_count,
+    )
+    profile_id = (
+        load_report_profile(profile_path).report_id
+        if profile_path is not None
         else None
+    )
+    repo.create_audit_event(
+        run_id,
+        "report_profile_resolved",
+        {
+            "report_id": report.report_id,
+            "matched": profile_path is not None,
+            "profile_id": profile_id,
+        },
     )
     llm_client = LLMClient(
         model=settings.llm_model,
