@@ -221,3 +221,18 @@ class AuditRun(BaseModel):
     completed_at: datetime | None = None
     error_message: str | None = None
     events: list[AuditEvent]
+
+
+class ReportAuditEventResponse(BaseModel):
+    audit_event_id: int
+    run_id: str | None
+    event_type: str
+    payload: dict[str, Any]
+    created_at: datetime | None = None
+
+
+class ReportAuditListResponse(BaseModel):
+    items: list[ReportAuditEventResponse]
+    total: int
+    offset: int
+    limit: int

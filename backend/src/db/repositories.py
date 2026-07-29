@@ -806,6 +806,48 @@ class Repository:
 
     def count_audit_events(self, run_id: str) -> int:
         return len(self.session.scalars(select(AuditEventRecord).where(AuditEventRecord.run_id == run_id)).all())
+
+    def list_report_audit_events(
+        self,
+        report_id: str,
+        *,
+        event_type: str | None,
+        offset: int,
+        limit: int,
+    ) -> tuple[int, list[AuditEventRecord]]:
+        report_run_ids = select(AnalysisRunRecord.run_id).where(
+            AnalysisRunRecord.report_id == report_id
+        )
+        belongs_to_report = or_(
+            AuditEventRecord.run_id.in_(report_run_ids),
+            (
+                AuditEventRecord.run_id.is_(None)
+                & (
+                    AuditEventRecord.event_payload["report_id"].as_string()
+                    == report_id
+                )
+            ),
+        )
+        filters = [belongs_to_report]
+        if event_type is not None:
+            filters.append(AuditEventRecord.event_type == event_type)
+        total = self.session.scalar(
+            select(func.count())
+            .select_from(AuditEventRecord)
+            .where(*filters)
+        )
+        records = self.session.scalars(
+            select(AuditEventRecord)
+            .where(*filters)
+            .order_by(
+                AuditEventRecord.created_at.desc(),
+                AuditEventRecord.audit_event_id.desc(),
+            )
+            .offset(offset)
+            .limit(limit)
+        ).all()
+        return int(total or 0), list(records)
+
     def list_audit_runs(self) -> list[dict]:
         rows = self.session.execute(
             select(AnalysisRunRecord, ReportRecord)

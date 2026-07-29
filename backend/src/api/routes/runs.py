@@ -1,5 +1,5 @@
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from src.db.repositories import Repository
@@ -13,7 +13,7 @@ router = APIRouter(prefix="/api/runs", tags=["runs"])
 
 
 class RetryFailedRequest(BaseModel):
-    reason: str
+    reason: str = Field(min_length=1, max_length=500)
 
 
 def dump_model(model):
@@ -94,6 +94,17 @@ def retry_failed(
     if report is None:
         raise HTTPException(status_code=404, detail="report not found")
     requirement_ids = set(run.failure_summary["retry_requirement_ids"])
+    repo.create_audit_event(
+        run.run_id,
+        "analysis_retry_created",
+        {
+            "report_id": report.report_id,
+            "parent_run_id": run_id,
+            "retry_run_id": run.run_id,
+            "retry_requirement_count": len(requirement_ids),
+            "reason": request.reason,
+        },
+    )
     repo.update_report_status(report.report_id, ReportStatus.ANALYZING)
     background_tasks.add_task(
         execute_analysis_job,

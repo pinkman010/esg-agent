@@ -139,6 +139,21 @@ async def test_retry_failed_creates_child_run_for_failed_requirements(api_client
     assert response.status_code == 200
     assert response.json()["parent_run_id"] == "run-1"
     assert response.json()["failure_summary"]["retry_requirement_ids"] == ["GRI 2-1-b"]
+    total, events = repo.list_report_audit_events(
+        "report-1",
+        event_type="analysis_retry_created",
+        offset=0,
+        limit=10,
+    )
+    assert total == 1
+    assert events[0].run_id == response.json()["run_id"]
+    assert events[0].event_payload == {
+        "report_id": "report-1",
+        "parent_run_id": "run-1",
+        "retry_run_id": response.json()["run_id"],
+        "retry_requirement_count": 1,
+        "reason": "修复后重跑",
+    }
 
 
 async def test_retry_failed_queues_background_job_with_identifiers_only(
