@@ -2,6 +2,7 @@ import csv
 import html
 import io
 import json
+from dataclasses import dataclass
 from hashlib import sha256
 from pathlib import Path
 
@@ -10,7 +11,7 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.cidfonts import UnicodeCIDFont
 from reportlab.pdfgen import canvas
 
-from src.db.repositories import Repository
+from src.db.repositories import Repository, new_id
 from src.domain.enums import ReportStatus, RiskLevel
 from src.domain.models import ExportVersion
 from src.services.analysis_runner import GRI_REQUIREMENTS_PATH
@@ -23,11 +24,126 @@ from src.domain.versions import CURRENT_RISK_RULE_VERSION
 AI_DISCLAIMER = "AI建议未经人工确认时不构成最终披露结论。"
 
 
+class ExportFileNotFoundError(FileNotFoundError):
+    pass
+
+
+class ExportFileIntegrityError(ValueError):
+    pass
+
+
+@dataclass(frozen=True)
+class ResolvedExportFile:
+    path: Path
+    filename: str
+    format: str
+    size: int
+    sha256: str
+
+
 class ExportGateError(PermissionError):
     def __init__(self, code: str, remaining: int):
         super().__init__(f"{code}: {remaining}")
         self.code = code
         self.remaining = remaining
+
+
+def _manifest_file_id(
+    export: ExportVersion,
+    index: int,
+    item: dict,
+) -> str:
+    existing = item.get("file_id")
+    if existing:
+        return str(existing)
+    identity = ":".join(
+        [
+            export.export_id,
+            str(index),
+            str(item.get("format") or ""),
+            str(item.get("sha256") or ""),
+        ]
+    )
+    return f"file-legacy-{sha256(identity.encode()).hexdigest()[:32]}"
+
+
+def _manifest_filename(item: dict) -> str:
+    source = (
+        item.get("filename")
+        or item.get("relative_path")
+        or item.get("path")
+        or item.get("format")
+        or "export-file"
+    )
+    return Path(str(source)).name
+
+
+def public_export_manifest(export: ExportVersion) -> list[dict[str, object]]:
+    return [
+        {
+            "file_id": _manifest_file_id(export, index, item),
+            "filename": _manifest_filename(item),
+            "format": str(item.get("format") or ""),
+            "size": int(item.get("size") or 0),
+            "sha256": str(item.get("sha256") or ""),
+        }
+        for index, item in enumerate(export.file_manifest)
+    ]
+
+
+def resolve_export_file(
+    export: ExportVersion,
+    file_id: str,
+    *,
+    output_root: Path,
+) -> ResolvedExportFile:
+    manifest_item = None
+    for index, item in enumerate(export.file_manifest):
+        if _manifest_file_id(export, index, item) == file_id:
+            manifest_item = item
+            break
+    if manifest_item is None:
+        raise ExportFileNotFoundError
+
+    stored_path = (
+        manifest_item.get("relative_path")
+        if "relative_path" in manifest_item
+        else manifest_item.get("path")
+    )
+    if not stored_path:
+        raise ExportFileNotFoundError
+
+    output_root = Path(output_root)
+    candidate = Path(str(stored_path))
+    if not candidate.is_absolute():
+        candidate = output_root / candidate
+    try:
+        allowed_root = (
+            output_root / "exports" / export.report_id / export.export_id
+        ).resolve(strict=True)
+        resolved_path = candidate.resolve(strict=True)
+    except (FileNotFoundError, OSError):
+        raise ExportFileNotFoundError from None
+    if not resolved_path.is_file() or not resolved_path.is_relative_to(
+        allowed_root
+    ):
+        raise ExportFileNotFoundError
+
+    content = resolved_path.read_bytes()
+    actual_size = len(content)
+    actual_sha256 = sha256(content).hexdigest()
+    if (
+        actual_size != int(manifest_item.get("size") or -1)
+        or actual_sha256 != str(manifest_item.get("sha256") or "")
+    ):
+        raise ExportFileIntegrityError
+    return ResolvedExportFile(
+        path=resolved_path,
+        filename=_manifest_filename(manifest_item),
+        format=str(manifest_item.get("format") or ""),
+        size=actual_size,
+        sha256=actual_sha256,
+    )
 
 
 def assessments_rows(repository: Repository, run_id: str) -> list[dict]:
@@ -385,7 +501,14 @@ class VersionedExportService:
         else:
             raise ValueError(f"unsupported export format: {format_name}")
         content = path.read_bytes()
-        return {"format": format_name, "path": path.as_posix(), "size": len(content), "sha256": sha256(content).hexdigest()}
+        return {
+            "file_id": new_id("file"),
+            "format": format_name,
+            "filename": path.name,
+            "relative_path": path.relative_to(self.output_root).as_posix(),
+            "size": len(content),
+            "sha256": sha256(content).hexdigest(),
+        }
 
 
 def _xlsx_value(value):

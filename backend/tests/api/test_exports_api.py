@@ -1,3 +1,5 @@
+from hashlib import sha256
+from io import BytesIO
 from pathlib import Path
 
 import pytest
@@ -5,7 +7,8 @@ from openpyxl import load_workbook
 
 from sqlalchemy import select
 
-from src.db.models import AssessmentRecord, AuditEventRecord
+from src.config.settings import get_settings
+from src.db.models import AssessmentRecord, AuditEventRecord, ExportVersionRecord
 from src.db.repositories import Repository
 from src.domain.ai_models import AIAssessmentSuggestion
 from src.domain.enums import AISuggestionStatus, AssessmentVerdict, EvidenceSourceMethod, PageQualityFlag, ReportStatus, ReviewOperation, ReviewStatus, RunStatus
@@ -15,6 +18,18 @@ from src.services.review_service import ReviewService
 from src.standards.gri import GRIAdapter
 
 pytestmark = pytest.mark.anyio
+
+
+async def download_export_file(api_client, export: dict, format_name: str):
+    item = next(
+        item
+        for item in export["file_manifest"]
+        if item["format"] == format_name
+    )
+    response = await api_client.get(
+        f"/api/exports/{export['export_id']}/files/{item['file_id']}"
+    )
+    return item, response
 
 
 def seed_export_data(session):
@@ -170,14 +185,168 @@ async def test_assessment_xlsx_places_ai_disclaimer_before_headers(
     )
 
     assert response.status_code == 200
-    path = response.json()["file_manifest"][0]["path"]
-    workbook = load_workbook(path, read_only=True)
+    body = response.json()
+    item = body["file_manifest"][0]
+    assert set(item) == {
+        "file_id",
+        "filename",
+        "format",
+        "size",
+        "sha256",
+    }
+    assert "path" not in response.text
+    assert "relative_path" not in response.text
+
+    item, download = await download_export_file(
+        api_client,
+        body,
+        "assessment_xlsx",
+    )
+    assert download.status_code == 200
+    assert download.headers["content-disposition"].startswith("attachment;")
+    assert len(download.content) == item["size"]
+    assert sha256(download.content).hexdigest() == item["sha256"]
+
+    workbook = load_workbook(BytesIO(download.content), read_only=True)
     sheet = workbook["GRI核查"]
     assert "AI建议未经人工确认时不构成最终披露结论" in sheet["A1"].value
     headers = [cell.value for cell in sheet[2]]
     assert "structure_status" in headers
     assert "ai_suggested_verdict" in headers
     workbook.close()
+    event = api_session.scalar(
+        select(AuditEventRecord)
+        .where(AuditEventRecord.event_type == "export_file_downloaded")
+        .order_by(AuditEventRecord.audit_event_id.desc())
+        .limit(1)
+    )
+    assert event.run_id == "run-1"
+    assert event.event_payload == {
+        "export_id": body["export_id"],
+        "file_id": item["file_id"],
+        "format": "assessment_xlsx",
+        "size": item["size"],
+        "sha256": item["sha256"],
+    }
+
+
+async def test_export_download_returns_stable_safe_errors(
+    api_client,
+    api_session,
+):
+    seed_export_data(api_session)
+    settings = get_settings()
+
+    missing_export = await api_client.get(
+        "/api/exports/export-missing/files/file-missing"
+    )
+    assert missing_export.status_code == 404
+    assert missing_export.json()["detail"] == "export_not_found"
+
+    generated = await api_client.post(
+        "/api/reports/report-1/exports/draft",
+        json={"formats": ["assessment_xlsx"], "created_by": "张三"},
+    )
+    body = generated.json()
+    item = body["file_manifest"][0]
+    record = api_session.get(ExportVersionRecord, body["export_id"])
+    original_manifest = [dict(entry) for entry in record.file_manifest]
+
+    unknown_file = await api_client.get(
+        f"/api/exports/{body['export_id']}/files/file-missing"
+    )
+    assert unknown_file.status_code == 404
+    assert unknown_file.json()["detail"] == "export_file_not_found"
+
+    outside_path = settings.derived_dir / "outside.xlsx"
+    outside_path.parent.mkdir(parents=True, exist_ok=True)
+    outside_path.write_bytes(b"outside")
+    outside_manifest = dict(original_manifest[0])
+    outside_manifest["relative_path"] = "outside.xlsx"
+    record.file_manifest = [outside_manifest]
+    api_session.commit()
+    outside = await api_client.get(
+        f"/api/exports/{body['export_id']}/files/{item['file_id']}"
+    )
+    assert outside.status_code == 404
+    assert outside.json()["detail"] == "export_file_not_found"
+    assert str(settings.derived_dir) not in outside.text
+
+    missing_manifest = dict(original_manifest[0])
+    missing_manifest["relative_path"] = (
+        f"exports/report-1/{body['export_id']}/missing.xlsx"
+    )
+    record.file_manifest = [missing_manifest]
+    api_session.commit()
+    missing = await api_client.get(
+        f"/api/exports/{body['export_id']}/files/{item['file_id']}"
+    )
+    assert missing.status_code == 404
+    assert missing.json()["detail"] == "export_file_not_found"
+    assert str(settings.derived_dir) not in missing.text
+
+    record.file_manifest = original_manifest
+    api_session.commit()
+    original_path = settings.derived_dir / original_manifest[0]["relative_path"]
+    original_path.write_bytes(original_path.read_bytes() + b"tampered")
+    mismatch = await api_client.get(
+        f"/api/exports/{body['export_id']}/files/{item['file_id']}"
+    )
+    assert mismatch.status_code == 409
+    assert mismatch.json()["detail"] == "export_file_integrity_mismatch"
+    assert str(settings.derived_dir) not in mismatch.text
+
+
+async def test_legacy_export_manifest_is_safely_projected_and_downloadable(
+    api_client,
+    api_session,
+):
+    seed_export_data(api_session)
+    settings = get_settings()
+    generated = await api_client.post(
+        "/api/reports/report-1/exports/draft",
+        json={"formats": ["assessment_xlsx"], "created_by": "张三"},
+    )
+    export_id = generated.json()["export_id"]
+    record = api_session.get(ExportVersionRecord, export_id)
+    internal = record.file_manifest[0]
+    legacy_path = settings.derived_dir / internal["relative_path"]
+    record.file_manifest = [
+        {
+            "format": internal["format"],
+            "path": legacy_path.as_posix(),
+            "size": legacy_path.stat().st_size,
+            "sha256": sha256(legacy_path.read_bytes()).hexdigest(),
+        }
+    ]
+    api_session.commit()
+
+    listed = await api_client.get("/api/reports/report-1/exports")
+    listed_export = next(
+        item for item in listed.json() if item["export_id"] == export_id
+    )
+    item = listed_export["file_manifest"][0]
+    assert set(item) == {
+        "file_id",
+        "filename",
+        "format",
+        "size",
+        "sha256",
+    }
+    assert "path" not in listed.text
+    assert "relative_path" not in listed.text
+
+    first = await api_client.get(
+        f"/api/exports/{export_id}/files/{item['file_id']}"
+    )
+    second_list = await api_client.get("/api/reports/report-1/exports")
+    second_export = next(
+        entry for entry in second_list.json()
+        if entry["export_id"] == export_id
+    )
+    assert second_export["file_manifest"][0]["file_id"] == item["file_id"]
+    assert first.status_code == 200
+    assert first.content == legacy_path.read_bytes()
 
 
 async def test_versioned_export_rejects_unimplemented_actions_xlsx(
@@ -193,6 +362,28 @@ async def test_versioned_export_rejects_unimplemented_actions_xlsx(
 
     assert response.status_code == 422
     assert response.json()["detail"] == "unsupported export format: actions_xlsx"
+
+
+@pytest.mark.parametrize(
+    "formats",
+    [
+        [],
+        ["assessment_xlsx", "assessment_xlsx"],
+    ],
+)
+async def test_versioned_export_rejects_empty_or_duplicate_formats(
+    api_client,
+    api_session,
+    formats,
+):
+    seed_export_data(api_session)
+
+    response = await api_client.post(
+        "/api/reports/report-1/exports/draft",
+        json={"formats": formats, "created_by": "张三"},
+    )
+
+    assert response.status_code == 422
 
 
 async def test_versioned_draft_and_formal_exports(api_client, api_session):
@@ -482,8 +673,12 @@ async def test_v3_export_covers_all_577_standard_units_without_fake_context_resu
     assert scope["human_reviewed_total"] == 0
     assert "全部 577 项均已人工确认" not in scope["review_scope_statement"]
 
-    files = {item["format"]: item["path"] for item in body["file_manifest"]}
-    workbook = load_workbook(files["assessment_xlsx"], read_only=True)
+    _, xlsx_download = await download_export_file(
+        api_client,
+        body,
+        "assessment_xlsx",
+    )
+    workbook = load_workbook(BytesIO(xlsx_download.content), read_only=True)
     sheet = workbook["GRI核查"]
     assert "AI建议未经人工确认时不构成最终披露结论" in sheet["A1"].value
     headers = [cell.value for cell in sheet[2]]
@@ -508,7 +703,12 @@ async def test_v3_export_covers_all_577_standard_units_without_fake_context_resu
     )
     workbook.close()
 
-    html = Path(files["print_html"]).read_text(encoding="utf-8")
+    _, html_download = await download_export_file(
+        api_client,
+        body,
+        "print_html",
+    )
+    html = html_download.text
     assert "共 577 项" in html
     assert html.count('data-unit-status="assessed"') == 499
     assert html.count('data-unit-status="context_incorporated"') == 78

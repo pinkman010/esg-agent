@@ -5,7 +5,7 @@ from pydantic import BaseModel
 
 from src.domain.enums import ReportStatus, RunStatus
 from src.domain.ai_models import AIAssessmentSuggestion
-from src.domain.models import AnalysisRun
+from src.domain.models import AnalysisRun, ExportVersion
 
 
 class ReportUploadResponse(BaseModel):
@@ -78,6 +78,18 @@ class AISummaryResponse(BaseModel):
 
 class AnalysisRunResponse(AnalysisRun):
     ai_summary: AISummaryResponse
+
+
+class ExportFileResponse(BaseModel):
+    file_id: str
+    filename: str
+    format: str
+    size: int
+    sha256: str
+
+
+class ExportVersionResponse(ExportVersion):
+    file_manifest: list[ExportFileResponse]
 
 
 class AssessmentListItem(BaseModel):

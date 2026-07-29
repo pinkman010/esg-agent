@@ -654,6 +654,10 @@ class Repository:
         ).all()
         return [self._export_from_record(record) for record in records]
 
+    def get_export_version(self, export_id: str) -> ExportVersion | None:
+        record = self.session.get(ExportVersionRecord, export_id)
+        return self._export_from_record(record) if record else None
+
     def next_formal_export_version(self, report_id: str) -> int:
         current = self.session.scalar(
             select(func.max(ExportVersionRecord.version_number)).where(
