@@ -11,6 +11,7 @@ import type {
   ExportVersion,
   AnalyzeResponse,
   AuditRun,
+  ReportAuditListResponse,
   ConfirmReportMetadataRequest,
   DemoResetResponse,
   DisclosureAssessment,
@@ -195,3 +196,18 @@ export function saveReviewDecision(runId: string, decision: ReviewDecisionReques
 export function exportAssessmentsJson(runId: string): Promise<Record<string, unknown>[]> { return request<Record<string, unknown>[]>(`/api/exports/runs/${runId}/assessments.json`); }
 export function exportReviewJson(runId: string): Promise<Record<string, unknown>[]> { return request<Record<string, unknown>[]>(`/api/exports/runs/${runId}/review.json`); }
 export function listAuditRuns(): Promise<AuditRun[]> { return request<AuditRun[]>("/api/audit/runs"); }
+export function listReportAudit(
+  reportId: string,
+  offset = 0,
+  limit = 20,
+  eventType?: string,
+): Promise<ReportAuditListResponse> {
+  const params = new URLSearchParams({
+    offset: String(offset),
+    limit: String(limit),
+  });
+  if (eventType) params.set("event_type", eventType);
+  return request<ReportAuditListResponse>(
+    `/api/reports/${encodeURIComponent(reportId)}/audit?${params.toString()}`,
+  );
+}

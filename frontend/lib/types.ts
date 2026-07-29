@@ -48,3 +48,5 @@ export type ReviewDecisionRequest = components["schemas"]["ReviewDecisionRequest
 export type ReviewDecision = components["schemas"]["ReviewDecision"];
 export type AuditEvent = components["schemas"]["AuditEvent"];
 export type AuditRun = components["schemas"]["AuditRun"];
+export type ReportAuditEventResponse = components["schemas"]["ReportAuditEventResponse"];
+export type ReportAuditListResponse = components["schemas"]["ReportAuditListResponse"];

@@ -1089,6 +1089,32 @@ export interface components {
             /** Events */
             events: components["schemas"]["AuditEvent"][];
         };
+        /** ReportAuditEventResponse */
+        ReportAuditEventResponse: {
+            /** Audit Event Id */
+            audit_event_id: number;
+            /** Run Id */
+            run_id: string | null;
+            /** Event Type */
+            event_type: string;
+            /** Payload */
+            payload: {
+                [key: string]: unknown;
+            };
+            /** Created At */
+            created_at?: string | null;
+        };
+        /** ReportAuditListResponse */
+        ReportAuditListResponse: {
+            /** Items */
+            items: components["schemas"]["ReportAuditEventResponse"][];
+            /** Total */
+            total: number;
+            /** Offset */
+            offset: number;
+            /** Limit */
+            limit: number;
+        };
         /** Body_upload_report_api_reports_upload_post */
         Body_upload_report_api_reports_upload_post: {
             /** File */

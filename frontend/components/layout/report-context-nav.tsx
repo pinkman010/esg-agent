@@ -7,6 +7,7 @@ import {
   FileOutput,
   FileText,
   Home,
+  History,
   LayoutDashboard,
   ListChecks,
 } from "lucide-react";
@@ -62,6 +63,7 @@ export function ReportContextNav() {
         { href: `/reports/${encodedReportId}/review`, label: "人工复核", icon: ClipboardCheck },
         { href: `/reports/${encodedReportId}/actions`, label: "整改任务", icon: FileCheck2 },
         { href: `/reports/${encodedReportId}/exports`, label: "输出版本", icon: FileOutput },
+        { href: `/reports/${encodedReportId}/audit`, label: "审计时间线", icon: History },
       ]
     : [];
 
