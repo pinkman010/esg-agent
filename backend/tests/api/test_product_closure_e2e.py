@@ -1,3 +1,4 @@
+from hashlib import sha256
 from io import BytesIO
 
 import pytest
@@ -8,8 +9,9 @@ from src.db.models import AssessmentRecord, AssessmentRiskRecord
 from src.db.repositories import Repository
 from src.domain.enums import AssessmentVerdict, EvidenceSourceMethod, ReviewStatus, RunStatus
 from src.domain.models import AnalysisStageEvent, DisclosureAssessment, EvidenceItem
-from src.services.analysis_runner import execute_analysis
+from src.services.analysis_runner import GRI_REQUIREMENTS_PATH, execute_analysis
 from src.services.risk_service import calculate_and_store_risk
+from src.standards.gri import GRIAdapter
 
 
 pytestmark = pytest.mark.anyio
@@ -39,14 +41,18 @@ async def test_product_closure_from_upload_to_formal_export(api_client, api_sess
             run_id=None,
             requirement_ids=None,
         ):
+            requirements = GRIAdapter(
+                GRI_REQUIREMENTS_PATH
+            ).load_requirements()
+            first_requirement = requirements[0]
             assessment = DisclosureAssessment(
                 assessment_id="assessment-e2e",
                 run_id=run_id,
                 report_id=report_id,
                 standard_id="GRI",
                 standard_version="2021",
-                disclosure_id="GRI 2-1",
-                requirement_id="GRI 2-1-a",
+                disclosure_id=first_requirement.disclosure_id,
+                requirement_id=first_requirement.requirement_id,
                 verdict=AssessmentVerdict.UNKNOWN,
                 rationale="证据质量需要人工确认。",
                 missing_items=["可直接核实的组织法定名称"],
@@ -83,15 +89,18 @@ async def test_product_closure_from_upload_to_formal_export(api_client, api_sess
                         report_id=report_id,
                         standard_id="GRI",
                         standard_version="2021",
-                        disclosure_id=f"GRI TEST-{index}",
-                        requirement_id=f"GRI TEST-{index}-a",
+                        disclosure_id=requirement.disclosure_id,
+                        requirement_id=requirement.requirement_id,
                         verdict="unknown",
                         rationale="未找到有效报告证据。",
                         missing_items=[],
                         model_called=False,
                         review_status="needs_manual_review",
                     )
-                    for index in range(2, 578)
+                    for index, requirement in enumerate(
+                        requirements[1:],
+                        start=2,
+                    )
                 ]
             )
             self.repository.session.flush()
@@ -107,7 +116,7 @@ async def test_product_closure_from_upload_to_formal_export(api_client, api_sess
                         applicability_status="undetermined",
                         trigger_event="analysis_completed",
                     )
-                    for index in range(2, 578)
+                    for index in range(2, len(requirements) + 1)
                 ]
             )
             self.repository.session.commit()
@@ -132,8 +141,8 @@ async def test_product_closure_from_upload_to_formal_export(api_client, api_sess
             return self.repository.update_run_status(
                 run_id,
                 RunStatus.COMPLETED,
-                eligible_requirement_count=577,
-                succeeded_requirement_count=577,
+                eligible_requirement_count=len(requirements),
+                succeeded_requirement_count=len(requirements),
             )
 
     monkeypatch.setattr("src.services.analysis_runner.SingleReportWorkflow", FakeWorkflow)
@@ -180,10 +189,6 @@ async def test_product_closure_from_upload_to_formal_export(api_client, api_sess
     stages = await api_client.get(f"/api/runs/{run_id}/stages")
     dashboard_before = await api_client.get(f"/api/reports/{report_id}/dashboard")
     queue = await api_client.get(f"/api/reports/{report_id}/review-queue")
-    draft = await api_client.post(
-        f"/api/reports/{report_id}/exports/draft",
-        json={"formats": ["assessment_xlsx", "management_pdf", "print_html"], "created_by": "张三"},
-    )
     blocked_formal = await api_client.post(
         f"/api/reports/{report_id}/exports/formal",
         json={"formats": ["assessment_xlsx"], "created_by": "张三"},
@@ -207,35 +212,123 @@ async def test_product_closure_from_upload_to_formal_export(api_client, api_sess
             "title": "补充组织法定名称",
             "priority": "high",
             "owner_name": "李四",
+            "due_date": "2026-08-15",
             "recommendation_text": "在报告主体章节补充法定名称。",
             "created_by": "张三",
         },
+    )
+    baseline_assessment = Repository(api_session).get_assessment(
+        "assessment-e2e"
+    )
+    baseline_risk = Repository(api_session).latest_risks_for_assessments(
+        ["assessment-e2e"]
+    )["assessment-e2e"]
+    baseline_snapshot = Repository(api_session).latest_review_snapshot(
+        "assessment-e2e"
+    )
+    searched = await api_client.get(
+        f"/api/reports/{report_id}/scope-items",
+        params={
+            "query": "LEGAL NAME",
+            "unit_status": "assessed",
+            "effective_verdict": "unknown",
+            "review_priority": "high",
+            "review_status": "reviewed_modified",
+        },
+    )
+    changed_due_date = await api_client.patch(
+        f"/api/actions/{action.json()['action_id']}",
+        json={"due_date": "2026-09-01"},
+    )
+    cleared_due_date = await api_client.patch(
+        f"/api/actions/{action.json()['action_id']}",
+        json={"due_date": None},
     )
     completed_action = await api_client.patch(
         f"/api/actions/{action.json()['action_id']}",
         json={"status": "completed", "completion_note": "已进入下一版报告修改清单"},
     )
+    draft = await api_client.post(
+        f"/api/reports/{report_id}/exports/draft",
+        json={
+            "formats": [
+                "assessment_xlsx",
+                "actions_xlsx",
+                "management_pdf",
+                "print_html",
+            ],
+            "created_by": "张三",
+        },
+    )
     formal = await api_client.post(
         f"/api/reports/{report_id}/exports/formal",
-        json={"formats": ["assessment_xlsx", "management_pdf", "print_html"], "created_by": "张三"},
+        json={
+            "formats": [
+                "assessment_xlsx",
+                "actions_xlsx",
+                "management_pdf",
+                "print_html",
+            ],
+            "created_by": "张三",
+        },
     )
     dashboard_after = await api_client.get(f"/api/reports/{report_id}/dashboard")
+    downloads = []
+    for item in draft.json()["file_manifest"]:
+        download = await api_client.get(
+            f"/api/exports/{draft.json()['export_id']}"
+            f"/files/{item['file_id']}"
+        )
+        downloads.append((item, download))
+
+    current_repo = Repository(api_session)
+    current_assessment = current_repo.get_assessment("assessment-e2e")
+    current_risk = current_repo.latest_risks_for_assessments(
+        ["assessment-e2e"]
+    )["assessment-e2e"]
+    current_snapshot = current_repo.latest_review_snapshot(
+        "assessment-e2e"
+    )
 
     assert upload.status_code == 200
     assert confirmed.json()["status"] == "ready_for_analysis"
     assert analyzed.json()["status"] == "pending"
     assert run.json()["status"] == "completed"
-    assert run.json()["eligible_requirement_count"] == 577
+    assert run.json()["eligible_requirement_count"] == 499
     assert len(stages.json()) == 7
     assert dashboard_before.json()["high_risk_total"] == 1
     assert dashboard_before.json()["high_risk_reviewed"] == 0
     assert queue.json()["total"] == 1
     assert draft.status_code == 200
     assert draft.json()["review_scope"]["draft_label"] is True
+    assert len(draft.json()["file_manifest"]) == 4
+    assert "path" not in draft.text
+    assert "relative_path" not in draft.text
     assert blocked_formal.status_code == 409
     assert reviewed.status_code == 200
+    assert searched.status_code == 200
+    assert searched.json()["total"] == 1
+    assert (
+        searched.json()["items"][0]["requirement_id"]
+        == "GRI 2-1-a"
+    )
+    assert changed_due_date.json()["due_date"] == "2026-09-01"
+    assert cleared_due_date.json()["due_date"] is None
     assert completed_action.json()["status"] == "completed"
     assert formal.status_code == 200
     assert formal.json()["version_number"] == 1
     assert formal.json()["review_scope"]["high_risk_reviewed"] == 1
     assert dashboard_after.json()["high_risk_reviewed"] == 1
+    assert len(downloads) == 4
+    for item, download in downloads:
+        assert download.status_code == 200
+        assert len(download.content) == item["size"]
+        assert sha256(download.content).hexdigest() == item["sha256"]
+    assert current_assessment.verdict == baseline_assessment.verdict
+    assert current_assessment.rationale == baseline_assessment.rationale
+    assert current_risk.model_dump(mode="json") == baseline_risk.model_dump(
+        mode="json"
+    )
+    assert current_snapshot.model_dump(
+        mode="json"
+    ) == baseline_snapshot.model_dump(mode="json")
