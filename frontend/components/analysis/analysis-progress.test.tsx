@@ -92,7 +92,7 @@ describe("AnalysisProgress", () => {
     expect(await screen.findByText("远景能源有限公司 · 2024 年")).toBeInTheDocument();
     expect(screen.getByText("Envision Energy 2024-zh.pdf")).toBeInTheDocument();
     expect(screen.getByText("分析进度 25%")).toBeInTheDocument();
-    expect(screen.getByText("当前阶段：GRI requirement 匹配")).toBeInTheDocument();
+    expect(screen.getByText("当前阶段：GRI 核查项匹配")).toBeInTheDocument();
     expect(screen.getByText("已完成 3/8 阶段")).toBeInTheDocument();
     expect(screen.queryByText(report.report_id)).not.toBeInTheDocument();
     expect(screen.queryByText(/577/)).not.toBeInTheDocument();
@@ -182,6 +182,10 @@ describe("AnalysisProgress", () => {
     expect(screen.getByRole("link", { name: "查看分析结果" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "重跑 1 条失败项" }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("/retry-failed"), expect.objectContaining({ method: "POST" })));
+    const retryCall = fetchMock.mock.calls.find((call) => String(call[0]).includes("/retry-failed"));
+    expect(JSON.parse(String(retryCall?.[1]?.body))).toEqual({
+      reason: "重跑失败核查项",
+    });
     await waitFor(() => expect(router.push).toHaveBeenCalledWith(`/reports/${report.report_id}/progress?runId=run-2`));
   });
 

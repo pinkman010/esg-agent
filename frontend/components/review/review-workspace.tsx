@@ -32,7 +32,7 @@ export function ReviewWorkspace({ reportId, reviewerName, initialAssessmentId }:
         ? "enabled"
         : "disabled";
 
-  let detailContent = <p className="p-6 text-sm text-muted-foreground">从左侧选择一个 requirement 开始复核。</p>;
+  let detailContent = <p className="p-6 text-sm text-muted-foreground">从左侧选择一个核查项开始复核。</p>;
   if (detail.isLoading) {
     detailContent = <p className="p-6 text-sm text-muted-foreground">正在加载核查详情...</p>;
   } else if (detail.isError) {

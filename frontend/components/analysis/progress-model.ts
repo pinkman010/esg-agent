@@ -4,7 +4,7 @@ export const analysisStages = [
   ["file_validation", "文件检查"],
   ["pdf_parsing", "PDF 解析"],
   ["report_structure", "报告结构识别"],
-  ["requirement_matching", "GRI requirement 匹配"],
+  ["requirement_matching", "GRI 核查项匹配"],
   ["evidence_assessment", "证据与结论生成"],
   ["risk_classification", "复核优先级计算"],
   ["ai_assistance", "AI 辅助分析"],

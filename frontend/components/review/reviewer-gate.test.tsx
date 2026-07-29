@@ -7,7 +7,16 @@ import { renderWithQuery } from "@/tests/render-with-query";
 describe("ReviewerGate", () => {
   beforeEach(() => localStorage.clear());
 
-  it("remembers the reviewer name for the next review session", () => {
+  it("starts blank even when an automated reviewer name remains in browser storage", () => {
+    localStorage.setItem("esg-agent-reviewer-name", "Chrome 自动验收");
+
+    renderWithQuery(<ReviewerGate reportId="report-1" />);
+
+    expect(screen.getByRole("textbox", { name: "复核人名称" })).toHaveValue("");
+    expect(screen.getByRole("button", { name: "进入复核工作台" })).toBeDisabled();
+  });
+
+  it("does not reuse the reviewer name across reports", () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
       items: [],
       page: 1,
@@ -19,10 +28,10 @@ describe("ReviewerGate", () => {
       target: { value: "张三" },
     });
     fireEvent.click(screen.getByRole("button", { name: "进入复核工作台" }));
-    expect(localStorage.getItem("esg-agent-reviewer-name")).toBe("张三");
 
     first.unmount();
     renderWithQuery(<ReviewerGate reportId="report-2" />);
-    expect(screen.getByRole("textbox", { name: "复核人名称" })).toHaveValue("张三");
+    expect(screen.getByRole("textbox", { name: "复核人名称" })).toHaveValue("");
+    expect(localStorage.getItem("esg-agent-reviewer-name")).toBeNull();
   });
 });

@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
-import { listReportAudit } from "@/lib/api";
+import { ApiError, listReportAudit } from "@/lib/api";
 
 const PAGE_SIZE = 20;
 const eventLabels: Record<string, string> = {
@@ -36,10 +36,10 @@ const payloadLabels: Record<string, string> = {
   parent_run_id: "原运行",
   retry_run_id: "重跑运行",
   retry_requirement_count: "重跑项目数",
-  failed_requirement_ids: "失败 Requirement",
+  failed_requirement_ids: "失败核查项",
   assessment_count: "核查项数",
   assessment_id: "核查项",
-  requirement_id: "Requirement",
+  requirement_id: "核查项",
   action_id: "整改任务",
   export_id: "输出版本",
   supersedes_export_id: "替代的输出版本",
@@ -77,6 +77,20 @@ function payloadValue(value: unknown): string {
   return String(value);
 }
 
+function auditErrorMessage(error: unknown): string {
+  if (
+    error instanceof ApiError
+    && error.status === 404
+    && typeof error.body === "object"
+    && error.body !== null
+    && "detail" in error.body
+    && error.body.detail === "Not Found"
+  ) {
+    return "当前服务版本与页面不一致，请重启后端服务后重试。";
+  }
+  return "报告审计记录加载失败，请稍后重试。";
+}
+
 export function ReportAuditTimeline({ reportId }: { reportId: string }) {
   const [offset, setOffset] = useState(0);
   const query = useQuery({
@@ -88,7 +102,7 @@ export function ReportAuditTimeline({ reportId }: { reportId: string }) {
     return <p className="rounded-xl border border-border bg-white p-5 text-sm text-muted-foreground">正在加载报告审计记录...</p>;
   }
   if (query.isError || !query.data) {
-    return <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-5 text-sm text-red-700">报告审计记录加载失败，请稍后重试。</p>;
+    return <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-5 text-sm text-red-700">{auditErrorMessage(query.error)}</p>;
   }
   const data = query.data;
   return (

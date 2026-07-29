@@ -42,7 +42,7 @@ export function AnalysisProgress({ reportId, runId }: { reportId: string; runId:
   }, [refetchStages, run, runId, stagesFetched]);
   const reportQuery = useQuery({ queryKey: ["report", reportId], queryFn: () => getReport(reportId) });
   const retryMutation = useMutation({
-    mutationFn: () => retryFailedRun(runId, "重跑失败 requirement"),
+    mutationFn: () => retryFailedRun(runId, "重跑失败核查项"),
     onSuccess: (newRun) => router.push(`/reports/${reportId}/progress?runId=${newRun.run_id}`),
   });
   const byCode = new Map((stagesQuery.data ?? []).map((stage) => [stage.stage_code, stage]));

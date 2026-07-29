@@ -48,6 +48,7 @@ describe("ReviewWorkspace", () => {
 
     renderWithQuery(<ReviewWorkspace reportId="report-1" reviewerName="张三" />);
     expect(screen.getByRole("button", { name: "队列" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByText("从左侧选择一个核查项开始复核。")).toBeInTheDocument();
     expect(screen.queryByTitle("PDF 证据")).not.toBeInTheDocument();
     fireEvent.click(await screen.findByText("GRI 2-1-a"));
 

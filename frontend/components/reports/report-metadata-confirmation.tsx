@@ -113,7 +113,7 @@ export function ReportMetadataConfirmation({ reportId }: { reportId: string }) {
           <span>
             <span className="block font-medium">启用 AI 辅助分析</span>
             <span className="mt-1 block leading-5 text-muted-foreground">
-              仅发送当前 requirement、有限证据片段、证据 ID、PDF 页码和必要报告信息。AI 建议不会覆盖规则结论或人工复核结果。
+              仅发送当前核查项、必要的报告信息和有限证据片段，包括证据编号及所在页码。AI 建议不会修改规则结果或人工复核记录。
             </span>
           </span>
         </label>

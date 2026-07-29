@@ -86,7 +86,9 @@ describe("ReportMetadataConfirmation", () => {
     const checkbox = await screen.findByRole("checkbox", { name: "启用 AI 辅助分析" });
     fireEvent.click(checkbox);
     expect(checkbox).toBeChecked();
-    expect(screen.getByText(/AI 建议不会覆盖规则结论或人工复核结果/)).toBeInTheDocument();
+    expect(screen.getByText(
+      "仅发送当前核查项、必要的报告信息和有限证据片段，包括证据编号及所在页码。AI 建议不会修改规则结果或人工复核记录。",
+    )).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "启动分析" }));
     await waitFor(() => expect(router.push).toHaveBeenCalledWith("/reports/report-1/progress?runId=run-ai"));

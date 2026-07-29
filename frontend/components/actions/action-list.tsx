@@ -60,7 +60,7 @@ function ActionItem({ action, reportId }: { action: ImprovementAction; reportId:
           <div className="flex flex-wrap items-center gap-2"><h2 className="text-sm font-semibold">{action.title}</h2><span className="text-xs text-muted-foreground">{statusLabels[action.status] ?? action.status}</span><span className="text-xs text-muted-foreground">{priorityLabels[action.priority] ?? action.priority}</span></div>
           {assessmentQuery.data?.requirement_id && (
             <p className="mt-2 text-xs font-medium text-emerald-800">
-              关联 requirement：{assessmentQuery.data.requirement_id}
+              关联核查项：{assessmentQuery.data.requirement_id}
             </p>
           )}
           <p className="mt-2 text-sm text-muted-foreground">{action.recommendation_text}</p>

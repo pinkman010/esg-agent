@@ -29,6 +29,7 @@ describe("ReportAuditTimeline", () => {
           payload: {
             snapshot_id: "snapshot-1",
             assessment_id: "assessment-1",
+            requirement_id: "GRI 2-2-a",
             operation_type: "approve",
           },
           created_at: "2026-07-29T04:00:00Z",
@@ -76,6 +77,8 @@ describe("ReportAuditTimeline", () => {
     expect(screen.getByText("版本号")).toBeInTheDocument();
     expect(screen.getByText("替代的输出版本")).toBeInTheDocument();
     expect(screen.getByText("重跑项目数")).toBeInTheDocument();
+    expect(screen.getByText("失败核查项")).toBeInTheDocument();
+    expect(screen.getAllByText("核查项")).toHaveLength(2);
     expect(screen.getByText("2")).toBeInTheDocument();
     expect(screen.getByText("GRI 2-1-a")).toBeInTheDocument();
     expect(view.container.querySelector("pre")).toBeNull();
@@ -113,5 +116,20 @@ describe("ReportAuditTimeline", () => {
       expect(url.searchParams.get("offset")).toBe("20");
     });
     expect(await screen.findByText("当前报告暂无审计事件")).toBeInTheDocument();
+  });
+
+  it("explains when the running backend does not expose the audit route", async () => {
+    vi.stubGlobal("fetch", vi.fn(() => Promise.resolve(new Response(JSON.stringify({
+      detail: "Not Found",
+    }), {
+      status: 404,
+      headers: { "content-type": "application/json" },
+    }))));
+
+    renderWithQuery(<ReportAuditTimeline reportId="report-1" />);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "当前服务版本与页面不一致，请重启后端服务后重试。",
+    );
   });
 });

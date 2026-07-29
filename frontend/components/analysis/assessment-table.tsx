@@ -88,7 +88,7 @@ export function AssessmentTable({ reportId }: { reportId: string }) {
             <input
               className="mt-1 block h-10 w-full rounded-md border border-border px-3 text-sm"
               maxLength={100}
-              placeholder="Requirement ID 或条款文本"
+              placeholder="核查项编号或条款内容"
               value={searchInput}
               onChange={(event) => setSearchInput(event.target.value)}
             />
@@ -166,7 +166,7 @@ export function AssessmentTable({ reportId }: { reportId: string }) {
         <table className="w-full min-w-[760px] text-left text-sm">
           <thead className="bg-slate-100 text-xs text-slate-600">
             <tr>
-              <th className="px-3 py-2">Requirement</th>
+              <th className="px-3 py-2">GRI 核查项</th>
               <th className="px-3 py-2">主题</th>
               <th className="px-3 py-2">当前结论</th>
               <th className="px-3 py-2">复核优先级</th>

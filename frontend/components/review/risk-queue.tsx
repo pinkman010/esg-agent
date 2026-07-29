@@ -71,7 +71,7 @@ export function RiskQueue({ reportId, onSelect, queueType = "priority", reviewer
           <p className="mt-1 text-xs leading-5 text-muted-foreground">
             {queueType === "priority"
               ? "处理证据异常、结论冲突和分析失败等需优先人工确认的项目。"
-              : "确认 requirement 是否适用于当前企业；该队列独立于复核优先级。"}
+              : "确认该核查项是否适用于当前企业；该队列独立于复核优先级。"}
           </p>
           {queueType === "priority"
             && typeof dashboardQuery.data?.high_priority_reviewed === "number"

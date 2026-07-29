@@ -15,7 +15,8 @@ describe("ActionList", () => {
     }));
     renderWithQuery(<ActionList reportId="report-1" />);
     expect(await screen.findByText("补充能源核算方法")).toBeInTheDocument();
-    expect(await screen.findByText("关联 requirement：GRI 305-1-a")).toBeInTheDocument();
+    expect(await screen.findByText("关联核查项：GRI 305-1-a")).toBeInTheDocument();
+    expect(screen.queryByText(/关联 requirement/)).not.toBeInTheDocument();
     expect(screen.queryByText("a-1")).not.toBeInTheDocument();
     expect(screen.getByText("张三")).toBeInTheDocument();
     expect(screen.getByText("2026-08-01")).toBeInTheDocument();

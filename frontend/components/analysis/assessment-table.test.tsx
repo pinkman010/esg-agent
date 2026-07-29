@@ -61,6 +61,12 @@ describe("AssessmentTable", () => {
     expect(within(assessmentRow!).getByText("待复核")).toBeInTheDocument();
     expect(screen.queryByText("pending_review")).not.toBeInTheDocument();
     expect(screen.getByText("完整 GRI 核查范围")).toBeInTheDocument();
+    expect(screen.getByLabelText("搜索核查范围")).toHaveAttribute(
+      "placeholder",
+      "核查项编号或条款内容",
+    );
+    expect(screen.getByRole("columnheader", { name: "GRI 核查项" })).toBeInTheDocument();
+    expect(screen.queryByText("Requirement")).not.toBeInTheDocument();
     expect(screen.getByText("共 577 项")).toBeInTheDocument();
     expect(screen.getByText("第 1–50 项，共 577 项")).toBeInTheDocument();
     expect(screen.getByText("低优先级")).toBeInTheDocument();

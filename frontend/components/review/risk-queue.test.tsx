@@ -94,6 +94,9 @@ describe("RiskQueue", () => {
 
     renderWithQuery(<RiskQueue reportId="report-1" queueType="applicability" reviewerName="张三" />);
     await screen.findByText("GRI 2-1-a");
+    expect(screen.getByText(
+      "确认该核查项是否适用于当前企业；该队列独立于复核优先级。",
+    )).toBeInTheDocument();
     fireEvent.change(screen.getByPlaceholderText("批量复核说明（必填）"), {
       target: { value: "本页项目均适用于企业" },
     });
