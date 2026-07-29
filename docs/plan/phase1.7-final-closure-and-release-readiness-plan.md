@@ -10,9 +10,9 @@
 
 **技术栈：** FastAPI、SQLAlchemy、PostgreSQL、Alembic、pytest、React/Next.js、TypeScript、Vitest、Playwright/Chrome、OpenAPI。
 
-**计划状态：** 已完成；等待用户批准集成、`v1.2` 标签和 push。
+**计划状态：** 已完成并发布；提交 `876859f` 已集成到 `main`，annotated tag `v1.2` 已与 `main` 原子推送到远端。
 
-**建议发布基线：** `v1.2`。标签、提交和推送必须在全部 gates 通过后另行批准。
+**正式发布基线：** `v1.2`（`876859f`）。发布时全部 gates 已通过，未使用 force push。
 
 ---
 
@@ -1266,12 +1266,12 @@ git diff --check
 git log --oneline --decorate -20
 ```
 
-**发布动作：**
+**发布动作执行结果：**
 
-- 不自动 push。
-- 不自动打 `v1.2` 标签。
-- 汇报 commit 列表、验证结果、未完成项和风险。
-- 用户批准后再执行 tag/push。
+- 用户批准后，将 Phase 1.7 以 fast-forward 集成到 `main`。
+- 创建 annotated tag `v1.2`，标签解析到 `876859f`。
+- `main` 与 `v1.2` 使用 atomic push 同步到远端，未使用 force push。
+- 已合并的本地功能分支和临时 worktree 已清理；发布后本地只保留 `main`。
 
 ---
 
@@ -1389,4 +1389,4 @@ git log --oneline --decorate -20
    - 任务 15—20。
    - 输出：OpenAPI、干净环境、全量 gates、Chrome、文档和独立复核。
 
-每批结束都运行目标测试并提交，但不 push。全部通过后统一向用户汇报，再决定 `v1.2` 标签和 push。
+每批结束均运行目标测试并提交，全部通过后统一汇报；用户随后批准并完成 `v1.2` 标签、`main`/标签原子推送和已合并分支清理。

@@ -593,6 +593,7 @@ uv run --no-sync python -m src.tools.evaluate_shadow_rag `
 
 ### 2026-07-29
 
+- Phase 1.7 经完整发布门禁复验后以 fast-forward 集成到 `main`，形成提交 `876859f`；annotated tag `v1.2` 与 `main` 原子推送到远端，未使用 force push。发布后本地只保留 `main`，已合并功能分支和临时 worktree 已清理。
 - 经批准执行 `docs/plan/phase1.7-final-closure-and-release-readiness-plan.md`，一次解冻完成运行谱系有效视图、577 项失败/未生成投影、报告审计、扫描 PDF 能力边界、通用 profile 解析、Goldwind 独立闭环和正式输出后纠正；没有新增 migration、表或外部服务依赖。
 - 有效视图从最新 run 沿 `parent_run_id` 合并同一报告结果，带循环、深度和跨报告防护。失败或未生成行不生成伪 verdict、evidence、risk、applicability 或人工状态；dashboard、scope、review、report status 和 formal export gate 使用同一有效语义。
 - 完全扫描且未启用实验 OCR 的 PDF 在 requirement 规则执行前返回 `unsupported_scanned_pdf`；数字文本与少量扫描页混合报告标记为 `supported_with_review`。本轮未运行 OCR/VLM，也未改变 OCR 实验路由。
