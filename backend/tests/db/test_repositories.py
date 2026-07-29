@@ -1,5 +1,5 @@
 import time
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 
 import pytest
 from sqlalchemy import func, inspect, select
@@ -13,6 +13,7 @@ from src.domain.ai_models import AIAssessmentSuggestion
 from src.domain.embedding_models import ChunkEmbedding
 from src.domain.enums import (
     AISuggestionStatus,
+    ActionPriority,
     ApplicabilityStatus,
     AssessmentVerdict,
     EvidenceSourceMethod,
@@ -32,6 +33,7 @@ from src.domain.models import (
     DisclosureTask,
     DocumentChunk,
     EvidenceItem,
+    ImprovementAction,
     PageExtraction,
     Recommendation,
     Report,
@@ -911,6 +913,68 @@ def test_repository_appends_and_queries_ai_suggestions_without_overwriting_histo
             repo.append_ai_suggestion(first)
     finally:
         session.rollback()
+        session.close()
+        reset_database(engine)
+        engine.dispose()
+
+
+def test_repository_distinguishes_omitted_and_null_action_fields():
+    engine, session = make_session()
+    try:
+        repo = Repository(session)
+        repo.create_report(
+            Report(
+                report_id="report-action",
+                original_filename="report.pdf",
+                stored_path="x",
+                file_hash="hash-action",
+            )
+        )
+        repo.create_run(
+            AnalysisRun(
+                run_id="run-action",
+                report_id="report-action",
+            )
+        )
+        repo.save_assessment(
+            DisclosureAssessment(
+                assessment_id="assessment-action",
+                run_id="run-action",
+                report_id="report-action",
+                standard_id="GRI",
+                standard_version="2021",
+                disclosure_id="GRI 2-1",
+                requirement_id="GRI 2-1-a",
+                verdict=AssessmentVerdict.UNKNOWN,
+                rationale="待核实",
+            )
+        )
+        repo.save_improvement_action(
+            ImprovementAction(
+                action_id="action-1",
+                report_id="report-action",
+                assessment_id="assessment-action",
+                title="补充法定名称证据",
+                priority=ActionPriority.HIGH,
+                owner_name="张三",
+                due_date=date(2026, 8, 15),
+                created_by="张三",
+            )
+        )
+
+        owner_updated = repo.update_improvement_action(
+            "action-1",
+            updates={"owner_name": "李四"},
+        )
+        cleared = repo.update_improvement_action(
+            "action-1",
+            updates={"owner_name": None, "due_date": None},
+        )
+
+        assert owner_updated.due_date == date(2026, 8, 15)
+        assert cleared.owner_name is None
+        assert cleared.due_date is None
+    finally:
         session.close()
         reset_database(engine)
         engine.dispose()

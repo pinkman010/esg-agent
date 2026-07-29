@@ -27,6 +27,7 @@ class CreateActionRequest(BaseModel):
 class UpdateActionRequest(BaseModel):
     status: ActionStatus | None = None
     owner_name: str | None = None
+    due_date: date | None = None
     completion_note: str | None = None
 
 
@@ -54,12 +55,80 @@ def create_action(report_id: str, request: CreateActionRequest, session: Session
 
 @action_router.patch("/{action_id}", response_model=ImprovementAction)
 def update_action(action_id: str, request: UpdateActionRequest, session: Session = Depends(get_db_session)) -> dict:
-    if request.status in {ActionStatus.COMPLETED, ActionStatus.CANCELLED, ActionStatus.OPEN} and not (request.completion_note or "").strip():
-        raise HTTPException(status_code=422, detail="completion_note is required for this status change")
     repo = Repository(session)
-    try:
-        action = repo.update_improvement_action(action_id, **request.model_dump())
-    except ValueError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
-    repo.create_audit_event(None, "improvement_action_updated", {"action_id": action_id, "status": action.status.value})
+    existing = repo.get_improvement_action(action_id)
+    if existing is None:
+        raise HTTPException(status_code=404, detail="action not found")
+    updates = request.model_dump(exclude_unset=True)
+    requested_status = updates.get("status")
+    if (
+        "status" in updates
+        and requested_status != existing.status
+        and requested_status
+        in {
+            ActionStatus.COMPLETED,
+            ActionStatus.CANCELLED,
+            ActionStatus.OPEN,
+        }
+        and not str(updates.get("completion_note") or "").strip()
+    ):
+        raise HTTPException(
+            status_code=422,
+            detail="completion_note is required for this status change",
+        )
+
+    action = repo.update_improvement_action(
+        action_id,
+        updates=updates,
+    )
+    old_values = {
+        "status": existing.status.value,
+        "owner_name": existing.owner_name,
+        "due_date": (
+            existing.due_date.isoformat() if existing.due_date else None
+        ),
+        "completion_note": existing.completion_note,
+    }
+    new_values = {
+        "status": action.status.value,
+        "owner_name": action.owner_name,
+        "due_date": action.due_date.isoformat() if action.due_date else None,
+        "completion_note": action.completion_note,
+    }
+    changed_fields = [
+        field
+        for field in UpdateActionRequest.model_fields
+        if field in updates and old_values[field] != new_values[field]
+    ]
+    payload = {
+        "action_id": action_id,
+        "changed_fields": changed_fields,
+    }
+    if "due_date" in changed_fields:
+        payload.update(
+            {
+                "old_due_date": old_values["due_date"],
+                "new_due_date": new_values["due_date"],
+            }
+        )
+    if "status" in changed_fields:
+        payload.update(
+            {
+                "old_status": old_values["status"],
+                "new_status": new_values["status"],
+            }
+        )
+    if "owner_name" in changed_fields:
+        payload.update(
+            {
+                "old_owner_name": old_values["owner_name"],
+                "new_owner_name": new_values["owner_name"],
+            }
+        )
+    assessment = repo.get_assessment(existing.assessment_id)
+    repo.create_audit_event(
+        assessment.run_id if assessment else None,
+        "improvement_action_updated",
+        payload,
+    )
     return action.model_dump(mode="json")

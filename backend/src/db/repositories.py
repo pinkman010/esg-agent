@@ -602,23 +602,46 @@ class Repository:
         ).all()
         return [self._action_from_record(record) for record in records]
 
+    def get_improvement_action(
+        self,
+        action_id: str,
+    ) -> ImprovementAction | None:
+        record = self.session.get(ImprovementActionRecord, action_id)
+        return self._action_from_record(record) if record else None
+
     def update_improvement_action(
         self,
         action_id: str,
         *,
-        status: ActionStatus | None = None,
-        owner_name: str | None = None,
-        completion_note: str | None = None,
+        updates: dict[str, object],
     ) -> ImprovementAction:
         record = self.session.get(ImprovementActionRecord, action_id)
         if record is None:
             raise ValueError("action not found")
-        if status is not None:
-            record.status = status.value
-        if owner_name is not None:
-            record.owner_name = owner_name
-        if completion_note is not None:
-            record.completion_note = completion_note
+        allowed_fields = {
+            "status",
+            "owner_name",
+            "due_date",
+            "completion_note",
+        }
+        unknown_fields = set(updates) - allowed_fields
+        if unknown_fields:
+            raise ValueError(
+                f"unsupported action field: {sorted(unknown_fields)[0]}"
+            )
+        if "status" in updates:
+            status = updates["status"]
+            record.status = (
+                status.value
+                if isinstance(status, ActionStatus)
+                else ActionStatus(str(status)).value
+            )
+        if "owner_name" in updates:
+            record.owner_name = updates["owner_name"]
+        if "due_date" in updates:
+            record.due_date = updates["due_date"]
+        if "completion_note" in updates:
+            record.completion_note = updates["completion_note"]
         record.updated_at = func.now()
         self.session.commit()
         self.session.refresh(record)
