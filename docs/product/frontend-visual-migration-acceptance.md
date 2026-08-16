@@ -1,0 +1,53 @@
+# 前端视觉迁移工程验收报告
+
+## 1. 结论
+
+前端视觉迁移已达到工程验收标准，可以作为当前视觉发布候选。实现提交为 `95f06f1`。本轮只改动前端代码、测试、依赖、静态资产和项目文档，没有解冻后端语义，也没有改变规则结论、AI 辅助建议、人工快照、适用性、复核优先级或正式导出口径。
+
+主观视觉确认仍需用户在实际浏览器中完成。当前自动浏览器控制内核受本机 Node ESM 配置影响，未完成本轮像素级截图和全交互重放；该限制不影响自动测试、生产构建、接口可达性和静态资源完整性结论。
+
+## 2. 完成范围
+
+- 设计基建：统一前端语义色板、业务色变量、卡片层级、骨架屏、动效和 `prefers-reduced-motion` 降级。
+- 基础组件：新增 `Panel`、`MetricCard`、`Skeleton`、`EmptyState`、`Select`、`BackToTop`、`Button`，扩展 `StatusBadge`。
+- 图表：新增 ECharts 按需封装、披露结论饼图和复核工作量雷达图；现有 Recharts 继续保留。
+- 页面：升级首页、报告总览、报告列表、桌面侧边栏和报告上下文导航；装饰图片改用 Next Image。
+- 一致性：业务中文标签集中到 `frontend/lib/business-labels.ts`，按钮与状态样式收敛到公共组件。
+- 工程质量：补齐 ESLint 9 flat config，并为图表、基础组件、无障碍语义和减弱动效增加测试。
+
+## 3. 自动验证
+
+| 门禁 | 结果 |
+|---|---|
+| `pnpm lint` | 通过，0 error、2 warning |
+| `pnpm test` | 39 个测试文件、139 项测试全部通过 |
+| `pnpm typecheck` | 通过 |
+| `pnpm build` | Next.js 16.2.9 production build 通过，8 个静态页面生成成功 |
+| `git diff --check` | 通过 |
+| demo health | `GET /api/health` 返回 `status=ok`、`app_env=demo` |
+| 页面冒烟 | 首页、报告列表、样例报告 dashboard 均返回 200 |
+| 资源冒烟 | 首页 hero、dashboard hero、侧边栏 3 个核心资源均返回 200 |
+
+两条 lint warning 均为既有技术边界：TanStack Table 的 `useReactTable` 被 React Compiler 跳过自动 memoization；动态 PDF 页面使用原生 `<img>`，避免为受控运行时图片 URL 引入 Next Image 远端配置变化。两者均不阻断 lint，也不属于本轮视觉迁移新增问题。
+
+## 4. 资产完整性
+
+从 `../esg-dashboard/public/` 迁移的 2 个品牌资产和 5 个视觉资产已逐文件比较 SHA-256，7/7 完全一致。目标路径、用途和哈希登记在 `docs/ASSETS.md` 第 11 节。来源仓库保持只读，未覆盖原始资产。
+
+## 5. 关键质量修复
+
+- 隐藏状态的回顶按钮同步设置 `aria-hidden` 和 `tabIndex=-1`，避免键盘焦点进入不可见控件。
+- `Panel` 信息提示使用可访问按钮、唯一 tooltip ID 和展开状态语义。
+- `Select` 使用原生 select 与显式 label，保留键盘和读屏器行为。
+- count-up 在减弱动效、禁用动画和测试环境中直接返回目标值，不在 effect 中同步写状态。
+- Button 的尺寸类只由 size variant 提供，消除 `h-10/h-9` 和 `px-4/px-3` 冲突。
+- 报告信息确认、复核工作台和风险队列移除同步 effect 状态复制，保持原有数据流并通过既有回归测试。
+
+## 6. 风险、限制与发布判断
+
+- ECharts 与 Recharts 暂时并存，增加前端包体积；当前只在报告 dashboard 加载 ECharts，后续应基于真实性能数据决定是否统一图表库。
+- `EmptyState` 已形成公共组件，但首次无报告首页保留任务型 hero 和上传入口，这是对原计划的受控调整。
+- 本轮未执行自动浏览器像素对比或完整交互截图，因此不能据此宣称主观视觉体验已经由用户验收。
+- 后端 774 项、Ruff 和 Envision/Goldwind 回归沿用最近发布记录；本轮没有后端文件或契约改动，因此未重复解冻和运行后端完整门禁。
+
+工程发布判断为通过。用户完成桌面端与窄屏主观视觉确认后，可冻结本轮视觉基线。后续产品主线回到真实使用、问题收集和发布维护，避免在没有用户证据时继续扩大视觉或功能范围。

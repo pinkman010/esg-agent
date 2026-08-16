@@ -44,7 +44,7 @@ ESG-Agent 第一版面向企业 ESG 团队，提供单报告 GRI 核查闭环。
 | UI | Tailwind CSS、shadcn/ui、lucide icons |
 | 数据请求 | TanStack Query |
 | 表格 | TanStack Table |
-| 图表 | Recharts，通过业务组件封装 |
+| 图表 | ECharts（`echarts/core` 按需注册 Bar/Line/Pie/Radar）与 Recharts 并存，均通过业务组件封装 |
 | PDF | pypdf、pdfplumber 正式默认链路；实验性 OCRmyPDF/Tesseract；Docling/VLM 设计预留 |
 | 模型 | OpenAI-compatible 薄适配层，默认不调用 |
 | 测试 | pytest、Vitest、React Testing Library、typecheck、build |
@@ -384,9 +384,17 @@ SiliconFlow `BAAI/bge-m3` 第一阶段属于离线影子 RAG。`EMBEDDING_ENABLE
 
 - 工作台式界面，不做聊天入口；
 - 报告和核查对象是首屏信号；
-- 使用紧凑信息密度，不使用营销式 hero；
+- 使用紧凑信息密度，不使用全屏营销式 hero；首页首次使用态与报告总览允许使用受控高度的任务型 hero；
 - 按钮使用 lucide icons 和明确 tooltip；
-- 页面不直接依赖 Recharts API；
+- 页面不直接依赖 Recharts 或 ECharts API，统一经 `components/charts/` 封装；
+- 基础 UI 组件集中在 `components/ui/`（kebab-case 文件名）：`panel`（卡片容器，配 globals.css `.panel`/`.subpanel` 组件层）、`metric-card`（count-up + sparkline，tone: neutral/danger/warning/success/info）、`status-badge`（soft/outline 两种 variant）、`skeleton`、`empty-state`、`select`、`back-to-top`、`button`（cva，variant: primary/secondary/ghost/danger）；
+- 图表封装在 `components/charts/`：`echart.tsx`（ECharts 按需引入、ResizeObserver 自适应、默认合并 `lib/chart-theme.ts` 文本样式）；报告 dashboard 的分布饼图与工作负载雷达图放在 `components/analysis/`（`verdict-distribution-pie`、`workload-radar-chart`），数据全部 derive 自现有 dashboard API 响应；
+- 图表语义色板与 ECharts 统一样式集中在 `lib/chart-theme.ts`（hex 值，与 globals.css 的 `--gap-*`、`--priority-*`、`--applicability` HSL 变量对齐）；
+- 计数动画 hook 在 `lib/hooks/use-count-up.ts`，测试环境和 `prefers-reduced-motion` 下跳过动画，保证断言确定并尊重用户动效偏好；
+- 动效集中在 globals.css（`.animate-fade-in`、`.animate-shimmer`、`.accent-sheen`、`.progress-sheen`、`.animate-ken-burns`），全部带 `prefers-reduced-motion` 降级；Ken Burns 与玻璃拟态 hero 仅限首页与报告 dashboard 头部，业务页保持简洁头部；
+- 正文字体以 globals.css 的中文系统字体栈为唯一来源，tailwind.config.ts 只保留等宽字体；
+- 报告状态、verdict、优先级等业务中文标签统一在 `lib/business-labels.ts`，组件内不重复定义；
+- 品牌与视觉资产在 `public/brand/`、`public/visuals/`，来源 `esg-dashboard`，登记见 `docs/ASSETS.md` 第 11 节；
 - 577 项表格分页和按需加载证据；
 - 所有核心指标来自后端 API；
 - 空、加载、部分失败、失败和无权限外的单用户状态均有明确呈现；

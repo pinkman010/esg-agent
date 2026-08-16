@@ -128,6 +128,7 @@ uv run uvicorn src.main:app --reload
 cd frontend
 pnpm install
 pnpm generate:api
+pnpm lint
 pnpm typecheck
 pnpm test
 pnpm build
@@ -609,6 +610,12 @@ uv run --no-sync python -m src.tools.evaluate_shadow_rag `
 影子输出使用 `shadow_*` 字段和 `shadow-chunk:<chunk_id>`，不构成最终合规结论。真实 SiliconFlow 和真实 DeepSeek 调用需要分别批准。
 
 ## 12. 开发日志
+
+### 2026-08-16
+
+- 完成前端视觉迁移工程收口：引入 ECharts 按需图表封装、统一语义色板、Panel/MetricCard/Skeleton/EmptyState/Select/BackToTop/Button 基础组件，并升级首页、报告总览和桌面侧边栏视觉；业务 API、后端规则、数据库、AI/RAG/OCR 和导出语义均未改变。
+- 补齐 ESLint 9 flat config 与 `pnpm lint`，修复同步 effect 状态、回顶按钮隐藏焦点、Panel tooltip 唯一 ID、Select 标签语义、reduced-motion count-up 和按钮尺寸类冲突。最终 lint 为 0 error、2 条已知 warning；39 个测试文件、139 项测试、typecheck 和 production build 通过。
+- 7 个授权迁移的品牌/视觉资产与 `../esg-dashboard` 来源逐文件 SHA-256 一致；首页、报告列表、报告总览和 3 个核心视觉资源在 demo 产品服务上均返回 200。完整结论见 `docs/product/frontend-visual-migration-acceptance.md`。
 
 ### 2026-07-29
 

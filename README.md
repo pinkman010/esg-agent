@@ -8,7 +8,9 @@ Phase 1.7 已完成最终闭环与发布就绪验收，正式发布基线为 `v1
 
 v1.2.1 发布后缺陷修复已形成本地补丁候选：普通产品运行统一使用 demo 环境，health 可核对运行身份，复核人每次进入均为空，主流程开发字段名已产品化，审计接口版本错配会给出明确提示。`v1.2` 标签保持不动；补丁尚未合并、打标或推送。完整验收见 `docs/product/v1.2.1-post-release-remediation-acceptance.md`。
 
-当前门禁：后端 774 项测试和 Ruff 通过；前端 30 个测试文件、121 项测试、typecheck 和 production build 通过；Envision v3 回归的新增 false disclosed、wrong source page 和 global fallback 均为 0，audit 为 0 error、0 warning。Goldwind 52 页真实数字文本报告已完成独立上传、分析、复核、整改、草稿、下载和审计闭环，用作产品泛化工程证据。内置报告画像同时校验文件名、页数和源 PDF SHA-256，防止同名同页文件误用报告专属证据路由。
+前端视觉升级已完成工程验收：统一语义色板、指标卡、骨架屏、按钮和状态标签，新增 ECharts 披露结论饼图与复核工作量雷达图，并迁移经授权的品牌视觉资产。业务 API、规则、AI/人工分层和导出口径均未改变。完整结论见 `docs/product/frontend-visual-migration-acceptance.md`。
+
+当前记录门禁：后端 774 项测试和 Ruff 通过；前端 lint 通过（0 error、2 条已知 warning），39 个测试文件、139 项测试、typecheck 和 production build 通过；Envision v3 回归的新增 false disclosed、wrong source page 和 global fallback 均为 0，audit 为 0 error、0 warning。Goldwind 52 页真实数字文本报告已完成独立上传、分析、复核、整改、草稿、下载和审计闭环，用作产品泛化工程证据。内置报告画像同时校验文件名、页数和源 PDF SHA-256，防止同名同页文件误用报告专属证据路由。
 
 混合影子 RAG Phase 1.5 已完成自动工程验收。499 个独立判断项均生成确定性的规则、向量和混合 Top 5 对比；在其中 119 条具有历史工程 gold 的样本中，混合 Hit@5、Recall@5 和 MRR 均高于规则基线，正式业务表和 Envision 冻结门禁保持不变。该能力继续只用于离线诊断，不进入正式 evidence、assessment、risk、AI suggestion、API 或前端，也不构成 ESG 专家判断。Phase 2 为可选增强且未启动，Phase 3 保持关闭。
 
@@ -41,6 +43,7 @@ esg-agent/
 - Phase 1.5 实际产品巡检与问题清单：`docs/product/phase1.5-product-observation-backlog.md`
 - Phase 1.6 产品闭环验收：`docs/product/phase1.6-product-closure-acceptance.md`
 - Phase 1.7 最终闭环与发布就绪验收：`docs/product/phase1.7-final-closure-acceptance.md`
+- 前端视觉迁移验收：`docs/product/frontend-visual-migration-acceptance.md`
 - 实施计划：`docs/plan/`
 
 ## 第一版范围
@@ -65,7 +68,7 @@ esg-agent/
 ## 技术栈
 
 - 后端：Python 3.11、FastAPI、Pydantic v2、PostgreSQL、SQLAlchemy 2.0、Alembic。
-- 前端：Next.js App Router、TypeScript、Tailwind CSS、TanStack Query、TanStack Table、Recharts。
+- 前端：Next.js App Router、TypeScript、Tailwind CSS、TanStack Query、TanStack Table、ECharts 与 Recharts。
 - PDF：pypdf、pdfplumber 为正式默认链路；OCRmyPDF/Tesseract 为实验性显式路由，Docling 和 VLM 仍为设计预留。
 - AI：DeepSeek OpenAI-compatible API；默认关闭，只生成追加式辅助建议。
 - 包管理：后端 uv，前端 pnpm。

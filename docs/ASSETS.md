@@ -1,4 +1,4 @@
-﻿# 资产与证据边界
+# 资产与证据边界
 
 ## 1. 资产来源
 
@@ -169,4 +169,18 @@ Get-FileHash "backend/data/reports/Envision Energy 2024-zh.pdf" -Algorithm SHA25
 这些目录中的内容不提交 Git。每项持久化资产必须在 `backend/data/manifests/assets_manifest.json` 登记项目相对目标路径、SHA256、大小、来源标识、用途和保护方式。外部来源只记录环境变量名，不记录本机绝对路径。
 
 模型评估资产不得包含 API Key、数据库连接信息、完整 Prompt 或未经筛选的外部模型原始响应。桌面和 `tmp/` 来源在目标文件存在且哈希一致前不得清理；清理由用户人工执行。
+
+## 11. 前端品牌与视觉资产迁移记录
+
+前端视觉迁移（`docs/plan/frontend-visual-migration-plan.md`）阶段 3 从 `../esg-dashboard/public/` 复制以下品牌与视觉资产到 `frontend/public/`，来源仓库保持只读。资产已获用户授权搬运，仅用于界面装饰，不属于证据材料。
+
+| 目标路径 | SHA-256 | 用途 |
+|---|---|---|
+| `frontend/public/brand/envision-wordmark.png` | `080b4b70eba72e04ccec0d322a8a7a9ea6682dccb0a0915540582bf80454ef1d` | 品牌 wordmark |
+| `frontend/public/brand/envision-favicon.png` | `b0fd3ce4ff0a2e7880116b0133f1ba2db9f96c334019f15b02db6a450873718c` | 品牌 favicon 备用 |
+| `frontend/public/visuals/overview-dashboard-hero.webp` | `2f3047f4778b792f5dfcfa00846e2f41c5266dd4f24bf5972bcd5c37296af060` | 首页 hero 背景 |
+| `frontend/public/visuals/module-policy-disclosure.webp` | `e08462e062810943f2bfbbb4df16f1824e51524e0fce6cf5ae045e561c1683d5` | 报告 dashboard 头部 hero |
+| `frontend/public/visuals/sidebar-renewable-energy.webp` | `4f4d9b4d36e2200f31914154f6e1a6f3ef88a2986edf86fce903c68bb522a908` | 桌面端侧边栏背景 |
+| `frontend/public/visuals/module-materiality-benchmark.webp` | `1524ccf1fe7da03c233f917edc57debdd570d53ea0ff847805871ae3473f4682` | 备用视觉图 |
+| `frontend/public/visuals/module-claw-monitor.webp` | `928659018577a2d8e9d543caf6a634c87193de13da87eae4174d1da10ac9f9d8` | 备用视觉图 |
 
