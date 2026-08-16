@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { ApiError, listRuns } from "./api";
+import { listRuns } from "./api";
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {

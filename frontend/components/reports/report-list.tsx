@@ -5,23 +5,9 @@ import { ArrowRight, FileText } from "lucide-react";
 import Link from "next/link";
 
 import { listReports, listRuns } from "@/lib/api";
+import { reportStatusLabels as statusLabels } from "@/lib/business-labels";
 import { latestActiveRunId } from "@/lib/report-next-action";
 import type { ReportResponse } from "@/lib/types";
-
-const statusLabels: Record<string, string> = {
-  uploaded: "待确认报告信息",
-  metadata_detected: "待确认报告信息",
-  awaiting_confirmation: "待确认报告信息",
-  ready_for_analysis: "待启动分析",
-  analyzing: "分析中",
-  analysis_completed: "分析已完成",
-  partially_completed: "部分完成",
-  analysis_failed: "分析失败",
-  high_risk_review_completed: "高优先级复核已完成",
-  formally_exported: "已生成正式输出",
-  reopened: "已重新开启",
-  archived: "已归档",
-};
 
 function reportCreatedLabel(createdAt: string | null | undefined): string {
   if (!createdAt) return "创建时间待记录";

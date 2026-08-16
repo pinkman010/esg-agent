@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, PencilLine, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { listReviewAssessments, listReviewRuns, saveReviewDecision } from "@/lib/api";
 import { reviewStatusLabels } from "@/lib/business-labels";
 import type { ReviewStatus } from "@/lib/types";
@@ -16,24 +16,24 @@ export function ReviewWorkbench() {
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [savedStatus, setSavedStatus] = useState<Record<string, ReviewStatus>>({});
   const runsQuery = useQuery({ queryKey: ["review-runs"], queryFn: listReviewRuns });
-  const assessmentsQuery = useQuery({ queryKey: ["review-assessments", selectedRunId], queryFn: () => listReviewAssessments(selectedRunId ?? ""), enabled: selectedRunId !== null });
+  const runs = runsQuery.data ?? [];
+  const activeRunId = selectedRunId ?? runs[0]?.run_id ?? null;
+  const assessmentsQuery = useQuery({ queryKey: ["review-assessments", activeRunId], queryFn: () => listReviewAssessments(activeRunId ?? ""), enabled: activeRunId !== null });
   const decisionMutation = useMutation({
-    mutationFn: ({ assessmentId, status }: { assessmentId: string; status: ReviewStatus }) => saveReviewDecision(selectedRunId ?? "", { assessment_id: assessmentId, review_status: status, reviewer_note: notes[assessmentId] ?? "" }),
+    mutationFn: ({ assessmentId, status }: { assessmentId: string; status: ReviewStatus }) => saveReviewDecision(activeRunId ?? "", { assessment_id: assessmentId, review_status: status, reviewer_note: notes[assessmentId] ?? "" }),
     onSuccess: (decision) => {
       setSavedStatus((current) => ({ ...current, [decision.assessment_id]: decision.review_status }));
       queryClient.invalidateQueries({ queryKey: ["review-runs"] });
-      queryClient.invalidateQueries({ queryKey: ["review-assessments", selectedRunId] });
+      queryClient.invalidateQueries({ queryKey: ["review-assessments", activeRunId] });
     },
   });
-  useEffect(() => { const firstRun = runsQuery.data?.[0]; if (!selectedRunId && firstRun) setSelectedRunId(firstRun.run_id); }, [runsQuery.data, selectedRunId]);
   if (runsQuery.isLoading) return <p className="rounded-lg border border-border bg-white p-5 text-sm text-muted-foreground">Loading review queue.</p>;
   if (runsQuery.error) return <p className="rounded-lg border border-red-200 bg-red-50 p-5 text-sm text-red-700">Review queue failed to load.</p>;
-  const runs = runsQuery.data ?? [];
   if (runs.length === 0) return <p className="rounded-lg border border-dashed border-border bg-white p-5 text-sm text-muted-foreground">No runs need manual review.</p>;
   const assessments = (assessmentsQuery.data ?? []).filter((assessment) => filter === "all" || assessment.review_status === filter);
   return (
     <div className="grid gap-5 lg:grid-cols-[280px_1fr]">
-      <section className="rounded-lg border border-border bg-white p-4 shadow-sm"><h1 className="text-lg font-semibold tracking-normal">Review</h1><div className="mt-4 space-y-2">{runs.map((run) => <button key={run.run_id} className="flex w-full items-center justify-between gap-3 rounded-md px-3 py-2 text-left text-sm hover:bg-muted data-[active=true]:bg-muted" data-active={run.run_id === selectedRunId} type="button" onClick={() => setSelectedRunId(run.run_id)}><span className="truncate font-mono text-xs">{run.run_id}</span><span>{run.status}</span></button>)}</div></section>
+      <section className="rounded-lg border border-border bg-white p-4 shadow-sm"><h1 className="text-lg font-semibold tracking-normal">Review</h1><div className="mt-4 space-y-2">{runs.map((run) => <button key={run.run_id} className="flex w-full items-center justify-between gap-3 rounded-md px-3 py-2 text-left text-sm hover:bg-muted data-[active=true]:bg-muted" data-active={run.run_id === activeRunId} type="button" onClick={() => setSelectedRunId(run.run_id)}><span className="truncate font-mono text-xs">{run.run_id}</span><span>{run.status}</span></button>)}</div></section>
       <section className="rounded-lg border border-border bg-white p-5 shadow-sm">
         <div className="flex flex-col gap-3 border-b border-border pb-4 sm:flex-row sm:items-center sm:justify-between"><h2 className="text-base font-semibold tracking-normal">Assessments</h2><select className="h-9 rounded-md border border-border bg-white px-3 text-sm" value={filter} onChange={(event) => setFilter(event.currentTarget.value as ReviewStatus | "all")}>{filters.map((item) => <option key={item} value={item}>{item === "all" ? "全部" : reviewStatusLabels[item] ?? "待确认"}</option>)}</select></div>
         {assessmentsQuery.isLoading ? <p className="mt-4 text-sm text-muted-foreground">Loading assessments.</p> : null}

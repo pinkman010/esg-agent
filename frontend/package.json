@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "generate:api": "openapi-typescript http://localhost:8000/openapi.json -o lib/generated/api-types.ts"
@@ -15,6 +16,7 @@
     "@tanstack/react-table": "^8.21.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "echarts": "^6.1.0",
     "lucide-react": "^1.22.0",
     "next": "^16.2.9",
     "react": "^19.2.7",

@@ -12,12 +12,17 @@ import {
   Scale,
   UserCheck,
 } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 
 import { MetricCard } from "@/components/ui/metric-card";
+import { Skeleton, SkeletonCard, SkeletonMetricCard } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { buttonVariants } from "@/components/ui/button";
 import { getReportDashboard, getRun } from "@/lib/api";
 import { DashboardDistribution } from "./dashboard-distribution";
+import { VerdictDistributionPie } from "./verdict-distribution-pie";
+import { WorkloadRadarChart } from "./workload-radar-chart";
 
 export function ReportDashboard({ reportId }: { reportId: string }) {
   const query = useQuery({ queryKey: ["report-dashboard", reportId], queryFn: () => getReportDashboard(reportId) });
@@ -26,7 +31,24 @@ export function ReportDashboard({ reportId }: { reportId: string }) {
     queryFn: () => getRun(query.data?.run_id ?? ""),
     enabled: Boolean(query.data?.run_id),
   });
-  if (query.isLoading) return <p className="p-6 text-sm text-muted-foreground">正在加载报告总览...</p>;
+  if (query.isLoading) {
+    return (
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-5 py-6 lg:px-7" aria-label="报告总览加载中">
+        <div className="panel space-y-4 p-6">
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-8 w-56" />
+          <Skeleton className="h-4 w-80 max-w-full" />
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <SkeletonMetricCard />
+          <SkeletonMetricCard />
+          <SkeletonMetricCard />
+          <SkeletonMetricCard />
+        </div>
+        <SkeletonCard />
+      </div>
+    );
+  }
   if (query.isError || !query.data) {
     return <p role="alert" className="p-6 text-sm text-red-700">报告总览加载失败，请稍后重试。</p>;
   }
@@ -45,8 +67,18 @@ export function ReportDashboard({ reportId }: { reportId: string }) {
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-5 py-6 lg:px-7">
-      <section className="flex flex-col gap-5 border-b border-border pb-5 lg:flex-row lg:items-end lg:justify-between">
-        <div>
+      <section className="relative flex flex-col gap-5 overflow-hidden rounded-2xl border border-emerald-100/80 bg-emerald-50/60 p-6 lg:flex-row lg:items-end lg:justify-between">
+        {/* dashboard 头部 hero 视觉（Ken Burns 仅限首页与 dashboard 头部） */}
+        <Image
+          src="/visuals/module-policy-disclosure.webp"
+          alt=""
+          aria-hidden="true"
+          fill
+          sizes="(min-width: 1280px) 1152px, 100vw"
+          className="animate-ken-burns pointer-events-none object-cover object-[28%_50%] opacity-[0.16] brightness-95 saturate-125"
+        />
+        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.88)_0%,rgba(236,253,245,0.58)_52%,rgba(209,250,229,0.30)_100%)]" />
+        <div className="relative">
           <p className="text-sm font-semibold text-emerald-700">当前报告</p>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight">报告总览</h1>
           <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -61,7 +93,7 @@ export function ReportDashboard({ reportId }: { reportId: string }) {
         </div>
         <Link
           href={`/reports/${reportId}/review`}
-          className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-accent px-4 text-sm font-semibold text-accent-foreground"
+          className={`relative ${buttonVariants()}`}
         >
           <ListChecks aria-hidden="true" className="h-4 w-4" />
           进入复核工作台
@@ -123,7 +155,16 @@ export function ReportDashboard({ reportId }: { reportId: string }) {
         />
       </section>
 
-      <section className="rounded-xl border border-border bg-white p-5 shadow-sm">
+      <section className="grid gap-4 xl:grid-cols-2" aria-label="核查分布图表">
+        <VerdictDistributionPie counts={data.verdict_counts} />
+        <WorkloadRadarChart
+          priorities={priorities}
+          applicabilityUndetermined={data.applicability_undetermined_total}
+          analysisIncomplete={analysisIncomplete}
+        />
+      </section>
+
+      <section className="panel p-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-base font-semibold">判断分层</h2>
           <span className="text-xs text-muted-foreground">规则、AI、人工分别留痕</span>
@@ -166,7 +207,7 @@ export function ReportDashboard({ reportId }: { reportId: string }) {
           </div>
           <Link
             href={`/reports/${reportId}/exports`}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-current bg-white px-4 text-sm font-semibold"
+            className={buttonVariants({ variant: "secondary" })}
           >
             <FileOutput aria-hidden="true" className="h-4 w-4" />
             查看输出与版本
@@ -175,11 +216,11 @@ export function ReportDashboard({ reportId }: { reportId: string }) {
       </section>
 
       <nav className="grid gap-3 sm:grid-cols-2" aria-label="报告后续操作">
-        <Link href={`/reports/${reportId}/assessments`} className="flex items-center justify-between rounded-xl border border-border bg-white p-4 text-sm font-semibold shadow-sm">
+        <Link href={`/reports/${reportId}/assessments`} className="panel panel-interactive flex items-center justify-between p-4 text-sm font-semibold">
           查看完整 GRI 核查表
           <ArrowRight aria-hidden="true" className="h-4 w-4 text-muted-foreground" />
         </Link>
-        <Link href={`/reports/${reportId}/actions`} className="flex items-center justify-between rounded-xl border border-border bg-white p-4 text-sm font-semibold shadow-sm">
+        <Link href={`/reports/${reportId}/actions`} className="panel panel-interactive flex items-center justify-between p-4 text-sm font-semibold">
           查看整改任务
           <ArrowRight aria-hidden="true" className="h-4 w-4 text-muted-foreground" />
         </Link>

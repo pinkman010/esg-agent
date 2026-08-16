@@ -1,8 +1,10 @@
 import type { ReactNode } from "react";
 
 import { FileText, Home } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 
+import { BackToTop } from "@/components/ui/back-to-top";
 import { ReportContextNav } from "./report-context-nav";
 
 const mobileNavItems = [
@@ -42,11 +44,25 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </header>
       <div className="mx-auto grid w-full max-w-[1800px] grid-cols-1 lg:grid-cols-[210px_minmax(0,1fr)] xl:grid-cols-[236px_minmax(0,1fr)]">
-        <aside className="hidden min-h-[calc(100vh-4rem)] border-r border-border bg-white px-3 py-5 lg:block">
-          <ReportContextNav />
+        <aside className="relative hidden min-h-[calc(100vh-4rem)] overflow-hidden border-r border-border bg-white lg:block">
+          {/* 品牌视觉背景 + 渐变遮罩（静态，不用 Ken Burns） */}
+          <Image
+            src="/visuals/sidebar-renewable-energy.webp"
+            alt=""
+            aria-hidden="true"
+            fill
+            sizes="236px"
+            className="pointer-events-none object-cover object-[88%_58%] opacity-40 brightness-95 saturate-125 contrast-125"
+          />
+          <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.72)_0%,rgba(255,255,255,0.55)_32%,rgba(255,255,255,0.40)_62%,rgba(236,253,245,0.30)_100%)]" />
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_76%_10%,rgba(20,184,166,0.10),transparent_38%),radial-gradient(circle_at_25%_86%,rgba(16,185,129,0.10),transparent_34%)]" />
+          <div className="relative px-3 py-5">
+            <ReportContextNav />
+          </div>
         </aside>
         <main className="min-w-0">{children}</main>
       </div>
+      <BackToTop />
     </div>
   );
 }

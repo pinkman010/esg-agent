@@ -13,11 +13,15 @@ import {
   RefreshCw,
   ShieldCheck,
 } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 
 import { MetricCard } from "@/components/ui/metric-card";
+import { Skeleton, SkeletonCard, SkeletonMetricCard } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { getReportDashboard, listReports, listRuns } from "@/lib/api";
+import { reportStatusLabels } from "@/lib/business-labels";
 import { latestActiveRunId, nextActionForReport } from "@/lib/report-next-action";
 
 const resultStatuses = new Set([
@@ -27,21 +31,6 @@ const resultStatuses = new Set([
   "formally_exported",
   "reopened",
 ]);
-
-const reportStatusLabels: Record<string, string> = {
-  uploaded: "待确认报告信息",
-  metadata_detected: "待确认报告信息",
-  awaiting_confirmation: "待确认报告信息",
-  ready_for_analysis: "待启动分析",
-  analyzing: "分析中",
-  analysis_completed: "分析已完成",
-  partially_completed: "分析部分完成",
-  analysis_failed: "分析失败",
-  high_risk_review_completed: "高优先级复核已完成",
-  formally_exported: "已生成正式输出",
-  reopened: "已重新开启",
-  archived: "已归档",
-};
 
 const workflow = [
   { label: "上传报告", icon: FileText },
@@ -84,7 +73,22 @@ export function HomeWorkspace() {
   const nextAction = nextActionForReport(report, activeRunId);
 
   if (reportsQuery.isLoading) {
-    return <div className="mx-auto max-w-7xl px-6 py-8 text-sm text-muted-foreground">正在加载工作台...</div>;
+    return (
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-5 py-6 lg:px-7" aria-label="工作台加载中">
+        <div className="panel space-y-4 p-6">
+          <Skeleton className="h-4 w-40" />
+          <Skeleton className="h-8 w-72" />
+          <Skeleton className="h-4 w-96 max-w-full" />
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <SkeletonMetricCard />
+          <SkeletonMetricCard />
+          <SkeletonMetricCard />
+          <SkeletonMetricCard />
+        </div>
+        <SkeletonCard />
+      </div>
+    );
   }
   if (reportsQuery.isError) {
     return (
@@ -92,14 +96,10 @@ export function HomeWorkspace() {
         <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-5 text-red-800">
           <h1 className="text-lg font-semibold">工作台数据加载失败</h1>
           <p className="mt-2 text-sm">请确认后端服务可用后重新加载。</p>
-          <button
-            type="button"
-            className="mt-4 inline-flex h-9 items-center gap-2 rounded-lg border border-red-300 bg-white px-3 text-sm font-medium"
-            onClick={() => reportsQuery.refetch()}
-          >
+          <Button variant="danger" size="sm" className="mt-4" onClick={() => reportsQuery.refetch()}>
             <RefreshCw aria-hidden="true" className="h-4 w-4" />
             重新加载
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -108,7 +108,18 @@ export function HomeWorkspace() {
   if (!report) {
     return (
       <div className="mx-auto max-w-6xl px-6 py-8">
-        <section className="rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-50 to-white p-8 shadow-sm">
+        <section className="relative overflow-hidden rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-50 to-white p-8 shadow-sm">
+          {/* 首页 hero 视觉（Ken Burns 仅限首页与 dashboard 头部） */}
+          <Image
+            src="/visuals/overview-dashboard-hero.webp"
+            alt=""
+            aria-hidden="true"
+            fill
+            sizes="(min-width: 1152px) 1152px, 100vw"
+            className="animate-ken-burns pointer-events-none object-cover object-[38%_50%] opacity-[0.22] brightness-95 saturate-125"
+          />
+          <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.88)_0%,rgba(236,253,245,0.60)_52%,rgba(209,250,229,0.32)_100%)]" />
+          <div className="relative">
           <p className="text-sm font-semibold text-emerald-700">企业 ESG 核查工作台</p>
           <h1 className="mt-3 text-3xl font-semibold tracking-tight">从第一份 ESG 报告开始</h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
@@ -116,11 +127,12 @@ export function HomeWorkspace() {
           </p>
           <Link
             href={nextAction.href}
-            className="mt-6 inline-flex h-10 items-center gap-2 rounded-lg bg-accent px-4 text-sm font-semibold text-accent-foreground"
+            className={`mt-6 ${buttonVariants()}`}
           >
             {nextAction.label}
             <ArrowRight aria-hidden="true" className="h-4 w-4" />
           </Link>
+          </div>
         </section>
       </div>
     );
@@ -132,8 +144,18 @@ export function HomeWorkspace() {
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-5 py-6 lg:px-7">
-      <section className="grid gap-6 rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-white p-6 shadow-sm lg:grid-cols-[1fr_auto] lg:items-center">
-        <div>
+      <section className="relative grid gap-6 overflow-hidden rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-white p-6 shadow-sm lg:grid-cols-[1fr_auto] lg:items-center">
+        {/* 首页 hero 视觉（Ken Burns 仅限首页与 dashboard 头部） */}
+        <Image
+          src="/visuals/overview-dashboard-hero.webp"
+          alt=""
+          aria-hidden="true"
+          fill
+          sizes="(min-width: 1280px) 1152px, 100vw"
+          className="animate-ken-burns pointer-events-none object-cover object-[38%_50%] opacity-[0.18] brightness-95 saturate-125"
+        />
+        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.90)_0%,rgba(236,253,245,0.62)_52%,rgba(209,250,229,0.34)_100%)]" />
+        <div className="relative">
           <div className="flex flex-wrap items-center gap-2">
             <p className="text-sm font-semibold text-emerald-700">当前演示报告</p>
             <StatusBadge tone={report.status.includes("failed") ? "danger" : report.status === "analyzing" ? "info" : "success"}>
@@ -149,23 +171,17 @@ export function HomeWorkspace() {
             {report.page_count ? ` · ${report.page_count} 页` : ""}
           </p>
           <div className="mt-5 flex flex-wrap gap-3">
-            <Link
-              href={nextAction.href}
-              className="inline-flex h-10 items-center gap-2 rounded-lg bg-accent px-4 text-sm font-semibold text-accent-foreground"
-            >
+            <Link href={nextAction.href} className={buttonVariants()}>
               {nextAction.label}
               <ArrowRight aria-hidden="true" className="h-4 w-4" />
             </Link>
-            <Link
-              href="/reports"
-              className="inline-flex h-10 items-center rounded-lg border border-border bg-white px-4 text-sm font-medium"
-            >
+            <Link href="/reports" className={buttonVariants({ variant: "secondary", className: "font-medium" })}>
               重新上传并演示
             </Link>
           </div>
         </div>
         {dashboard && (
-          <div className="min-w-40 text-left lg:text-right">
+          <div className="relative min-w-40 text-left lg:text-right">
             <p className="text-5xl font-semibold tracking-tight text-emerald-950">{dashboard.standard_unit_count}</p>
             <p className="mt-2 text-sm text-muted-foreground">项 GRI 核查范围</p>
           </div>
@@ -188,7 +204,7 @@ export function HomeWorkspace() {
       )}
 
       <section className="grid gap-4 xl:grid-cols-[1.3fr_.7fr]">
-        <div className="rounded-xl border border-border bg-white p-5 shadow-sm">
+        <div className="panel p-5">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-base font-semibold">产品闭环</h2>
             <span className="text-xs text-muted-foreground">状态来自当前报告</span>
@@ -213,13 +229,13 @@ export function HomeWorkspace() {
           </p>
         </div>
 
-        <div className="rounded-xl border border-border bg-white p-5 shadow-sm">
+        <div className="panel p-5">
           <p className="text-xs font-semibold uppercase tracking-[0.12em] text-emerald-700">建议下一步</p>
           <h2 className="mt-3 text-lg font-semibold">{nextAction.label}</h2>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">{nextAction.description}</p>
           <Link
             href={nextAction.href}
-            className="mt-5 inline-flex h-10 items-center gap-2 rounded-lg bg-accent px-4 text-sm font-semibold text-accent-foreground"
+            className={`mt-5 ${buttonVariants()}`}
           >
             继续处理
             <ArrowRight aria-hidden="true" className="h-4 w-4" />

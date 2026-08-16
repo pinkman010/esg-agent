@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, ChevronRight, CircleHelp } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { getApplicabilityQueue, getReportDashboard, getReviewQueue, saveApplicabilityBatch } from "@/lib/api";
 import { PaginationControls } from "@/components/ui/pagination-controls";
@@ -24,11 +24,13 @@ const reasonLabels: Record<string, string> = {
 };
 
 export function RiskQueue({ reportId, onSelect, queueType = "priority", reviewerName, selectedAssessmentId }: { reportId: string; onSelect?: (assessmentId: string) => void; queueType?: "priority" | "applicability"; reviewerName?: string; selectedAssessmentId?: string | null }) {
-  const [page, setPage] = useState(1);
+  const paginationScope = `${reportId}:${queueType}`;
+  const [pagination, setPagination] = useState({ scope: paginationScope, page: 1 });
+  const page = pagination.scope === paginationScope ? pagination.page : 1;
+  const setPage = (nextPage: number) => setPagination({ scope: paginationScope, page: nextPage });
   const [batchNote, setBatchNote] = useState("");
   const [batchMessage, setBatchMessage] = useState("");
   const queryClient = useQueryClient();
-  useEffect(() => setPage(1), [reportId, queueType]);
   const query = useQuery({
     queryKey: [queueType === "priority" ? "review-queue" : "applicability-queue", reportId, page, PAGE_SIZE],
     queryFn: () => queueType === "priority" ? getReviewQueue(reportId, page, PAGE_SIZE) : getApplicabilityQueue(reportId, page, PAGE_SIZE),

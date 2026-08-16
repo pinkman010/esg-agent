@@ -4,7 +4,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { Check, Play } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { analyzeReport, ApiError, confirmReportMetadata, getReport } from "@/lib/api";
 import type { ReportResponse } from "@/lib/types";
@@ -26,21 +26,21 @@ function activeRunId(error: unknown): string | null {
 }
 
 export function ReportMetadataConfirmation({ reportId }: { reportId: string }) {
-  const router = useRouter();
   const reportQuery = useQuery({ queryKey: ["report", reportId], queryFn: () => getReport(reportId) });
-  const [companyName, setCompanyName] = useState("");
-  const [reportYear, setReportYear] = useState("");
-  const [language, setLanguage] = useState("");
-  const [confirmed, setConfirmed] = useState(false);
-  const [aiAssistanceEnabled, setAIAssistanceEnabled] = useState(false);
 
-  useEffect(() => {
-    if (!reportQuery.data) return;
-    setCompanyName(reportQuery.data.company_name || detectedValue(reportQuery.data, "company_name"));
-    setReportYear(String(reportQuery.data.report_year ?? detectedValue(reportQuery.data, "report_year")));
-    setLanguage(reportQuery.data.language || detectedValue(reportQuery.data, "language") || "zh-CN");
-    setConfirmed(reportQuery.data.status === "ready_for_analysis");
-  }, [reportQuery.data]);
+  if (reportQuery.isLoading) return <p className="p-6 text-sm text-muted-foreground">正在读取报告信息...</p>;
+  if (!reportQuery.data) return <p role="alert" className="p-6 text-sm text-red-700">报告信息读取失败。</p>;
+
+  return <ReportMetadataConfirmationForm key={reportQuery.data.report_id} reportId={reportId} report={reportQuery.data} />;
+}
+
+function ReportMetadataConfirmationForm({ reportId, report }: { reportId: string; report: ReportResponse }) {
+  const router = useRouter();
+  const [companyName, setCompanyName] = useState(() => report.company_name || detectedValue(report, "company_name"));
+  const [reportYear, setReportYear] = useState(() => String(report.report_year ?? detectedValue(report, "report_year")));
+  const [language, setLanguage] = useState(() => report.language || detectedValue(report, "language") || "zh-CN");
+  const [confirmed, setConfirmed] = useState(() => report.status === "ready_for_analysis");
+  const [aiAssistanceEnabled, setAIAssistanceEnabled] = useState(false);
 
   const confirmMutation = useMutation({
     mutationFn: () => confirmReportMetadata(reportId, {
@@ -55,14 +55,11 @@ export function ReportMetadataConfirmation({ reportId }: { reportId: string }) {
     onSuccess: (run) => router.push(`/reports/${reportId}/progress?runId=${run.run_id}`),
   });
 
-  if (reportQuery.isLoading) return <p className="p-6 text-sm text-muted-foreground">正在读取报告信息...</p>;
-  if (!reportQuery.data) return <p role="alert" className="p-6 text-sm text-red-700">报告信息读取失败。</p>;
-
   const editableStatuses = new Set(["uploaded", "metadata_detected", "awaiting_confirmation", "ready_for_analysis"]);
   const resultStatuses = new Set(["analysis_completed", "partially_completed", "high_risk_review_completed", "formally_exported", "reopened"]);
-  const canEdit = editableStatuses.has(reportQuery.data.status);
-  const hasResults = resultStatuses.has(reportQuery.data.status);
-  const isAnalyzing = reportQuery.data.status === "analyzing";
+  const canEdit = editableStatuses.has(report.status);
+  const hasResults = resultStatuses.has(report.status);
+  const isAnalyzing = report.status === "analyzing";
   const concurrentRunId = activeRunId(analyzeMutation.error);
 
   return (
@@ -70,7 +67,7 @@ export function ReportMetadataConfirmation({ reportId }: { reportId: string }) {
       <div className="border-b border-border pb-5">
         <p className="text-sm font-semibold text-emerald-700">分析准备</p>
         <h1 className="mt-1 text-2xl font-semibold">确认报告信息</h1>
-        <p className="mt-1 text-sm text-muted-foreground">{reportQuery.data.original_filename} · {reportQuery.data.page_count ?? "?"} 页</p>
+        <p className="mt-1 text-sm text-muted-foreground">{report.original_filename} · {report.page_count ?? "?"} 页</p>
         <p className="mt-2 text-xs text-muted-foreground">自动识别结果仅用于预填，请在启动分析前完成人工确认。</p>
       </div>
       {hasResults && (

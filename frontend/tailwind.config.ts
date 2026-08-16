@@ -17,8 +17,11 @@ const config: Config = {
         accent: "hsl(var(--accent))",
         "accent-foreground": "hsl(var(--accent-foreground))",
       },
+      boxShadow: {
+        panel: "0 2px 12px rgba(15, 23, 42, 0.05)",
+      },
+      // 正文字体以 globals.css 的中文系统字体栈为唯一来源，这里只保留等宽字体
       fontFamily: {
-        sans: ["Inter", "Segoe UI", "Arial", "sans-serif"],
         mono: ["Cascadia Mono", "Consolas", "monospace"],
       },
     },
