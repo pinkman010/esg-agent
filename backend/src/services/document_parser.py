@@ -110,13 +110,17 @@ class DocumentParser:
                         report_id=report_id,
                         text=result.text,
                         source_page=result.page_number,
-                            source_method=EvidenceSourceMethod.OCR,
-                            source_file_hash=source_file_hash,
-                            quality_flags=[PageQualityFlag.NEEDS_MANUAL_REVIEW],
-                            embedding_status="not_started",
-                            metadata={"ocr_page": result.page_number},
-                        )
+                        source_method=EvidenceSourceMethod.OCR,
+                        source_file_hash=source_file_hash,
+                        quality_flags=[PageQualityFlag.NEEDS_MANUAL_REVIEW],
+                        embedding_status="not_started",
+                        metadata={
+                            "ocr_page": result.page_number,
+                            "derived_file_sha256": result.derived_file_sha256,
+                            "ocr_text_length": len(result.text),
+                        },
                     )
+                )
 
         return ParsedDocument(
             report_id=report_id,

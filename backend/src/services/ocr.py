@@ -1,23 +1,24 @@
 from dataclasses import dataclass
+from hashlib import sha256
 import os
 from pathlib import Path
 import subprocess
 
 import pdfplumber
 
+from src.services.ocr_errors import OcrExecutionError
+
 
 @dataclass(frozen=True)
 class OcrResult:
     page_number: int
     text: str
-
-
-class OcrExecutionError(RuntimeError):
-    pass
+    derived_file_sha256: str
 
 
 class OcrNotConfiguredError(OcrExecutionError):
-    pass
+    def __init__(self) -> None:
+        super().__init__("ocrmypdf_missing")
 
 
 def run_ocr_for_pages(
@@ -27,14 +28,16 @@ def run_ocr_for_pages(
     report_id: str,
     derived_dir: Path,
     ocrmypdf_cmd: str = "ocrmypdf",
+    ghostscript_cmd: str = "",
     tesseract_cmd: str = "",
     ocr_lang: str = "chi_sim+eng",
+    timeout_seconds: int = 300,
 ) -> list[OcrResult]:
     selected_pages = sorted({page for page in pages if page > 0})
     if not selected_pages:
         return []
     if not ocrmypdf_cmd:
-        raise OcrNotConfiguredError("OCRmyPDF command is not configured")
+        raise OcrNotConfiguredError()
 
     path = Path(pdf_path)
     output_path = _ocr_output_path(path, selected_pages, report_id=report_id, derived_dir=Path(derived_dir))
@@ -49,26 +52,36 @@ def run_ocr_for_pages(
         str(path),
         str(output_path),
     ]
-    completed = subprocess.run(
-        command,
-        capture_output=True,
-        text=True,
-        check=False,
-        env=_subprocess_env(tesseract_cmd),
-    )
+    try:
+        completed = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            check=False,
+            env=_subprocess_env(tesseract_cmd, ghostscript_cmd),
+            timeout=timeout_seconds,
+        )
+    except subprocess.TimeoutExpired as exc:
+        output_path.unlink(missing_ok=True)
+        raise OcrExecutionError("ocr_execution_timeout") from exc
     if completed.returncode != 0:
-        if output_path.exists():
-            output_path.unlink()
-        detail = completed.stderr.strip() or completed.stdout.strip() or f"OCRmyPDF exited with code {completed.returncode}"
-        raise OcrExecutionError(detail)
+        output_path.unlink(missing_ok=True)
+        raise OcrExecutionError("ocr_execution_failed")
 
+    derived_hash = sha256(output_path.read_bytes()).hexdigest()
     results: list[OcrResult] = []
     with pdfplumber.open(output_path) as pdf:
         for page_number in selected_pages:
             if page_number > len(pdf.pages):
                 continue
             text = pdf.pages[page_number - 1].extract_text() or ""
-            results.append(OcrResult(page_number=page_number, text=text))
+            results.append(
+                OcrResult(
+                    page_number=page_number,
+                    text=text,
+                    derived_file_sha256=derived_hash,
+                )
+            )
     return results
 
 
@@ -81,12 +94,19 @@ def _format_pages(pages: list[int]) -> str:
     return ",".join(str(page) for page in pages)
 
 
-def _subprocess_env(tesseract_cmd: str) -> dict[str, str]:
+def _subprocess_env(tesseract_cmd: str, ghostscript_cmd: str) -> dict[str, str]:
     env = os.environ.copy()
-    if not tesseract_cmd:
-        return env
-    tesseract_path = Path(tesseract_cmd)
-    tesseract_dir = str(tesseract_path if tesseract_path.is_dir() else tesseract_path.parent)
-    env["PATH"] = f"{tesseract_dir}{os.pathsep}{env.get('PATH', '')}"
-    env["TESSERACT_CMD"] = tesseract_cmd
+    command_dirs = []
+    for configured_command in (tesseract_cmd, ghostscript_cmd):
+        if not configured_command:
+            continue
+        command_path = Path(configured_command)
+        command_dir = command_path if command_path.is_dir() else command_path.parent
+        if command_dir != Path("."):
+            command_dirs.append(str(command_dir))
+    if command_dirs:
+        prefix = os.pathsep.join(dict.fromkeys(command_dirs))
+        env["PATH"] = f"{prefix}{os.pathsep}{env.get('PATH', '')}"
+    if tesseract_cmd:
+        env["TESSERACT_CMD"] = tesseract_cmd
     return env

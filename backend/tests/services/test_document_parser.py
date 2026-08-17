@@ -46,7 +46,13 @@ def test_document_parser_uses_mocked_ocr_hook_for_selected_pages(tmp_path):
     def fake_ocr(path, pages):
         assert path == pdf_path
         assert pages == [1]
-        return [OcrResult(page_number=1, text="OCR energy disclosure text")]
+        return [
+            OcrResult(
+                page_number=1,
+                text="德勤 独立有限鉴证报告 鉴证结论",
+                derived_file_sha256="a" * 64,
+            )
+        ]
 
     parsed = DocumentParser(ocr_runner=fake_ocr).parse_pdf(
         pdf_path,
@@ -56,6 +62,12 @@ def test_document_parser_uses_mocked_ocr_hook_for_selected_pages(tmp_path):
     )
 
     assert parsed.chunks[0].source_method is EvidenceSourceMethod.OCR
-    assert parsed.chunks[0].text == "OCR energy disclosure text"
-    assert PageQualityFlag.NEEDS_MANUAL_REVIEW in parsed.chunks[0].quality_flags
-    assert parsed.chunks[0].metadata["ocr_page"] == 1
+    ocr_chunk = parsed.chunks[0]
+    assert ocr_chunk.source_method is EvidenceSourceMethod.OCR
+    assert ocr_chunk.text == "德勤 独立有限鉴证报告 鉴证结论"
+    assert ocr_chunk.quality_flags == [PageQualityFlag.NEEDS_MANUAL_REVIEW]
+    assert ocr_chunk.metadata == {
+        "ocr_page": 1,
+        "derived_file_sha256": "a" * 64,
+        "ocr_text_length": len("德勤 独立有限鉴证报告 鉴证结论"),
+    }
