@@ -611,6 +611,12 @@ uv run --no-sync python -m src.tools.evaluate_shadow_rag `
 
 ## 12. 开发日志
 
+### 2026-08-17
+
+- 收口中文人工复核与审计时间线的产品展示边界。实测 Envision 报告 499/499 个独立判断项的 `effective_requirement_text` 来自官方英文标准资产；中文界面保留 GRI 编号、中文判断依据、中文缺失项和证据，不再默认渲染英文要求正文。未来提供经过确认的中文要求正文时可直接显示。
+- 审计 API 和数据库继续保留完整关联 ID，产品时间线隐藏 run/report/action/assessment/snapshot/export/file/profile 等内部 ID，并只展示已登记的业务 payload 字段；负责人、截止日期、状态、适用性等业务变更保持可见，未知字段不回退为开发字段名，可见错误或原因文本中的内部 ID 统一脱敏。
+- 新增四项回归测试并完成红绿验证。最终前端 lint 为 0 error、2 条已知 warning；39 个测试文件、143 项测试、typecheck 和 production build 通过。应用内浏览器只读复验 `GRI 2-27-a-i` 和 6 条实际审计事件，目标英文正文、完整技术 ID 和原始字段名均为 0，console error/warning 为 0。
+
 ### 2026-08-16
 
 - 完成前端视觉迁移工程收口：引入 ECharts 按需图表封装、统一语义色板、Panel/MetricCard/Skeleton/EmptyState/Select/BackToTop/Button 基础组件，并升级首页、报告总览和桌面侧边栏视觉；业务 API、后端规则、数据库、AI/RAG/OCR 和导出语义均未改变。
