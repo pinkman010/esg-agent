@@ -13,20 +13,23 @@ from src.domain.enums import AssessmentVerdict, EvidenceSourceMethod, PageQualit
 from src.domain.models import DisclosureAssessment, DisclosureRequirement, DocumentChunk, EvidenceItem, PageExtraction, Report
 from src.services.ai_assessment_service import AIAssessmentService
 from src.services.document_parser import ParsedDocument
+from src.services.ocr_capability import OcrCapability
+from src.services.ocr_errors import OcrPreflightError
 from src.tools.llm_client import LLMCompletionError, LLMCompletionResult
 from src.workflows.single_report_workflow import SingleReportWorkflow
 from tests.database import make_test_engine, reset_database
 
 
 class FakeParser:
-    def __init__(self):
+    def __init__(self, page_count=1):
         self.calls = []
+        self.page_count = page_count
 
     def parse_pdf(self, pdf_path, report_id, source_file_hash, ocr_pages=None):
         self.calls.append(ocr_pages)
         return ParsedDocument(
             report_id=report_id,
-            page_count=1,
+            page_count=self.page_count,
             pages=[PageExtraction(report_id=report_id, page_number=1, text="Energy consumption is disclosed.")],
             chunks=[
                 DocumentChunk(
@@ -91,6 +94,57 @@ class LowTextParser:
             page_count=3,
             pages=[],
             chunks=[],
+            metadata={},
+            outline=[],
+        )
+
+
+class ProfileAndLowQualityParser:
+    def __init__(self):
+        self.calls = []
+
+    def parse_pdf(self, pdf_path, report_id, source_file_hash, ocr_pages=None):
+        self.calls.append(ocr_pages)
+        pages = [
+            PageExtraction(
+                report_id=report_id,
+                page_number=77,
+                text="Independent assurance image page",
+                quality_flags=[PageQualityFlag.DIGITAL_TEXT],
+            ),
+            PageExtraction(
+                report_id=report_id,
+                page_number=78,
+                quality_flags=[
+                    PageQualityFlag.LOW_TEXT_DENSITY,
+                    PageQualityFlag.SCANNED,
+                ],
+            ),
+        ]
+        chunks = []
+        if ocr_pages:
+            chunks = [
+                DocumentChunk(
+                    chunk_id=f"{report_id}-p{page_number}-ocr",
+                    report_id=report_id,
+                    text=f"OCR page {page_number}",
+                    source_page=page_number,
+                    source_method=EvidenceSourceMethod.OCR,
+                    source_file_hash=source_file_hash,
+                    quality_flags=[PageQualityFlag.NEEDS_MANUAL_REVIEW],
+                    metadata={
+                        "ocr_page": page_number,
+                        "derived_file_sha256": str(page_number) * 32,
+                        "ocr_text_length": len(f"OCR page {page_number}"),
+                    },
+                )
+                for page_number in ocr_pages
+            ]
+        return ParsedDocument(
+            report_id=report_id,
+            page_count=78,
+            pages=pages,
+            chunks=chunks,
             metadata={},
             outline=[],
         )
@@ -362,6 +416,50 @@ def seed_report(repo):
     )
 
 
+def available_ocr_capability():
+    return OcrCapability(
+        enabled=True,
+        available=True,
+        dependency_codes=(),
+        language="chi_sim+eng",
+        max_pages=5,
+    )
+
+
+def write_ocr_profile(tmp_path):
+    profile_path = tmp_path / "ocr-profile.json"
+    profile_path.write_text(
+        json.dumps(
+            {
+                "report_id": "envision_2024",
+                "company_name": "Envision",
+                "report_year": 2024,
+                "pdf_file": "envision.pdf",
+                "total_pdf_pages": 78,
+                "page_numbering": {
+                    "report_index_pdf_page": 71,
+                    "report_index_report_page": 70,
+                    "total_pdf_pages": 78,
+                },
+                "assurance_pages": [
+                    {"pdf_page": 77, "requires_ocr": True},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    return profile_path
+
+
+def get_audit_event(repo_session, run_id, event_type):
+    return repo_session.scalars(
+        select(AuditEventRecord).where(
+            AuditEventRecord.run_id == run_id,
+            AuditEventRecord.event_type == event_type,
+        )
+    ).one()
+
+
 def test_single_report_workflow_completes_without_model_calls(repo_session):
     repo = Repository(repo_session)
     seed_report(repo)
@@ -585,36 +683,191 @@ def test_single_report_workflow_does_not_request_ocr_by_default(repo_session):
     repo = Repository(repo_session)
     seed_report(repo)
     parser = FakeParser()
-    workflow = SingleReportWorkflow(repo, parser, FakeAdapter(), DisclosureAgent())
+    preflight_calls = []
+    workflow = SingleReportWorkflow(
+        repo,
+        parser,
+        FakeAdapter(),
+        DisclosureAgent(),
+        ocr_preflight=lambda: preflight_calls.append(True) or available_ocr_capability(),
+    )
 
     run = workflow.run("report-1", Path("report.pdf"), "hash-1", confirm_llm=False)
 
     assert run.status is RunStatus.COMPLETED
     assert parser.calls == [None]
+    assert preflight_calls == []
 
 
 def test_single_report_workflow_passes_explicit_ocr_pages(repo_session):
     repo = Repository(repo_session)
     seed_report(repo)
-    parser = FakeParser()
-    workflow = SingleReportWorkflow(repo, parser, FakeAdapter(), DisclosureAgent())
+    parser = FakeParser(page_count=78)
+    preflight_calls = []
+    workflow = SingleReportWorkflow(
+        repo,
+        parser,
+        FakeAdapter(),
+        DisclosureAgent(),
+        ocr_preflight=lambda: preflight_calls.append(True) or available_ocr_capability(),
+    )
 
     run = workflow.run("report-1", Path("report.pdf"), "hash-1", confirm_llm=False, enable_ocr=True, ocr_pages=[77])
 
     assert run.status is RunStatus.COMPLETED
-    assert parser.calls == [[77]]
+    assert parser.calls == [None, [77]]
+    assert preflight_calls == [True]
 
 
 def test_single_report_workflow_selects_low_quality_pages_when_ocr_pages_are_empty(repo_session):
     repo = Repository(repo_session)
     seed_report(repo)
     parser = LowTextParser()
-    workflow = SingleReportWorkflow(repo, parser, FakeAdapter(), DisclosureAgent(), ocr_max_pages=1)
+    preflight_calls = []
+    workflow = SingleReportWorkflow(
+        repo,
+        parser,
+        FakeAdapter(),
+        DisclosureAgent(),
+        ocr_max_pages=1,
+        ocr_preflight=lambda: preflight_calls.append(True) or available_ocr_capability(),
+    )
 
     run = workflow.run("report-1", Path("report.pdf"), "hash-1", confirm_llm=False, enable_ocr=True)
 
     assert run.status is RunStatus.COMPLETED
     assert parser.calls == [None, [2]]
+    assert preflight_calls == [True]
+
+
+def test_single_report_workflow_skips_preflight_when_no_page_requires_ocr(repo_session):
+    repo = Repository(repo_session)
+    seed_report(repo)
+    parser = FakeParser()
+    preflight_calls = []
+    workflow = SingleReportWorkflow(
+        repo,
+        parser,
+        FakeAdapter(),
+        DisclosureAgent(),
+        ocr_preflight=lambda: preflight_calls.append(True) or available_ocr_capability(),
+    )
+
+    run = workflow.run(
+        "report-1",
+        Path("report.pdf"),
+        "hash-1",
+        confirm_llm=False,
+        enable_ocr=True,
+        ocr_pages=[],
+    )
+
+    assert run.status is RunStatus.COMPLETED
+    assert parser.calls == [None]
+    assert preflight_calls == []
+    assert get_audit_event(repo_session, run.run_id, "ocr_not_required")
+
+
+def test_workflow_selects_profile_required_ocr_page_before_low_quality_page(
+    repo_session,
+    tmp_path,
+):
+    repo = Repository(repo_session)
+    seed_report(repo)
+    parser = ProfileAndLowQualityParser()
+    preflight_calls = []
+    workflow = SingleReportWorkflow(
+        repo,
+        parser,
+        FakeAdapter(),
+        DisclosureAgent(),
+        report_profile_path=write_ocr_profile(tmp_path),
+        ocr_max_pages=5,
+        ocr_preflight=lambda: preflight_calls.append(True) or available_ocr_capability(),
+    )
+
+    run = workflow.run(
+        "report-1",
+        Path("report.pdf"),
+        "hash-1",
+        confirm_llm=False,
+        enable_ocr=True,
+        ocr_pages=[],
+    )
+
+    assert run.status is RunStatus.COMPLETED
+    assert parser.calls == [None, [77, 78]]
+    assert preflight_calls == [True]
+    selection_event = get_audit_event(
+        repo_session,
+        run.run_id,
+        "ocr_pages_selected",
+    )
+    assert selection_event.event_payload == {
+        "page_count": 2,
+        "pages": [77, 78],
+        "sources": [
+            {"page_number": 77, "source": "profile_requires_ocr"},
+            {"page_number": 78, "source": "page_quality"},
+        ],
+    }
+    completed_event = get_audit_event(repo_session, run.run_id, "ocr_completed")
+    assert completed_event.event_payload["ocr_page_count"] == 2
+    assert completed_event.event_payload["pages"] == [
+        {
+            "page_number": 77,
+            "text_length": len("OCR page 77"),
+            "derived_file_sha256": "77" * 32,
+        },
+        {
+            "page_number": 78,
+            "text_length": len("OCR page 78"),
+            "derived_file_sha256": "78" * 32,
+        },
+    ]
+    assert set(completed_event.event_payload) == {
+        "ocr_page_count",
+        "pages",
+        "duration_ms",
+    }
+    assert "OCR page" not in str(completed_event.event_payload)
+    assert "private-path" not in str(completed_event.event_payload)
+
+
+def test_workflow_persists_safe_preflight_failure(repo_session):
+    repo = Repository(repo_session)
+    seed_report(repo)
+    parser = FakeParser(page_count=78)
+
+    def failed_preflight():
+        raise OcrPreflightError("ghostscript_missing")
+
+    workflow = SingleReportWorkflow(
+        repo,
+        parser,
+        FakeAdapter(),
+        DisclosureAgent(),
+        ocr_preflight=failed_preflight,
+    )
+
+    run = workflow.run(
+        "report-1",
+        Path("report.pdf"),
+        "hash-1",
+        confirm_llm=False,
+        enable_ocr=True,
+        ocr_pages=[77],
+    )
+
+    assert run.status is RunStatus.FAILED
+    assert run.failure_summary["error_code"] == "ghostscript_missing"
+    assert run.error_message == "Ghostscript 不可用。"
+    failure_event = get_audit_event(repo_session, run.run_id, "analysis_failed")
+    assert failure_event.event_payload == {
+        "error_code": "ghostscript_missing",
+        "error": "Ghostscript 不可用。",
+    }
+    assert "stderr" not in str(failure_event.event_payload)
 
 
 def test_single_report_workflow_marks_run_failed_on_parser_error(repo_session):

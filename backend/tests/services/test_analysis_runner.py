@@ -1,7 +1,10 @@
+from pathlib import Path
+
 from src.domain.enums import AssessmentVerdict, ReportStatus, RunStatus
 from src.config.settings import Settings
 from src.domain.models import AnalysisRun, DisclosureAssessment, Report
 from src.services import analysis_runner
+from src.services.ocr_capability import OcrCapability
 
 
 class FakeRepository:
@@ -188,3 +191,113 @@ def test_execute_analysis_resolves_goldwind_profile_and_audits_selection(
             },
         )
     ]
+
+
+def test_execute_analysis_wires_ocr_runtime_settings_and_shared_preflight(
+    monkeypatch,
+    tmp_path,
+):
+    captured: dict[str, object] = {}
+
+    class FakeWorkflow:
+        def __init__(self, repository, parser, *args, ocr_preflight=None, **kwargs):
+            captured["parser"] = parser
+            captured["ocr_preflight"] = ocr_preflight
+
+        def run(self, report_id, pdf_path, source_file_hash, **kwargs):
+            captured["parser"].ocr_runner(Path(pdf_path), [1])
+            captured["ocr_preflight"]()
+            return AnalysisRun(
+                run_id=kwargs["run_id"],
+                report_id=report_id,
+                status=RunStatus.COMPLETED,
+                eligible_requirement_count=1,
+                succeeded_requirement_count=1,
+            )
+
+    class ExecuteRepository:
+        def __init__(self):
+            self.latest_run = None
+
+        def create_audit_event(self, run_id, event_type, payload):
+            pass
+
+        def latest_run_for_report(self, report_id):
+            return self.latest_run
+
+        def update_report_status(self, report_id, status):
+            pass
+
+    def fake_run_ocr_for_pages(pdf_path, pages, **kwargs):
+        captured["ocr_call"] = {
+            "pdf_path": pdf_path,
+            "pages": pages,
+            **kwargs,
+        }
+        return []
+
+    def fake_require_ocr_capability(settings):
+        captured["preflight_settings"] = settings
+        return OcrCapability(
+            enabled=True,
+            available=True,
+            dependency_codes=(),
+            language=settings.ocr_lang,
+            max_pages=settings.ocr_max_pages,
+        )
+
+    monkeypatch.setattr(analysis_runner, "SingleReportWorkflow", FakeWorkflow)
+    monkeypatch.setattr(analysis_runner, "run_ocr_for_pages", fake_run_ocr_for_pages)
+    monkeypatch.setattr(
+        analysis_runner,
+        "require_ocr_capability",
+        fake_require_ocr_capability,
+        raising=False,
+    )
+    monkeypatch.setattr(
+        analysis_runner.ReportProfileResolver,
+        "resolve",
+        lambda self, **kwargs: None,
+    )
+    settings = Settings(
+        _env_file=None,
+        app_env="test",
+        derived_dir=tmp_path / "derived",
+        ocr_enabled=True,
+        ocrmypdf_cmd="ocrmypdf",
+        ghostscript_cmd="gswin64c",
+        tesseract_cmd="tesseract",
+        ocr_lang="chi_sim+eng",
+        ocr_timeout_seconds=123,
+    )
+    report = Report(
+        report_id="report-1",
+        original_filename="report.pdf",
+        stored_path=str(tmp_path / "report.pdf"),
+        file_hash="a" * 64,
+        page_count=1,
+    )
+
+    result = analysis_runner.execute_analysis(
+        ExecuteRepository(),
+        report,
+        settings,
+        run_id="run-1",
+        confirm_llm=False,
+        enable_ocr=True,
+        ocr_pages=[1],
+    )
+
+    assert result.status is RunStatus.COMPLETED
+    assert captured["preflight_settings"] is settings
+    assert captured["ocr_call"] == {
+        "pdf_path": Path(report.stored_path),
+        "pages": [1],
+        "report_id": "report-1",
+        "derived_dir": settings.derived_dir,
+        "ocrmypdf_cmd": "ocrmypdf",
+        "ghostscript_cmd": "gswin64c",
+        "tesseract_cmd": "tesseract",
+        "ocr_lang": "chi_sim+eng",
+        "timeout_seconds": 123,
+    }

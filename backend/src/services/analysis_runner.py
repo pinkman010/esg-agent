@@ -11,6 +11,7 @@ from src.services.document_parser import DocumentParser
 from src.services.ai_assessment_service import AIAssessmentService
 from src.services.effective_run_view_service import EffectiveRunViewService
 from src.services.ocr import run_ocr_for_pages
+from src.services.ocr_capability import require_ocr_capability
 from src.standards.gri import GRIAdapter
 from src.workflows.single_report_workflow import SingleReportWorkflow
 from src.tools.llm_client import LLMClient
@@ -81,8 +82,10 @@ def execute_analysis(
             report_id=report.report_id,
             derived_dir=settings.derived_dir,
             ocrmypdf_cmd=settings.ocrmypdf_cmd,
+            ghostscript_cmd=settings.ghostscript_cmd,
             tesseract_cmd=settings.tesseract_cmd,
             ocr_lang=settings.ocr_lang,
+            timeout_seconds=settings.ocr_timeout_seconds,
         )
 
     if report.page_count is None:
@@ -132,6 +135,7 @@ def execute_analysis(
         requirement_pack_path=GRI_REQUIREMENT_PACK_PATH,
         report_profile_path=profile_path,
         ocr_max_pages=settings.ocr_max_pages,
+        ocr_preflight=lambda: require_ocr_capability(settings),
         ai_assessment_service=ai_assessment_service,
     )
     result = workflow.run(

@@ -1,10 +1,12 @@
+from collections.abc import Callable
 import json
 from pathlib import Path
+from time import perf_counter
 from uuid import uuid4
 
 from src.agents.disclosure_agent import DisclosureAgent
 from src.db.repositories import Repository
-from src.domain.enums import AISuggestionStatus, PageQualityFlag, RunStatus
+from src.domain.enums import AISuggestionStatus, EvidenceSourceMethod, RunStatus
 from src.domain.models import AnalysisRun, AnalysisStageEvent, DisclosureTask, PageExtraction
 from src.domain.versions import CURRENT_RISK_RULE_VERSION
 from src.reports.profile import ReportProfile, load_report_profile
@@ -15,6 +17,9 @@ from src.services.document_capability_service import (
     UnsupportedScannedPdfError,
     assess_document_capability,
 )
+from src.services.ocr_capability import OcrCapability
+from src.services.ocr_errors import OcrPreflightError
+from src.services.ocr_page_selector import OcrPageSelection, select_ocr_pages
 from src.standards.evidence_contracts import get_requirement_contract
 from src.standards.gri_report_index import build_report_index
 from src.tools.evidence_routing import EvidenceRouter
@@ -30,6 +35,7 @@ class SingleReportWorkflow:
         requirement_pack_path: Path | None = None,
         report_profile_path: Path | None = None,
         ocr_max_pages: int = 5,
+        ocr_preflight: Callable[[], OcrCapability] | None = None,
         ai_assessment_service: AIAssessmentService | None = None,
     ):
         self.repository = repository
@@ -38,6 +44,7 @@ class SingleReportWorkflow:
         self.disclosure_agent = disclosure_agent
         self.requirement_pack_path = requirement_pack_path
         self.ocr_max_pages = ocr_max_pages
+        self.ocr_preflight = ocr_preflight
         self.ai_assessment_service = ai_assessment_service
         self.report_profile: ReportProfile | None = (
             load_report_profile(report_profile_path) if report_profile_path is not None else None
@@ -100,16 +107,37 @@ class SingleReportWorkflow:
                 pdf_path,
                 report_id=report_id,
                 source_file_hash=source_file_hash,
-                ocr_pages=self._explicit_ocr_pages(enable_ocr, ocr_pages),
+                ocr_pages=None,
             )
-            if enable_ocr and not ocr_pages:
-                selected_ocr_pages = self._select_ocr_pages(parsed.pages)
-                if selected_ocr_pages:
+            ocr_selection = OcrPageSelection(pages=(), sources=())
+            if enable_ocr:
+                ocr_selection = select_ocr_pages(
+                    explicit_pages=ocr_pages,
+                    parsed_pages=parsed.pages,
+                    report_profile=self.report_profile,
+                    page_count=parsed.page_count,
+                    max_pages=self.ocr_max_pages,
+                )
+                self._audit_ocr_selection(run_id, ocr_selection)
+                if ocr_selection.pages:
+                    self._run_ocr_preflight(run_id)
+                    ocr_started = perf_counter()
                     parsed = self.parser.parse_pdf(
                         pdf_path,
                         report_id=report_id,
                         source_file_hash=source_file_hash,
-                        ocr_pages=selected_ocr_pages,
+                        ocr_pages=list(ocr_selection.pages),
+                    )
+                    self._audit_ocr_completed(
+                        run_id,
+                        parsed.chunks,
+                        duration_seconds=perf_counter() - ocr_started,
+                    )
+                else:
+                    self.repository.create_audit_event(
+                        run_id,
+                        "ocr_not_required",
+                        {"page_count": 0, "pages": []},
                     )
             capability = assess_document_capability(parsed.pages)
             if (
@@ -131,6 +159,9 @@ class SingleReportWorkflow:
                     "low_text_density_page_count": (
                         capability.low_text_density_page_count
                     ),
+                    "ocr_enabled": enable_ocr,
+                    "ocr_page_count": len(ocr_selection.pages),
+                    "ocr_pages": list(ocr_selection.pages),
                 },
             )
             self.repository.save_pages_and_chunks(parsed.pages, parsed.chunks)
@@ -209,11 +240,7 @@ class SingleReportWorkflow:
         except Exception as exc:
             self.repository.rollback()
             try:
-                error_code = (
-                    exc.code
-                    if isinstance(exc, UnsupportedScannedPdfError)
-                    else "analysis_execution_failed"
-                )
+                error_code = getattr(exc, "code", "analysis_execution_failed")
                 self._stage(run_id, "result_summary", "failed", 0, 1, str(exc))
                 self.repository.create_audit_event(
                     run_id,
@@ -324,22 +351,93 @@ class SingleReportWorkflow:
         summary = getter()
         return dict(summary) if summary else {}
 
-    def _explicit_ocr_pages(self, enable_ocr: bool, ocr_pages: list[int] | None) -> list[int] | None:
-        if not enable_ocr:
-            return None
-        if not ocr_pages:
-            return None
-        return sorted({page for page in ocr_pages if page > 0})
+    def _audit_ocr_selection(
+        self,
+        run_id: str,
+        selection: OcrPageSelection,
+    ) -> None:
+        self.repository.create_audit_event(
+            run_id,
+            "ocr_pages_selected",
+            {
+                "page_count": len(selection.pages),
+                "pages": list(selection.pages),
+                "sources": [
+                    {"page_number": page_number, "source": source}
+                    for page_number, source in selection.sources
+                ],
+            },
+        )
 
-    def _select_ocr_pages(self, pages: list[PageExtraction]) -> list[int]:
-        selected: list[int] = []
-        for page in pages:
-            flags = set(page.quality_flags)
-            if PageQualityFlag.LOW_TEXT_DENSITY in flags or PageQualityFlag.SCANNED in flags:
-                selected.append(page.page_number)
-            if len(selected) >= self.ocr_max_pages:
-                break
-        return selected
+    def _run_ocr_preflight(self, run_id: str) -> OcrCapability:
+        if self.ocr_preflight is None:
+            error = OcrPreflightError("ocr_feature_disabled")
+            self._audit_ocr_preflight_failure(run_id, error)
+            raise error
+        try:
+            capability = self.ocr_preflight()
+        except OcrPreflightError as exc:
+            self._audit_ocr_preflight_failure(run_id, exc)
+            raise
+        self.repository.create_audit_event(
+            run_id,
+            "ocr_preflight_completed",
+            {
+                "available": capability.available,
+                "dependency_codes": list(capability.dependency_codes),
+                "language": capability.language,
+                "max_pages": capability.max_pages,
+            },
+        )
+        return capability
+
+    def _audit_ocr_preflight_failure(
+        self,
+        run_id: str,
+        error: OcrPreflightError,
+    ) -> None:
+        self.repository.create_audit_event(
+            run_id,
+            "ocr_preflight_completed",
+            {
+                "available": False,
+                "dependency_codes": [error.code],
+            },
+        )
+
+    def _audit_ocr_completed(
+        self,
+        run_id: str,
+        chunks,
+        *,
+        duration_seconds: float,
+    ) -> None:
+        page_stats = []
+        for chunk in sorted(chunks, key=lambda item: item.source_page):
+            if chunk.source_method is not EvidenceSourceMethod.OCR:
+                continue
+            page_stats.append(
+                {
+                    "page_number": chunk.source_page,
+                    "text_length": chunk.metadata.get(
+                        "ocr_text_length",
+                        len(chunk.text),
+                    ),
+                    "derived_file_sha256": chunk.metadata.get(
+                        "derived_file_sha256",
+                        "",
+                    ),
+                }
+            )
+        self.repository.create_audit_event(
+            run_id,
+            "ocr_completed",
+            {
+                "ocr_page_count": len(page_stats),
+                "pages": page_stats,
+                "duration_ms": round(duration_seconds * 1000),
+            },
+        )
 
     def _attach_report_index_candidates(
         self,
