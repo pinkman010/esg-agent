@@ -12,9 +12,9 @@
 
 ## 0. 计划状态与决策
 
-**计划状态：** Task 1–8 已完成；Task 9 未授权且未执行。真实 DeepSeek、SiliconFlow、OCR 和 VLM 新调用均为 0。
+**计划状态：** Task 1–9 已完成。Task 9 已获得独立授权并通过默认产品路径执行；由于合格候选为 0，新的真实 DeepSeek、SiliconFlow、OCR 和 VLM 请求均为 0。
 
-**推荐执行方式：** 用户确认本计划后，在当前窗口连续完成 Task 1–8；按工作包分批 commit，全部验证完成后统一汇报。真实 DeepSeek 对比属于 Task 9 的独立授权门禁，不随代码实施自动获得授权。
+**执行方式：** Task 1–8 按工作包分批 commit；完整门禁通过后，Task 9 另行获得真实外部模型调用授权，使用新的 report/run 保留历史对照。
 
 ### 0.1 与现有计划的关系
 
@@ -960,11 +960,11 @@ Expected:
 
 ---
 
-## Task 9：真实 DeepSeek 前后对比（独立授权，默认不执行）
+## Task 9：真实 DeepSeek 前后对比（独立授权）
 
 **授权门槛：** 用户必须在 Task 1–8 全部门禁通过后，再次明确批准真实外部模型调用。此前对“执行计划”的批准不自动覆盖本 Task。
 
-- [ ] **Step 1：确认运行条件**
+- [x] **Step 1：确认运行条件**
 
 - API key 仅存在本地环境变量；
 - 不打印密钥；
@@ -972,7 +972,7 @@ Expected:
 - 不调用 `assess_explicit_candidates()` 强制绕过；
 - 不覆盖历史 report/run/suggestion。
 
-- [ ] **Step 2：执行新 run 并生成只读观测结果**
+- [x] **Step 2：执行新 run 并生成只读观测结果**
 
 预期对比：
 
@@ -986,7 +986,9 @@ Expected:
 
 成功标准是调用资格正确，不要求出现更高 confidence。若报告没有其他合格 AI 候选，真实调用总数为 0 仍可判定本次路由修复通过。
 
-- [ ] **Step 3：保存脱敏对比并单独 commit**
+实际结果：新 run 为 completed，499 条 suggestion 全部 skipped，其中 436 条 `low_review_priority`、63 条 `no_substantive_evidence`；AI stage 为 skipped `0/0`，实际 DeepSeek 请求为 0。与历史 run 相比，4 个 GRI 2-5 弱证据调用全部转为 `no_substantive_evidence`。499 项规则、风险、适用性、证据数量和 PDF 页码差异均为 0，新增 false disclosed 和 wrong source page 均为 0，范围保持 `577/499/78/0`。
+
+- [x] **Step 3：保存脱敏对比并单独 commit**
 
 运行产物放 `tmp/ai/`，不提交原始响应；文档只记录聚合指标和脱敏案例。
 
@@ -1023,7 +1025,7 @@ Expected:
 - Envision v3 保持 `577/499/78/0`，安全和 audit gates 全部为 0；
 - README、DESIGN、DEVELOPMENT 和验收报告与实际行为一致；
 - 形成 3 个分批 commit，未 push；
-- 真实 DeepSeek 对比若未独立批准，明确标记“未执行”，不能影响 Task 1–8 完成判断。
+- Task 9 已通过独立授权门禁；授权不改变默认 `confirm_llm=false` 行为，也不扩大 OCR/VLM、RAG、模型或 Prompt 范围。
 
 ## 7. 宏观下一步
 

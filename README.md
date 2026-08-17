@@ -10,7 +10,7 @@ v1.2.1 发布后缺陷修复已形成本地补丁候选：普通产品运行统�
 
 前端视觉升级已完成工程验收：统一语义色板、指标卡、骨架屏、按钮和状态标签，新增 ECharts 披露结论饼图与复核工作量雷达图，并迁移经授权的品牌视觉资产。中文人工复核页不再默认展示英文标准原文；审计时间线隐藏完整内部关联 ID、未知 payload 字段和解析文本块数，输出文件类型、文件大小及 PDF 页面质量均使用产品化中文展示。业务 API、规则、AI/人工分层和导出口径均未改变。完整结论见 `docs/product/frontend-visual-migration-acceptance.md` 和 `docs/product/v1.2.1-post-release-remediation-acceptance.md`。
 
-AI 候选路由已完成受控解冻：`image_body_not_extracted` evidence 不再进入默认外部模型候选，显式非实质证据和图片正文未提取证据使用统一 AI 本地分类；索引限定路由本身不被误判为非实质证据。`confirm_llm=false` 继续保持零调用和无逐项 suggestion；已授权但零合格候选的运行保存逐项跳过原因，便于前端解释和只读审计。模型、Prompt、数据库、规则、风险、人工复核和导出口径均未改变。完整结论见 `docs/product/ai-candidate-routing-acceptance.md`。
+AI 候选路由已完成受控解冻：`image_body_not_extracted` evidence 不再进入默认外部模型候选，显式非实质证据和图片正文未提取证据使用统一 AI 本地分类；索引限定路由本身不被误判为非实质证据。`confirm_llm=false` 继续保持零调用和无逐项 suggestion；已授权但零合格候选的运行保存逐项跳过原因，便于前端解释和只读审计。Task 9 已通过新的 Envision 产品 run 完成授权对比：旧 run 的 4 次弱证据调用降为 0，499 项规则、风险、适用性和证据页差异均为 0。模型、Prompt、数据库、规则、风险、人工复核和导出口径均未改变。完整结论见 `docs/product/ai-candidate-routing-acceptance.md`。
 
 当前记录门禁：后端 792 项测试和 Ruff 通过；前端 lint 通过（0 error、2 条已知 warning），39 个测试文件、149 项测试、typecheck 和 production build 通过；Envision v3 回归的新增 false disclosed、wrong source page 和 global fallback 均为 0，audit 为 0 error、0 warning。Goldwind 52 页真实数字文本报告已完成独立上传、分析、复核、整改、草稿、下载和审计闭环，用作产品泛化工程证据。内置报告画像同时校验文件名、页数和源 PDF SHA-256，防止同名同页文件误用报告专属证据路由。
 

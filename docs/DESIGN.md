@@ -471,7 +471,7 @@ v3 技术结构为 `577/499/78/0`。部分失败、失败项 retry 和服务重�
 
 正式输出后的纠正复用 assessment `reopen`。reopen 快照使报告进入 `reopened`；完成新的解决型人工复核并重新满足有效完整性 gate 后生成 N+1 正式版本，旧正式版本转为 `superseded`，历史快照和文件保持可读。当前没有独立 report reopen API，也没有启用 `voided` 操作。
 
-225 条真实 DeepSeek 评估继续作为 AI 辅助工程基线；模型和 Prompt 未因本轮解冻改变。2026-08-17 的候选路由解冻仅阻止 `image_body_not_extracted` 弱证据触发模型，并增加只读观测和中文跳过原因；没有执行新的真实 DeepSeek 对比。规则、AI 和人工三层权威关系保持独立。该发布基线属于本地产品与工程验收，不构成 GRI 专家认证、外部鉴证或企业部署承诺。
+225 条真实 DeepSeek 评估继续作为 AI 辅助工程基线；模型和 Prompt 未因本轮解冻改变。2026-08-17 的候选路由解冻阻止 `image_body_not_extracted` 弱证据触发模型，并增加只读观测和中文跳过原因。独立授权的 Task 9 使用默认 analyze 路径和 `confirm_llm=true` 新建 Envision run，499 项全部得到可解释 skipped，合格候选和真实 DeepSeek 请求均为 0；与历史 run 相比，4 个 GRI 2-5 弱证据调用被消除，规则、风险、适用性、证据数量和证据页均无差异。规则、AI 和人工三层权威关系保持独立。该发布基线属于本地产品与工程验收，不构成 GRI 专家认证、外部鉴证或企业部署承诺。
 
 通用 verdict 批量复核、生产 OCR、RAG Phase 2 和企业级平台能力进入条件化路线图。旧 `review_decisions` 和旧 API 继续处于兼容窗口。完整结果、限制和触发条件见 `docs/product/phase1.7-final-closure-acceptance.md`。
 

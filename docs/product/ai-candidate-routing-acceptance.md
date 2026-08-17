@@ -2,7 +2,7 @@
 
 ## 1. 验收范围
 
-本轮只验证 AI 候选路由、已授权零候选记录、前端原因表达、只读观测和调用边界。规则 verdict、适用性、风险、人工 snapshot、GRI `577/499/78/0`、数据库结构、Prompt、OCR/VLM、RAG 和正式导出均属于保护区。
+本轮验证 AI 候选路由、已授权零候选记录、前端原因表达、只读观测、调用边界和独立授权的 Task 9 产品前后对比。规则 verdict、适用性、风险、人工 snapshot、GRI `577/499/78/0`、数据库结构、Prompt、OCR/VLM、RAG 和正式导出均属于保护区。
 
 ## 2. 实施前基线
 
@@ -37,7 +37,7 @@
 - `index_page_bounded` 和 `candidate_page_source` 只用于诊断，不能单独决定 evidence 是否实质。
 - `confirm_llm=false` 继续保持零调用、run 级 skipped、无逐项 suggestion。
 - `confirm_llm=true` 且零合格候选时保存逐项 skipped 原因，但不调用模型。
-- 真实 DeepSeek 前后对比需要独立授权，本轮默认不执行。
+- 真实 DeepSeek 前后对比只在 Task 1–8 通过后执行，并使用新的 report/run 保留历史对照。
 
 ## 5. 实施与验证结果
 
@@ -95,9 +95,26 @@ confidence buckets = 3 in 0-19% + 1 in 20-39%
 | review CSV audit | 0 error、0 warning |
 | 最终裁决 pending | 0 |
 
-### 5.5 外部调用与结论边界
+### 5.5 Task 9 真实产品前后对比
 
-本轮执行产生的真实 DeepSeek、SiliconFlow、OCR 和 VLM 调用均为 0。4 个 GRI 2-5 缺陷样本已经通过默认 `assess_candidates()` 回归测试固定为 `no_substantive_evidence`，fake client 调用为 0。没有执行 Task 9 的新真实 DeepSeek 产品 run，因此不宣称模型 confidence 已提高。
+用户独立授权后，通过默认产品上传、元数据确认和 analyze API 创建新报告 `report-b955efdf66b547d8bd47698fc6e05eff` 与 run `run-debd7c6af0ed494bbb6c8b5f73d99188`。运行设置为 `confirm_llm=true`、OCR 关闭，没有调用 `assess_explicit_candidates()`，旧 report/run/suggestion 均未覆盖。
+
+| 指标 | 历史 run `run-5502642e45944aa19dd455e677462d72` | Task 9 新 run | 差异 |
+|---|---:|---:|---:|
+| suggestion | 499 | 499 | 0 |
+| 实际调用 / succeeded | 4 | 0 | -4 |
+| skipped | 495 | 499 | +4 |
+| `low_review_priority` | 436 | 436 | 0 |
+| `no_substantive_evidence` | 59 | 63 | +4 |
+| technical failed | 0 | 0 | 0 |
+
+新增的 4 条 `no_substantive_evidence` 正好对应 `GRI 2-5-a`、`GRI 2-5-b-i`、`GRI 2-5-b-ii` 和 `GRI 2-5-b-iii`。四项仍引用 PDF 第 77 页，质量标记包含 `digital_text`、`short_text` 和 `image_body_not_extracted`；新 run 均保存为 skipped，AI stage 为 skipped `0/0`，没有发出 DeepSeek 请求。
+
+前后两个 run 按 requirement ID 对齐后，499 项 system verdict、risk level、evidence status、applicability status、risk reason codes、evidence count 和 source PDF pages 的差异均为 0，因此新增 false disclosed 和 wrong source page 也均为 0。范围保持 577 个标准单元、499 个独立判断项、78 个上下文项、0 个失败或未生成项。脱敏结果保存在 `tmp/ai/envision_ai_routing_task9_after_summary.json` 和对应 CSV，不提交 raw response、密钥、数据库 URL、Prompt 或证据正文。
+
+### 5.6 外部调用与结论边界
+
+Task 9 已授权外部模型，但正式路由得出 0 个合格候选，因此新真实 DeepSeek、SiliconFlow、OCR 和 VLM 请求均为 0。该结果验证调用资格和零调用安全边界，不提供 confidence 提升、模型正确率或供应商响应质量证据。
 
 规则 verdict、适用性、风险、人工 snapshot、正式导出和 `577/499/78/0` 均未改变。新分类器只提高 AI 候选资格精度，不改善缺失正文的 evidence recall。
 
@@ -106,8 +123,8 @@ confidence buckets = 3 in 0-19% + 1 in 20-39%
 1. PDF 第 77 页的鉴证正文仍带 `image_body_not_extracted`，本轮选择跳过 AI；要分析正文仍需独立 OCR/VLM 阶段和真实样本门禁。
 2. 缺少 `evidence_type` 且没有 `image_body_not_extracted` 的 evidence 继续按兼容口径视为 substantive，避免破坏现有数字文本召回。后续只有出现新的误调用证据时才扩展分类，不采用公司名、固定页码或中文关键词硬编码。
 3. confidence 是模型自报分数，当前没有独立 ESG 专家 gold，不能做可靠校准或准确率结论。
-4. Task 9 保持未执行。当前自动回归和零调用安全门禁已足以验收路由代码；只有需要验证真实产品运行的调用数量、成本或供应商行为时，再单独授权该任务。
+4. 本地 `.env` 的 Prompt version 覆盖值仍为历史版本；Task 9 没有产生模型请求，因此对本次结果无影响。未来存在合格候选并计划真实调用前，应先统一运行环境与代码默认版本，并单独批准 Prompt 变更范围。
 
 ## 7. 验收结论
 
-Task 1–8 达到计划完成条件：弱证据被默认 AI 路由拦截、已授权零候选可解释、未授权语义保持、观测可复现、显式评估未进入产品路径，前后端和 Envision 完整 gates 均通过。后端基线可在本轮文档提交后重新冻结；Task 9 和 OCR/VLM 不属于本次完成条件。
+Task 1–9 达到计划完成条件：弱证据被默认 AI 路由拦截、已授权零候选可解释、未授权语义保持、观测可复现、显式评估未进入产品路径，前后端和 Envision 完整 gates 均通过；真实产品对比进一步证明 4 次弱证据调用已消除，保护字段无差异。后端基线可在本轮文档提交后重新冻结；OCR/VLM 仍属于独立决策范围。
