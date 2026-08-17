@@ -32,13 +32,13 @@
 - Node.js。
 - Python 3.11。
 
-实验性 OCR 路由额外需要：
+受控 OCR 路由额外需要：
 
 - OCRmyPDF。
 - Tesseract，以及请求语言对应的语言包。
 - Ghostscript，供 OCRmyPDF 真实执行 OCR 时调用。
 
-缺少上述 OCR 依赖不会影响 `enable_ocr=false` 的正式默认链路。当前 v1.1 未将 OCR 作为生产能力验收，真实 OCR 启用前必须完成 `docs/plan/ocr-production-readiness-deferred-plan.md` 规定的依赖检查、错误审计和扫描样本验证。
+缺少上述 OCR 依赖不会影响 `enable_ocr=false` 的正式默认链路。OCR 已通过 Envision 第 77 页单页受控试点；通用扫描报告仍需满足 `docs/plan/ocr-production-readiness-deferred-plan.md` 的样本和质量门槛。
 
 工具路径约定：
 
@@ -69,11 +69,27 @@
 
 OCR 相关环境变量：
 
-- `OCR_ENABLED=false`：当前为预留配置字段；正式请求仍以 `enable_ocr=false` 为默认值。该字段尚未作为全局强制门禁，未来解冻时必须先确定其保留、移除或双重开关语义。
+- `OCR_ENABLED=false`：全局强制门禁；只有该值为 `true` 且请求显式传入 `enable_ocr=true` 时才允许 OCR。
 - `OCR_LANG=chi_sim+eng`：OCRmyPDF/Tesseract 语言。
 - `OCR_MAX_PAGES=5`：未显式指定页码时最多处理的低文本/扫描页数。
 - `TESSERACT_CMD`：Tesseract 命令或路径。
 - `OCRMYPDF_CMD=ocrmypdf`：OCRmyPDF 命令。
+- `GHOSTSCRIPT_CMD`：Ghostscript 命令；Windows 通常使用 `gswin64c`。
+- `OCR_TIMEOUT_SECONDS=300`：单次 OCR 子进程超时，允许范围为 1–1800 秒。
+
+`GET /api/capabilities/ocr` 返回全局开关、依赖可用性、语言、页数上限和稳定 dependency code，不返回本机路径或原始 stderr。该接口与分析 workflow 共用 preflight；`/api/health` 继续只表达服务存活。
+
+2026-08-17 本机受控试点验证版本为 OCRmyPDF 17.8.0、Ghostscript CLI 10.07.1（Chocolatey 包 `Ghostscript 10.7.1`）和 Tesseract 5.5.0.20241111，语言包为 `chi_sim`、`eng`、`osd`。版本核验命令：
+
+```powershell
+cd backend
+uv run --no-sync ocrmypdf --version
+gswin64c --version
+tesseract --version
+tesseract --list-langs
+```
+
+运行回滚优先设置 `OCR_ENABLED=false` 并保持请求 `enable_ocr=false`。需要移除系统依赖时，先停止 OCR 任务，再由管理员执行 `choco uninstall ghostscript -y`；该操作不删除原始报告，派生文件仍按 runtime 数据策略处理。
 
 DeepSeek 相关环境变量：
 
@@ -626,6 +642,10 @@ uv run --no-sync python -m src.tools.evaluate_shadow_rag `
 
 ### 2026-08-17
 
+- 完成 OCR 单页受控试点：增加共享 dependency preflight、非阻断 `GET /api/capabilities/ocr`、全局/请求双重门禁、显式/profile/低质量页选择、页码与页数校验、有限超时、安全错误码、派生文件清理和 OCR 审计。数据库、GRI 范围、规则、风险、AI、人工快照、前端和导出 schema 均未修改。
+- 管理员安装 Chocolatey `Ghostscript 10.7.1` 后，OCRmyPDF 17.8.0、Ghostscript CLI 10.07.1、Tesseract 5.5.0.20241111 和 `chi_sim+eng` preflight 通过。Envision 第 77 页真实 OCR 生成 1 个 2,324 字符 chunk，命中“德勤”“鉴证结论”两个锚点，带 `needs_manual_review`，原始 PDF SHA-256 不变。
+- 新 OCR run 固定 `confirm_llm=false`，499/499 成功。与基线逐项比较时，仅 GRI 2-5 四项从 1 条 `pdfplumber` evidence 增加为同页 `pdfplumber + ocr` 两条 evidence；其余 495 项保护字段差异为 0，global fallback、新增 false disclosed、新增 wrong source page 均为 0。DeepSeek、embedding、VLM 调用均为 0。
+- 重新冻结门禁为后端 822 项测试和 Ruff 通过；前端 lint 0 error、2 条既有 warning，39 个测试文件 149 项测试、typecheck 和 production build 通过；Envision regeneration 保持 `577/499/78/0`、audit 0 error/0 warning 和 16 条最终裁决 0 pending。完整事实见 `docs/product/ocr-controlled-pilot-acceptance.md`。
 - 完成 AI 候选路由与证据类型治理受控解冻：新增只供 AI 使用的 evidence eligibility 分类器，`image_body_not_extracted` 和显式非实质 evidence 不再进入默认外部模型候选；`index_page_bounded`、候选来源和 `short_text` 不被单独视为非实质 evidence。分类器不回写规则证据。
 - `confirm_llm=true` 且零合格候选时追加保存逐项 skipped 原因，AI stage 保持 skipped `0/0`，skipped assessment 不标记 `model_called`；`confirm_llm=false` 仍为零调用、run 级 skipped、无逐项 suggestion。
 - 前端补齐上下文项和实质证据不足的中文跳过原因；新增只读 AI 观测 CLI，真实读取历史 Envision run 后复现 499 条 suggestion、4 次 succeeded、495 次 skipped、0 次 failed，输出只包含脱敏聚合和白名单字段。该读取没有产生新的外部模型调用或数据库写入。

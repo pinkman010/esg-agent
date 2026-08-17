@@ -45,7 +45,7 @@ ESG-Agent 第一版面向企业 ESG 团队，提供单报告 GRI 核查闭环。
 | 数据请求 | TanStack Query |
 | 表格 | TanStack Table |
 | 图表 | ECharts（`echarts/core` 按需注册 Bar/Line/Pie/Radar）与 Recharts 并存，均通过业务组件封装 |
-| PDF | pypdf、pdfplumber 正式默认链路；实验性 OCRmyPDF/Tesseract；Docling/VLM 设计预留 |
+| PDF | pypdf、pdfplumber 正式默认链路；默认关闭的受控 OCRmyPDF/Tesseract/Ghostscript 路由；Docling/VLM 设计预留 |
 | 模型 | OpenAI-compatible 薄适配层，默认不调用 |
 | 测试 | pytest、Vitest、React Testing Library、typecheck、build |
 | 包管理 | 后端 uv，前端 pnpm |
@@ -346,9 +346,13 @@ API 前缀保持 `/api`。资源分组：
 
 ## 13. PDF 与外部模型边界
 
-PDF 继续采用分级路由：pypdf/pdfplumber 为正式默认主链路；扫描关键页可通过请求参数进入实验性 OCR 路由；Docling fallback 和 VLM 仍为接口或字段预留，没有进入正式产品运行。VLM 只有用户显式确认后才允许调用。
+PDF 继续采用分级路由：pypdf/pdfplumber 为正式默认主链路；扫描关键页可通过全局和请求双重门禁进入受控 OCR 路由；Docling fallback 和 VLM 仍为接口或字段预留，没有进入正式产品运行。VLM 只有用户显式确认后才允许调用。
 
-Phase 1.7 的正式输入边界为数字文本型 PDF。解析完成后生成页级质量报告；全部页面不可形成数字文本、且未启用实验 OCR 时，在 requirement 规则执行前以 `unsupported_scanned_pdf` 失败，不生成 assessment。数字文本与少量扫描页混合的报告标记为 `supported_with_review`，扫描或低文本密度页继续带人工复核提示。当前代码支持显式 `enable_ocr`、指定页或低质量页选择、派生 PDF 和 `source_method=ocr` chunk，但缺少 Ghostscript preflight 和真实扫描样本发布门禁，OCR 不进入正式生产能力承诺。只有实际扫描报告造成关键证据缺失、产品验收明确要求扫描 PDF，或已经形成可复核扫描样本集时，才允许按 `docs/plan/ocr-production-readiness-deferred-plan.md` 条件解冻后端。
+Phase 1.7 的正式输入边界为数字文本型 PDF。解析完成后生成页级质量报告；全部页面不可形成数字文本、且未启用 OCR 时，在 requirement 规则执行前以 `unsupported_scanned_pdf` 失败，不生成 assessment。数字文本与少量扫描页混合的报告标记为 `supported_with_review`，扫描或低文本密度页继续带人工复核提示。
+
+OCR 已通过单页受控试点，默认关闭，仅在全局和请求双重启用后按目标页运行；当前不构成通用扫描 PDF 生产能力。请求先校验页码和 `OCR_MAX_PAGES`，再由基础解析产生目标页；页选择优先级为显式页、report profile 的 `requires_ocr` 页、低文本/扫描页。没有目标页时不执行依赖检查或 OCR。存在目标页时，capability 与 workflow 共用 preflight，检查 OCRmyPDF、Ghostscript、Tesseract 和语言包；错误使用稳定代码和脱敏摘要。核心 `/api/health` 不因 OCR 依赖缺失而失败。
+
+OCRmyPDF 只生成派生 PDF，pdfplumber 从目标页读取 OCR 文本并追加 `source_method=ocr` chunk。OCR chunk 保留原始 PDF 页码、派生文件哈希和 `needs_manual_review`，与原生数字文本证据并存；它不能覆盖规则 assessment、风险、适用性、人工 snapshot 或正式输出结论。Envision 第 77 页试点和后续生产化条件分别见 `docs/product/ocr-controlled-pilot-acceptance.md`、`docs/plan/ocr-production-readiness-deferred-plan.md`。
 
 证据工作台通过 `GET /api/reports/{report_id}/pages/{page_number}/image` 按页渲染原始 PDF 的 PNG 预览。该预览只读、按需生成并允许私有缓存；原始 PDF 仍通过文件接口保留，不覆盖、不转换为新的事实来源。
 
@@ -362,7 +366,8 @@ SiliconFlow `BAAI/bge-m3` 第一阶段属于离线影子 RAG。`EMBEDDING_ENABLE
 
 - 原始 PDF 不覆盖；
 - OCR 产物作为派生文件保存；
-- OCR 未完成依赖检查与真实样本验收前不进入正式生产能力；
+- OCR 受全局/请求双重门禁、页数上限、共享 preflight、超时、错误脱敏和审计约束；
+- 单页试点通过不等于通用扫描 PDF 生产能力；
 - 外部模型默认不调用；
 - AI `disclosed` 不允许直接升级规则的 `partial/unknown`，此类建议进入人工复核 guardrail；
 - VLM 输出不直接成为最终合规事实；

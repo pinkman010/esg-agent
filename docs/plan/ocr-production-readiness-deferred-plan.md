@@ -8,7 +8,7 @@
 
 **技术栈：** Python 3.11、FastAPI、Pydantic v2、OCRmyPDF、Tesseract、Ghostscript、pypdf、pdfplumber、pytest。
 
-**执行状态（2026-08-17）：** 条件解冻方向已批准，实施尚未启动。真实 Envision 第 77 页图片正文未提取并影响 4 个 GRI 2-5 独立判断项，已达到受控 OCR 试点触发条件；通用扫描 PDF 生产化和 VLM 继续延期。最新设计以 `docs/plan/ocr-controlled-pilot-design.md` 为准。
+**执行状态（2026-08-17）：** 单页受控试点已按 `docs/plan/ocr-controlled-pilot-implementation-plan.md` 完成并重新冻结。Envision 第 77 页真实 OCR、依赖 preflight、capability、错误脱敏和审计已通过；通用扫描 PDF 生产化、VLM、后台队列和 ParserBackend 大抽象继续延期。本文件后续任务只在新增真实扫描样本和再次批准解冻后执行。
 
 ---
 
@@ -17,18 +17,19 @@
 - 正式默认链路为 `pypdf + pdfplumber`，当前 Envision 主报告能够完成数字文本解析。
 - `enable_ocr=false` 时不进入 OCR；`enable_ocr=true` 支持显式 `ocr_pages`，未指定时只选择 `low_text_density` 或 `scanned` 页并受 `OCR_MAX_PAGES` 限制。
 - OCR 输出写入派生目录，不覆盖原始 PDF；OCR chunk 使用 `source_method=ocr` 并携带 `needs_manual_review`。
-- OCRmyPDF 17.8.0 可由项目环境运行；Tesseract 可见 `chi_sim`、`eng`、`osd`；Ghostscript 当前不可用。
-- `backend/src/services/ocr.py` 尚未提供依赖 preflight，失败时会直接使用 OCRmyPDF stderr，错误类别和路径脱敏均未形成正式契约。
-- `OCR_ENABLED` 已存在于配置和文档中，但当前请求链路没有把它作为全局强制门禁。
+- OCRmyPDF 17.8.0、Ghostscript CLI 10.07.1 和 Tesseract 5.5.0.20241111 已通过共享 preflight；Tesseract 可见 `chi_sim`、`eng`、`osd`。
+- OCR capability、workflow 和 OCR runner 使用同一依赖口径；失败返回稳定错误码和脱敏摘要，不暴露路径、命令行或原始 stderr。
+- `OCR_ENABLED` 已作为全局强制门禁；请求仍需显式 `enable_ocr=true`，页码和 `OCR_MAX_PAGES` 在创建 run 前校验。
+- Envision 第 77 页真实试点生成 1 个 2,324 字符 OCR chunk，命中 2 个验收锚点；499 项仅 GRI 2-5 四项增加同页 OCR evidence，其余 495 项保护字段零差异。
 - Docling 为接口预留，PaddleOCR 未接入，VLM 为字段或设计预留；没有扫描样本评测支持 ParserBackend 大抽象。
-- 2026-07-28 只读审计收集到 709 项后端测试，OCR 目标测试 49 项通过；2026-07-05 的 179 项记录属于当时测试发现范围。
+- 当前完整门禁为后端 822 项、Ruff、前端 39 个测试文件 149 项测试、typecheck、production build 和 Envision `577/499/78/0` 回归全部通过。
 
 ## 2. 延期理由
 
 1. 当前产品主线没有扫描 PDF 交付要求，OCR 不阻塞单报告 ESG 分析闭环。
-2. 默认链路已完成 v1.1 冻结和产品验收，解冻需要重新验证运行状态、审计、API 和 Envision 回归。
-3. 缺少真实扫描报告和可复核页级样本，当前无法衡量 OCR 对证据召回、错页和人工复核量的实际影响。
-4. Ghostscript 缺失且真实 OCR 未完成端到端运行，立即抽象 Docling、PaddleOCR 或后台队列缺少质量与耗时证据。
+2. 默认链路已在本次单页试点后重新验证和冻结，继续扩大范围需要再次执行完整门禁。
+3. 当前只有一个中文混合文本/图片报告的一页可复核样本，无法衡量完全扫描报告的证据召回、错页和人工复核量。
+4. 单页 OCR 约 29 秒，只能证明同步受控执行可行，尚不足以决定 Docling、PaddleOCR、VLM 或后台队列架构。
 
 ## 3. 条件解冻触发门槛
 
@@ -235,7 +236,7 @@
 
 ## 6. 当前停止点
 
-- v1.1 后端继续冻结。
-- 不安装 Ghostscript，不运行真实 OCR，不新增 capability API。
+- OCR 受控试点后端重新冻结。
+- Ghostscript、真实单页 OCR 和 capability API 已完成；不继续扩展为通用扫描 PDF 生产能力。
 - 保留 `enable_ocr=false` 的正式产品运行方式。
-- 收集真实 PDF 使用问题；出现第 3 节触发条件后重新审批。
+- 收集至少两类真实扫描报告、页级 gold 和运行指标；再次满足第 3 节触发条件后重新审批。

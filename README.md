@@ -72,11 +72,11 @@ esg-agent/
 
 - 后端：Python 3.11、FastAPI、Pydantic v2、PostgreSQL、SQLAlchemy 2.0、Alembic。
 - 前端：Next.js App Router、TypeScript、Tailwind CSS、TanStack Query、TanStack Table、ECharts 与 Recharts。
-- PDF：pypdf、pdfplumber 为正式默认链路；OCRmyPDF/Tesseract 为实验性显式路由，Docling 和 VLM 仍为设计预留。
+- PDF：pypdf、pdfplumber 为正式默认链路；OCRmyPDF/Tesseract/Ghostscript 为默认关闭的受控显式路由，Docling 和 VLM 仍为设计预留。
 - AI：DeepSeek OpenAI-compatible API；默认关闭，只生成追加式辅助建议。
 - 包管理：后端 uv，前端 pnpm。
 
-原始 PDF 不覆盖。正式支持数字文本型 PDF；少量扫描页混合报告带人工复核警告；完全扫描且未启用实验 OCR 的文档会在规则执行前返回 `unsupported_scanned_pdf`。OCR 默认关闭，仅在分析请求显式传入 `enable_ocr=true` 且确有目标页时进入实验性路由。Ghostscript preflight 和真实扫描样本发布门禁尚未完成，因此 OCR 不属于正式生产能力；延期与条件解冻边界见 `docs/plan/ocr-production-readiness-deferred-plan.md`。外部模型只有用户显式确认后才允许调用。
+原始 PDF 不覆盖。正式支持数字文本型 PDF；少量扫描页混合报告带人工复核警告；完全扫描且未启用 OCR 的文档会在规则执行前返回 `unsupported_scanned_pdf`。OCR 已通过单页受控试点，默认关闭，仅在全局和请求双重启用后按目标页运行；当前不构成通用扫描 PDF 生产能力。依赖能力通过 `GET /api/capabilities/ocr` 非阻断公开，OCR evidence 强制带人工复核标记。试点事实和通用能力延期边界分别见 `docs/product/ocr-controlled-pilot-acceptance.md`、`docs/plan/ocr-production-readiness-deferred-plan.md`。外部模型只有用户显式确认后才允许调用。
 
 ## 本地运行
 

@@ -12,7 +12,7 @@
 
 ## 0. 执行状态与授权边界
 
-**计划状态：** 设计已批准；代码、Ghostscript 安装和真实 OCR 尚未执行。
+**计划状态（2026-08-17）：** 已完成。四个代码工作包、Ghostscript 10.7.1 安装、Envision 第 77 页真实 OCR、完整前后端门禁、Envision v3 回归和验收文档均通过；后端重新冻结，未 push。
 
 **执行方式：** 在当前 `main` 连续执行，按四个代码提交工作包和一个验收文档提交拆分，完成后统一汇报；不自动 push。用户批准执行本计划时，需要同时明确批准 Ghostscript 系统包安装。没有该批准时，只允许完成安装前的代码与 fake 测试，并在 Task 8 前停止。
 
@@ -64,7 +64,7 @@
 - Read: `backend/src/workflows/single_report_workflow.py`
 - Read: `backend/src/api/routes/reports.py`
 
-- [ ] **Step 1：确认 Git 和提交边界**
+- [x] **Step 1：确认 Git 和提交边界**
 
 ```powershell
 git status --short --branch
@@ -74,7 +74,7 @@ git rev-parse HEAD
 
 Expected：工作区无未分类改动；起点包含设计提交 `3383163`；本地 ahead 状态只记录、不 push。
 
-- [ ] **Step 2：记录 PDF 与依赖只读基线**
+- [x] **Step 2：记录 PDF 与依赖只读基线**
 
 ```powershell
 Get-FileHash -Algorithm SHA256 "backend/data/reports/Envision Energy 2024-zh.pdf"
@@ -87,7 +87,7 @@ Get-Command gs,gswin64c,gswin32c -ErrorAction SilentlyContinue
 
 Expected：OCRmyPDF 为 17.8.0；`chi_sim`、`eng` 可用；Ghostscript 当前不可用；不得打印密钥、数据库 URL 或本机用户目录。
 
-- [ ] **Step 3：运行安装前 focused baseline**
+- [x] **Step 3：运行安装前 focused baseline**
 
 ```powershell
 Set-Location backend
@@ -103,7 +103,7 @@ uv run --no-sync pytest `
 
 Expected：PASS，不产生真实 OCR 或外部模型调用。若基线失败，停止并先区分已有缺陷。
 
-- [ ] **Step 4：记录全量测试发现范围**
+- [x] **Step 4：记录全量测试发现范围**
 
 ```powershell
 Set-Location backend
@@ -126,7 +126,7 @@ Expected：测试数不少于当前记录的 792，pytest 与 Ruff 通过。该�
 - Modify: `backend/src/config/settings.py`
 - Modify: `backend/tests/test_settings.py`
 
-- [ ] **Step 1：先写 settings 失败测试**
+- [x] **Step 1：先写 settings 失败测试**
 
 在 `backend/tests/test_settings.py` 增加：
 
@@ -148,7 +148,7 @@ def test_ocr_timeout_rejects_out_of_range_values():
         Settings(_env_file=None, ocr_timeout_seconds=1801)
 ```
 
-- [ ] **Step 2：写 preflight 参数化失败测试**
+- [x] **Step 2：写 preflight 参数化失败测试**
 
 `backend/tests/services/test_ocr_capability.py` 至少包含：
 
@@ -200,7 +200,7 @@ def test_require_ocr_capability_raises_only_safe_message(monkeypatch):
 
 测试 helper 必须 monkeypatch `shutil.which` 和 `subprocess.run`，不访问本机真实命令。
 
-- [ ] **Step 3：运行测试确认 RED**
+- [x] **Step 3：运行测试确认 RED**
 
 ```powershell
 Set-Location backend
@@ -213,7 +213,7 @@ uv run --no-sync pytest `
 
 Expected：因 `ocr_timeout_seconds`、`ghostscript_cmd`、`ocr_errors` 和 `ocr_capability` 尚不存在而失败。
 
-- [ ] **Step 4：实现稳定错误类型**
+- [x] **Step 4：实现稳定错误类型**
 
 `backend/src/services/ocr_errors.py` 固定公开接口：
 
@@ -247,7 +247,7 @@ class OcrExecutionError(OcrError):
 
 异常字符串只能来自固定消息表，不能拼接路径、命令行、stdout 或 stderr。
 
-- [ ] **Step 5：实现只读 capability**
+- [x] **Step 5：实现只读 capability**
 
 `backend/src/services/ocr_capability.py` 的公开类型固定为：
 
@@ -272,7 +272,7 @@ class OcrCapability:
 - `dependency_codes` 按 OCRmyPDF、Ghostscript、Tesseract、语言包顺序稳定输出。
 - `available = settings.ocr_enabled and not dependency_codes`。
 
-- [ ] **Step 6：扩展 settings**
+- [x] **Step 6：扩展 settings**
 
 在 `Settings` 中增加：
 
@@ -283,7 +283,7 @@ ocr_timeout_seconds: int = Field(default=300, ge=1, le=1800)
 
 保留 `ocr_enabled=False`、`ocr_max_pages=5` 和现有 OCR 默认值。
 
-- [ ] **Step 7：运行 GREEN 与 Ruff**
+- [x] **Step 7：运行 GREEN 与 Ruff**
 
 ```powershell
 Set-Location backend
@@ -302,7 +302,7 @@ uv run --no-sync ruff check `
 
 Expected：PASS，测试不调用真实依赖。
 
-- [ ] **Step 8：提交 preflight 工作包**
+- [x] **Step 8：提交 preflight 工作包**
 
 ```powershell
 git add -- `
@@ -325,7 +325,7 @@ git commit -m "feat: add OCR dependency preflight"
 - Modify: `backend/tests/services/test_ocr.py`
 - Modify: `backend/tests/services/test_document_parser.py`
 
-- [ ] **Step 1：先写 timeout、失败脱敏和哈希测试**
+- [x] **Step 1：先写 timeout、失败脱敏和哈希测试**
 
 扩展 `backend/tests/services/test_ocr.py`：
 
@@ -390,7 +390,7 @@ def test_run_ocr_for_pages_failure_does_not_expose_stderr(monkeypatch, tmp_path)
     assert "secret" not in str(exc_info.value)
 ```
 
-- [ ] **Step 2：先写 parser metadata 失败测试**
+- [x] **Step 2：先写 parser metadata 失败测试**
 
 在 `backend/tests/services/test_document_parser.py` 增加 fake `OcrResult`：
 
@@ -414,7 +414,7 @@ assert ocr_chunk.metadata == {
 }
 ```
 
-- [ ] **Step 3：运行测试确认 RED**
+- [x] **Step 3：运行测试确认 RED**
 
 ```powershell
 Set-Location backend
@@ -427,7 +427,7 @@ uv run --no-sync pytest `
 
 Expected：缺少新参数、结构化错误和派生哈希导致失败。
 
-- [ ] **Step 4：实现受控 runner**
+- [x] **Step 4：实现受控 runner**
 
 `OcrResult` 改为：
 
@@ -471,11 +471,11 @@ derived_hash = sha256(output_path.read_bytes()).hexdigest()
 
 不得把 `completed.stderr` 或 `completed.stdout` 写入异常。
 
-- [ ] **Step 5：扩展子进程环境与 parser metadata**
+- [x] **Step 5：扩展子进程环境与 parser metadata**
 
 `_subprocess_env()` 同时接受 Tesseract 和 Ghostscript 配置，只把各命令父目录前置到子进程 PATH，不修改系统 PATH。`DocumentParser` 将 `derived_file_sha256` 和 `ocr_text_length` 写入 OCR chunk metadata，不把派生绝对路径写入数据库。
 
-- [ ] **Step 6：运行 GREEN 与 Ruff**
+- [x] **Step 6：运行 GREEN 与 Ruff**
 
 ```powershell
 Set-Location backend
@@ -491,7 +491,7 @@ uv run --no-sync ruff check `
   tests/services/test_document_parser.py
 ```
 
-- [ ] **Step 7：提交 runner 工作包**
+- [x] **Step 7：提交 runner 工作包**
 
 ```powershell
 git add -- `
@@ -512,7 +512,7 @@ git commit -m "fix: bound and audit OCR execution"
 - Create: `backend/tests/services/test_ocr_page_selector.py`
 - Modify: `backend/src/services/ocr_errors.py`
 
-- [ ] **Step 1：写优先级和边界失败测试**
+- [x] **Step 1：写优先级和边界失败测试**
 
 `backend/tests/services/test_ocr_page_selector.py` 覆盖：
 
@@ -568,7 +568,7 @@ def test_explicit_page_limit_is_rejected():
     assert exc_info.value.code == "ocr_page_limit_exceeded"
 ```
 
-- [ ] **Step 2：运行测试确认 RED**
+- [x] **Step 2：运行测试确认 RED**
 
 ```powershell
 Set-Location backend
@@ -580,7 +580,7 @@ uv run --no-sync pytest `
 
 Expected：模块不存在。
 
-- [ ] **Step 3：实现纯函数接口**
+- [x] **Step 3：实现纯函数接口**
 
 `backend/src/services/ocr_page_selector.py`：
 
@@ -605,7 +605,7 @@ class OcrPageSelectionError(OcrError):
 4. 按 profile、页质量顺序去重，截取 `max_pages`。
 5. 不根据公司名、固定页码、正文关键词或 requirement ID 做选择。
 
-- [ ] **Step 4：运行 GREEN 与 Ruff**
+- [x] **Step 4：运行 GREEN 与 Ruff**
 
 ```powershell
 Set-Location backend
@@ -630,7 +630,7 @@ uv run --no-sync ruff check `
 - Modify: `backend/src/main.py`
 - Modify: `backend/tests/api/test_reports_api.py`
 
-- [ ] **Step 1：写 capability API 失败测试**
+- [x] **Step 1：写 capability API 失败测试**
 
 ```python
 async def test_ocr_capability_is_non_blocking_and_safe(api_client, monkeypatch):
@@ -664,7 +664,7 @@ async def test_core_health_remains_ok_when_ocr_is_unavailable(api_client):
     assert response.json()["status"] == "ok"
 ```
 
-- [ ] **Step 2：写 analyze 门禁失败测试**
+- [x] **Step 2：写 analyze 门禁失败测试**
 
 在 `test_reports_api.py` 增加：
 
@@ -702,7 +702,7 @@ async def test_analyze_rejects_out_of_range_ocr_pages_before_run(
 
 另增加 6 个唯一显式页触发 `ocr_page_limit_exceeded` 的测试。每个测试恢复 `get_settings().ocr_enabled`，避免污染其他 API 用例。
 
-- [ ] **Step 3：运行测试确认 RED**
+- [x] **Step 3：运行测试确认 RED**
 
 ```powershell
 Set-Location backend
@@ -713,7 +713,7 @@ uv run --no-sync pytest `
   --basetemp ../tmp/pytest-ocr-api-red
 ```
 
-- [ ] **Step 4：增加 response schema 与 router**
+- [x] **Step 4：增加 response schema 与 router**
 
 `backend/src/api/schemas.py`：
 
@@ -746,7 +746,7 @@ def ocr_capability() -> OcrCapabilityResponse:
 
 在 `main.py` 注册 router；不得让 `/api/health` 调用 preflight。
 
-- [ ] **Step 5：实现 run 创建前门禁**
+- [x] **Step 5：实现 run 创建前门禁**
 
 `AnalyzeRequest.ocr_pages` 改用 `Field(default_factory=list)`。在 `analyze_report()` 读取 report 后、检查 active run 和创建 run 前执行：
 
@@ -784,7 +784,7 @@ if request.enable_ocr:
 
 `enable_ocr=false` 的行为完全保持；不因 capability 不可用阻止普通分析。
 
-- [ ] **Step 6：运行 GREEN、OpenAPI 和 Ruff**
+- [x] **Step 6：运行 GREEN、OpenAPI 和 Ruff**
 
 ```powershell
 Set-Location backend
@@ -804,7 +804,7 @@ uv run --no-sync ruff check `
 
 再用测试 app 的 OpenAPI 断言 `/api/capabilities/ocr` 存在，`/api/health` schema 未改变。
 
-- [ ] **Step 7：提交 selector 与 API 工作包**
+- [x] **Step 7：提交 selector 与 API 工作包**
 
 ```powershell
 git add -- `
@@ -831,7 +831,7 @@ git commit -m "feat: gate and expose OCR capability"
 - Modify: `backend/tests/services/test_analysis_runner.py`
 - Modify: `backend/tests/workflows/test_single_report_workflow.py`
 
-- [ ] **Step 1：更新既有调用顺序测试并确认 RED**
+- [x] **Step 1：更新既有调用顺序测试并确认 RED**
 
 将显式 OCR 用例预期从一次 OCR parse 改为基础解析加 OCR 二次解析：
 
@@ -848,7 +848,7 @@ assert low_quality_parser.calls == [None, [2]]
 
 增加 fake preflight 调用计数：默认关闭和零目标页为 0，目标页非空为 1。
 
-- [ ] **Step 2：写 profile 选择、成功审计和失败审计测试**
+- [x] **Step 2：写 profile 选择、成功审计和失败审计测试**
 
 ```python
 def test_workflow_selects_profile_required_ocr_page_before_low_quality_page(
@@ -907,7 +907,7 @@ def test_workflow_persists_safe_preflight_failure(repo_session):
 
 增加 `ocr_completed` payload 断言：只包含页码、每页文字长度、耗时、派生 SHA-256，不含路径、正文或命令行。
 
-- [ ] **Step 3：运行 workflow 测试确认 RED**
+- [x] **Step 3：运行 workflow 测试确认 RED**
 
 ```powershell
 Set-Location backend
@@ -918,7 +918,7 @@ uv run --no-sync pytest `
   --basetemp ../tmp/pytest-ocr-workflow-red
 ```
 
-- [ ] **Step 4：注入 runner 参数与 preflight**
+- [x] **Step 4：注入 runner 参数与 preflight**
 
 `analysis_runner.py` 的 OCR closure 传递：
 
@@ -935,7 +935,7 @@ ocr_preflight=lambda: require_ocr_capability(settings),
 
 `enable_ocr=false` 时不得调用 closure。
 
-- [ ] **Step 5：重排 workflow 的解析顺序**
+- [x] **Step 5：重排 workflow 的解析顺序**
 
 固定流程：
 
@@ -970,7 +970,7 @@ if enable_ocr:
 
 `ocr_preflight` 未配置但有目标页时抛出安全 `ocr_feature_disabled`，不能继续 OCR。
 
-- [ ] **Step 6：让 failure_summary 保留 OCR code**
+- [x] **Step 6：让 failure_summary 保留 OCR code**
 
 workflow 顶层异常处理改用：
 
@@ -980,7 +980,7 @@ error_code = getattr(exc, "code", "analysis_execution_failed")
 
 异常字符串来自固定 `OcrError` 消息；已有 `UnsupportedScannedPdfError.code` 继续兼容。不得扩大其他异常的 API 语义。
 
-- [ ] **Step 7：扩展 parse_completed 与 OCR audit**
+- [x] **Step 7：扩展 parse_completed 与 OCR audit**
 
 `parse_completed` 增加白名单字段：
 
@@ -1000,7 +1000,7 @@ derived_file_sha256
 
 不保存 OCR 正文。
 
-- [ ] **Step 8：运行纵向 GREEN 与 Ruff**
+- [x] **Step 8：运行纵向 GREEN 与 Ruff**
 
 ```powershell
 Set-Location backend
@@ -1020,7 +1020,7 @@ uv run --no-sync ruff check src tests
 
 Expected：全部 fake 测试通过，真实 OCR 调用仍为 0。
 
-- [ ] **Step 9：提交 workflow 工作包**
+- [x] **Step 9：提交 workflow 工作包**
 
 ```powershell
 git add -- `
@@ -1035,7 +1035,7 @@ git commit -m "feat: route selected OCR pages with audit"
 
 ## Task 7：安装前代码门禁与范围审计
 
-- [ ] **Step 1：运行后端全量与 Ruff**
+- [x] **Step 1：运行后端全量与 Ruff**
 
 ```powershell
 Set-Location backend
@@ -1045,7 +1045,7 @@ uv run --no-sync ruff check src tests
 
 Expected：测试数量不少于 Task 1 发现范围，0 failure、0 Ruff error。
 
-- [ ] **Step 2：运行前端保护门禁**
+- [x] **Step 2：运行前端保护门禁**
 
 ```powershell
 Set-Location frontend
@@ -1057,7 +1057,7 @@ pnpm build
 
 Expected：0 lint error；测试数量不少于当前 39 个文件、149 项；typecheck 和 production build 通过。前端 diff 必须为空。
 
-- [ ] **Step 3：执行静态保护区审计**
+- [x] **Step 3：执行静态保护区审计**
 
 ```powershell
 git diff 3383163..HEAD --name-only
@@ -1075,7 +1075,7 @@ Expected：没有 migration、数据库模型、standards、AI、frontend 或 ex
 
 **系统影响：** 该任务会通过 Chocolatey 安装 Ghostscript 10.7.1，并可能增加系统级程序目录和 PATH/shim。卸载命令为 `choco uninstall ghostscript -y`。执行本任务前必须具有用户对本计划和系统安装的明确批准。
 
-- [ ] **Step 1：重新确认包和安装前状态**
+- [x] **Step 1：重新确认包和安装前状态**
 
 ```powershell
 choco search ghostscript --exact --limit-output
@@ -1085,7 +1085,7 @@ Get-Command gs,gswin64c,gswin32c -ErrorAction SilentlyContinue
 
 Expected：包版本 10.7.1 可用，安装前 Ghostscript 命令不存在。若版本或来源发生变化，停止并重新报告，不自动改装其他包。
 
-- [ ] **Step 2：安装 Ghostscript**
+- [x] **Step 2：安装 Ghostscript**
 
 ```powershell
 choco install ghostscript --version=10.7.1 -y
@@ -1093,7 +1093,7 @@ choco install ghostscript --version=10.7.1 -y
 
 Expected：Chocolatey 成功退出。不得同时安装其他 OCR、PDF 或图像工具。
 
-- [ ] **Step 3：刷新当前会话并验证命令**
+- [x] **Step 3：刷新当前会话并验证命令**
 
 ```powershell
 $env:PATH = [Environment]::GetEnvironmentVariable("PATH", "Machine") + ";" + [Environment]::GetEnvironmentVariable("PATH", "User")
@@ -1103,7 +1103,7 @@ gswin64c --version
 
 Expected：至少一个 Ghostscript CLI 可用且版本为 10.7.1。
 
-- [ ] **Step 4：运行真实只读 preflight**
+- [x] **Step 4：运行真实只读 preflight**
 
 在 `backend` 目录使用隔离设置实例调用 `inspect_ocr_capability()`，设置：
 
@@ -1133,7 +1133,7 @@ choco uninstall ghostscript -y
 - Baseline run: `run-debd7c6af0ed494bbb6c8b5f73d99188`
 - Output: demo runtime 派生目录和新 report/run
 
-- [ ] **Step 1：记录原始哈希和 baseline**
+- [x] **Step 1：记录原始哈希和 baseline**
 
 ```powershell
 Get-FileHash -Algorithm SHA256 "backend/data/reports/Envision Energy 2024-zh.pdf"
@@ -1141,7 +1141,7 @@ Get-FileHash -Algorithm SHA256 "backend/data/reports/Envision Energy 2024-zh.pdf
 
 通过 API 重新读取 baseline run，确认 499 assessment、`577/499/78/0`、失败 0、AI 调用 0，并保存终端输出。不得修改 baseline。
 
-- [ ] **Step 2：启动隔离 OCR demo 后端**
+- [x] **Step 2：启动隔离 OCR demo 后端**
 
 在独立终端或统一 exec session 中设置 demo 数据库和 demo runtime，额外设置：
 
@@ -1158,7 +1158,7 @@ uv run --no-sync uvicorn src.main:app --host 127.0.0.1 --port 8012
 
 数据库 URL 从本地 `.env` 读取并只替换数据库名为 demo；不得打印 URL。上传和派生目录必须位于 demo runtime。启动后检查 `/api/health` 和 `/api/capabilities/ocr`。
 
-- [ ] **Step 3：通过正式 API 创建新 report/run**
+- [x] **Step 3：通过正式 API 创建新 report/run**
 
 流程固定为：
 
@@ -1180,7 +1180,7 @@ analyze body：
 
 Expected：创建新的 report/run；不覆盖历史；DeepSeek、SiliconFlow 和 VLM 调用均为 0。
 
-- [ ] **Step 4：轮询 run 并核验 OCR 审计**
+- [x] **Step 4：轮询 run 并核验 OCR 审计**
 
 每 5 秒读取：
 
@@ -1192,7 +1192,7 @@ GET /api/reports/{report_id}/audit
 
 Expected：run completed；`ocr_pages_selected` 为显式第 77 页；preflight available；`ocr_completed` 成功页数 1；无路径和 stderr。
 
-- [ ] **Step 5：只读核验 OCR chunk 与锚点**
+- [x] **Step 5：只读核验 OCR chunk 与锚点**
 
 使用 demo 数据库只读事务查询新 report 的 `document_chunks`：
 
@@ -1208,7 +1208,7 @@ WHERE report_id = :report_id
 
 Expected：仅 OCR PDF 第 77 页；文字长度显著高于 46；至少两个锚点命中；chunk 带 `needs_manual_review`。
 
-- [ ] **Step 6：逐项比较 baseline 与 OCR run**
+- [x] **Step 6：逐项比较 baseline 与 OCR run**
 
 按 `requirement_id` 对齐两个 run 的 499 assessments，比较：
 
@@ -1233,7 +1233,7 @@ Expected：
 
 若 OCR chunk 成功但 GRI 2-5 没有引用 OCR evidence，判定试点未完成并停止；不得临时修改 Prompt、规则或 profile 制造通过。
 
-- [ ] **Step 7：确认原始报告不变**
+- [x] **Step 7：确认原始报告不变**
 
 ```powershell
 Get-FileHash -Algorithm SHA256 "backend/data/reports/Envision Energy 2024-zh.pdf"
@@ -1255,13 +1255,13 @@ Expected：SHA-256 与 Step 1 相同；原始报告无 Git 变化；派生 PDF �
 - Modify: `docs/plan/ocr-controlled-pilot-implementation-plan.md`
 - Create: `docs/product/ocr-controlled-pilot-acceptance.md`
 
-- [ ] **Step 1：执行 Envision v3 regeneration gate**
+- [x] **Step 1：执行 Envision v3 regeneration gate**
 
 使用 `docs/DEVELOPMENT.md` 当前固定命令重新生成 Envision 499 assessment review、scope summary、diff summary 和 audit，保持 `confirm_llm=false` 与 `enable_ocr=false`。
 
 Expected：`577/499/78/0`；global fallback、新增 false disclosed、新增 wrong source page、audit error 和 audit warning 均为 0。
 
-- [ ] **Step 2：执行最终后端门禁**
+- [x] **Step 2：执行最终后端门禁**
 
 ```powershell
 Set-Location backend
@@ -1271,7 +1271,7 @@ uv run --no-sync ruff check src tests
 
 Expected：测试发现范围不少于 Task 1，0 failure、0 Ruff error。
 
-- [ ] **Step 3：执行最终前端门禁**
+- [x] **Step 3：执行最终前端门禁**
 
 ```powershell
 Set-Location frontend
@@ -1283,7 +1283,7 @@ pnpm build
 
 Expected：前端无代码 diff，全部 gates 通过。
 
-- [ ] **Step 4：完成验收报告**
+- [x] **Step 4：完成验收报告**
 
 `docs/product/ocr-controlled-pilot-acceptance.md` 必须记录：
 
@@ -1300,7 +1300,7 @@ Expected：前端无代码 diff，全部 gates 通过。
 
 不得写入完整 OCR 正文、系统路径、数据库 URL、密钥或原始 stderr。
 
-- [ ] **Step 5：更新主文档能力表述**
+- [x] **Step 5：更新主文档能力表述**
 
 固定表述：
 
@@ -1310,7 +1310,7 @@ OCR 已通过单页受控试点，默认关闭，仅在全局和请求双重启�
 
 记录 Ghostscript、OCRmyPDF、Tesseract 版本和回滚方式；VLM 继续延期。
 
-- [ ] **Step 6：计划与文档自检**
+- [x] **Step 6：计划与文档自检**
 
 ```powershell
 rg -n "T[B]D|TO[D]O|待[补]充[:：]|待[确]认[:：]" `
@@ -1328,7 +1328,7 @@ git diff --check
 
 Expected：无占位符、无本机绝对路径、无尾随空格或冲突标记。
 
-- [ ] **Step 7：提交文档和验收结果**
+- [x] **Step 7：提交文档和验收结果**
 
 ```powershell
 git add -- `
@@ -1342,7 +1342,7 @@ git add -- `
 git commit -m "docs: record controlled OCR pilot acceptance"
 ```
 
-- [ ] **Step 8：最终提交检查**
+- [x] **Step 8：最终提交检查**
 
 ```powershell
 git status --short --branch
