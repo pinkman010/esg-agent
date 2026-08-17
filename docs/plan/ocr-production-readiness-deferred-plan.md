@@ -8,7 +8,7 @@
 
 **技术栈：** Python 3.11、FastAPI、Pydantic v2、OCRmyPDF、Tesseract、Ghostscript、pypdf、pdfplumber、pytest。
 
-**执行状态（2026-07-28）：** 延期。v1.1 后端保持冻结；本计划未启动。
+**执行状态（2026-08-17）：** 条件解冻方向已批准，实施尚未启动。真实 Envision 第 77 页图片正文未提取并影响 4 个 GRI 2-5 独立判断项，已达到受控 OCR 试点触发条件；通用扫描 PDF 生产化和 VLM 继续延期。最新设计以 `docs/plan/ocr-controlled-pilot-design.md` 为准。
 
 ---
 
