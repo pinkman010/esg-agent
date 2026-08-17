@@ -1,6 +1,29 @@
+import json
+import tomllib
+from pathlib import Path
+
 import pytest
 
 pytestmark = pytest.mark.anyio
+
+
+async def test_openapi_exposes_v1_3_release_version(api_client):
+    response = await api_client.get("/openapi.json")
+
+    assert response.status_code == 200
+    project_root = Path(__file__).parents[3]
+    backend_version = tomllib.loads(
+        (project_root / "backend" / "pyproject.toml").read_text(encoding="utf-8")
+    )["project"]["version"]
+    frontend_version = json.loads(
+        (project_root / "frontend" / "package.json").read_text(encoding="utf-8")
+    )["version"]
+
+    assert {
+        response.json()["info"]["version"],
+        backend_version,
+        frontend_version,
+    } == {"1.3.0"}
 
 
 async def test_openapi_exposes_response_schemas_for_frontend_generation(api_client):

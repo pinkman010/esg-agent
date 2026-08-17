@@ -140,6 +140,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/capabilities/ocr": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Ocr Capability */
+        get: operations["ocr_capability_api_capabilities_ocr_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/reports/{report_id}/dashboard": {
         parameters: {
             query?: never;
@@ -922,11 +939,8 @@ export interface components {
              * @default false
              */
             enable_ocr: boolean;
-            /**
-             * Ocr Pages
-             * @default []
-             */
-            ocr_pages: number[];
+            /** Ocr Pages */
+            ocr_pages?: number[];
         };
         /** AnalyzeResponse */
         AnalyzeResponse: {
@@ -1362,6 +1376,19 @@ export interface components {
             created_at?: string | null;
             /** Updated At */
             updated_at?: string | null;
+        };
+        /** OcrCapabilityResponse */
+        OcrCapabilityResponse: {
+            /** Enabled */
+            enabled: boolean;
+            /** Available */
+            available: boolean;
+            /** Dependency Codes */
+            dependency_codes: string[];
+            /** Language */
+            language: string;
+            /** Max Pages */
+            max_pages: number;
         };
         /**
          * PageQualityFlag
@@ -1965,6 +1992,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ocr_capability_api_capabilities_ocr_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OcrCapabilityResponse"];
                 };
             };
         };

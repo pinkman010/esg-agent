@@ -18,6 +18,9 @@ from src.config.settings import get_settings
 from src.services.analysis_job import recover_interrupted_analysis_runs
 
 
+APP_VERSION = "1.3.0"
+
+
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     recover_interrupted_analysis_runs()
@@ -26,7 +29,11 @@ async def lifespan(_app: FastAPI):
 
 def create_app() -> FastAPI:
     settings = get_settings()
-    app = FastAPI(title="esg-agent", lifespan=lifespan)
+    app = FastAPI(
+        title="esg-agent",
+        version=APP_VERSION,
+        lifespan=lifespan,
+    )
 
     app.add_middleware(
         CORSMiddleware,
