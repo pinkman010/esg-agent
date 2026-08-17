@@ -21,6 +21,23 @@ def test_default_environment_is_main():
     assert Settings().app_env == "main"
 
 
+def test_ocr_defaults_remain_disabled_and_bounded():
+    settings = Settings(_env_file=None)
+
+    assert settings.ocr_enabled is False
+    assert settings.ocr_lang == "chi_sim+eng"
+    assert settings.ocr_max_pages == 5
+    assert settings.ocr_timeout_seconds == 300
+    assert settings.ghostscript_cmd == ""
+
+
+def test_ocr_timeout_rejects_out_of_range_values():
+    with pytest.raises(ValueError):
+        Settings(_env_file=None, ocr_timeout_seconds=0)
+    with pytest.raises(ValueError):
+        Settings(_env_file=None, ocr_timeout_seconds=1801)
+
+
 def test_llm_defaults_match_deepseek_json_configuration():
     settings = Settings(_env_file=None)
 

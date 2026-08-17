@@ -20,6 +20,8 @@ class Settings(BaseSettings):
     ocr_max_pages: int = 5
     tesseract_cmd: str = ""
     ocrmypdf_cmd: str = "ocrmypdf"
+    ghostscript_cmd: str = ""
+    ocr_timeout_seconds: int = Field(default=300, ge=1, le=1800)
     openai_compatible_api_base: str = "https://api.deepseek.com"
     openai_compatible_api_key: str = ""
     llm_model: str = "deepseek-v4-flash"
