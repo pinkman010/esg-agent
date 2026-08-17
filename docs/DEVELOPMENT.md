@@ -87,6 +87,19 @@ DeepSeek 相关环境变量：
 
 外部模型默认关闭。只有分析请求显式传入 `confirm_llm=true` 才允许调用；失败 suggestion 追加保留并降级，不能覆盖规则 assessment、人工 snapshot、适用性或正式输出门禁。
 
+AI 默认候选筛选还要求 structure 独立、复核优先级为高/中且至少有一条合格实质 evidence。`image_body_not_extracted` 和显式非实质 evidence 不进入默认调用；索引限定路由和短文本标记本身不构成跳过依据。`confirm_llm=true` 且零合格候选时保存逐项 skipped 原因但不调用模型；`confirm_llm=false` 仍不保存逐项 suggestion。
+
+只读观测命令：
+
+```powershell
+cd backend
+uv run --no-sync python -m src.tools.report_ai_assistance_metrics `
+  --run-id <run-id> `
+  --output-prefix envision_ai_routing
+```
+
+工具在 `REPEATABLE READ READ ONLY` 事务中读取指定 run，输出到 `tmp/ai/`，不创建模型 client、不写数据库，也不输出 raw response、完整 Prompt、证据正文、密钥或数据库 URL。confidence 和人工采纳/修改/拒绝分布只用于产品工程观测，不构成模型正确率、GRI 认证或 ESG 专家结论。
+
 SiliconFlow BGE-M3 离线影子 RAG 环境变量：
 
 - `EMBEDDING_ENABLED=false`：默认关闭；
@@ -613,6 +626,11 @@ uv run --no-sync python -m src.tools.evaluate_shadow_rag `
 
 ### 2026-08-17
 
+- 完成 AI 候选路由与证据类型治理受控解冻：新增只供 AI 使用的 evidence eligibility 分类器，`image_body_not_extracted` 和显式非实质 evidence 不再进入默认外部模型候选；`index_page_bounded`、候选来源和 `short_text` 不被单独视为非实质 evidence。分类器不回写规则证据。
+- `confirm_llm=true` 且零合格候选时追加保存逐项 skipped 原因，AI stage 保持 skipped `0/0`，skipped assessment 不标记 `model_called`；`confirm_llm=false` 仍为零调用、run 级 skipped、无逐项 suggestion。
+- 前端补齐上下文项和实质证据不足的中文跳过原因；新增只读 AI 观测 CLI，真实读取历史 Envision run 后复现 499 条 suggestion、4 次 succeeded、495 次 skipped、0 次 failed，输出只包含脱敏聚合和白名单字段。该读取没有产生新的外部模型调用或数据库写入。
+- `assess_explicit_candidates()` 增加离线边界说明和 AST 调用方测试，当前仅 `evaluate_deepseek_against_manual_review.py` 调用，默认 workflow、API、runner 和后台任务均未调用。
+- 最终门禁为后端 focused 87 项、全量 792 项和 Ruff 通过；前端 lint 0 error、2 条既有 warning，39 个测试文件 149 项测试、typecheck 和 production build 通过；Envision regeneration 保持 `577/499/78/0`，global fallback、新增 false disclosed、新增 wrong source page、audit error 和 audit warning 均为 0。本轮没有修改模型、Prompt、数据库、规则、风险、人工快照、OCR/VLM、RAG 或导出，也没有执行新的真实 DeepSeek 对比。
 - 收口中文人工复核与审计时间线的产品展示边界。实测 Envision 报告 499/499 个独立判断项的 `effective_requirement_text` 来自官方英文标准资产；中文界面保留 GRI 编号、中文判断依据、中文缺失项和证据，不再默认渲染英文要求正文。未来提供经过确认的中文要求正文时可直接显示。
 - 审计 API 和数据库继续保留完整关联 ID，产品时间线隐藏 run/report/action/assessment/snapshot/export/file/profile 等内部 ID，并只展示已登记的业务 payload 字段；负责人、截止日期、状态、适用性等业务变更保持可见，未知字段不回退为开发字段名，可见错误或原因文本中的内部 ID 统一脱敏。
 - 审计下载与版本生成事件将 `assessment_xlsx` 等四种内部格式转换为产品名称，字节数转换为 B/KB/MB；PDF 页数和页面质量统计增加“页”单位，解析文本块数不进入产品时间线，三种文档解析状态均使用中文说明。

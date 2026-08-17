@@ -352,7 +352,9 @@ Phase 1.7 的正式输入边界为数字文本型 PDF。解析完成后生成页
 
 证据工作台通过 `GET /api/reports/{report_id}/pages/{page_number}/image` 按页渲染原始 PDF 的 PNG 预览。该预览只读、按需生成并允许私有缓存；原始 PDF 仍通过文件接口保留，不覆盖、不转换为新的事实来源。
 
-DeepSeek 使用 OpenAI-compatible 薄适配层。`confirm_llm=false` 时 AI 阶段记录为 skipped 且不实例化外部调用；`confirm_llm=true` 仍只对结构独立、具有直接证据并进入高/中复核优先级的条目调用。AI 建议只追加保存，不能设置适用性、风险优先级、人工复核状态或正式输出状态；模型失败只使 AI 阶段部分失败，不使确定性分析 run 失败。
+DeepSeek 使用 OpenAI-compatible 薄适配层。`confirm_llm=false` 时 AI 阶段记录为 skipped 且不实例化外部调用；`confirm_llm=true` 仍只对结构独立、具有直接证据并进入高/中复核优先级的条目调用。AI 本地证据资格分为 `substantive`、`explicit_non_substantive` 和 `unresolved_image_body`：显式 `omission_note/index_statement/chapter_cover/candidate_page` 以及带 `image_body_not_extracted` 的 evidence 不进入默认调用；`index_page_bounded`、`candidate_page_source` 或 `short_text` 不能单独推导为非实质证据。分类器只读 evidence，不回写 metadata、quality flags、规则 verdict 或风险。
+
+已授权且 AI service 已配置的运行即使合格候选为 0，也追加保存逐项 skipped suggestion，AI stage 仍为 skipped `0/0`，assessment 的 `model_called` 保持 false；未授权运行继续只记录 run 级 skipped，不写逐项 suggestion。AI 建议只追加保存，不能设置适用性、风险优先级、人工复核状态或正式输出状态；模型失败只使 AI 阶段部分失败，不使确定性分析 run 失败。
 
 SiliconFlow `BAAI/bge-m3` 第一阶段属于离线影子 RAG。`EMBEDDING_ENABLED=false` 为默认值；真实调用还需执行当次人工批准。工具只向量化显式 `report_id` 下的 `document_chunks`，使用精确余弦排序，并把单条召回、批量指标、context pack 和可选生成评估写入 `tmp/embedding/`。它不接入 `retrieve_evidence()`、`SingleReportWorkflow`、正式 API 或前端，不写 `evidence_items`、`ai_assessment_suggestions`、assessment、risk、review snapshot 和 export。
 
@@ -457,9 +459,9 @@ pnpm build
 
 ## 18. 当前实现与验收状态
 
-截至 2026-07-29，Phase 1.7 已完成最终闭环与发布就绪验收，并以提交 `876859f` 形成正式 `v1.2` 发布基线；`main` 与远端一致。代码迁移 head、main 数据库和 demo 数据库均为 `0012_chunk_embeddings`；本轮没有 migration 或表结构变化。结构 manifest 为 `gri-requirement-checklist-v3`；产品方法版本为 `envision-method-v1.1`；结果裁决版本为 `envision-result-v1.1`；复核优先级规则为 `risk-v2.1`。
+截至 2026-08-17，Phase 1.7 已完成最终闭环与发布就绪验收，并以提交 `876859f` 形成正式 `v1.2` 发布基线；其后的前端体验、审计展示和 AI 候选路由修改作为本地补丁候选继续验证。代码迁移 head、main 数据库和 demo 数据库均为 `0012_chunk_embeddings`；本轮没有 migration 或表结构变化。结构 manifest 为 `gri-requirement-checklist-v3`；产品方法版本为 `envision-method-v1.1`；结果裁决版本为 `envision-result-v1.1`；复核优先级规则为 `risk-v2.1`。
 
-v3 技术结构为 `577/499/78/0`。部分失败、失败项 retry 和服务重启恢复统一通过运行谱系有效视图形成当前产品状态；范围表、dashboard、review、export gate 和 report status 读取同一语义。失败或未生成项独立展示分析状态，不能形成虚假正式结论。dashboard 分别返回失败数、未生成数和聚合分析不完整数；旧失败数字段不扩大语义。Envision v3 gate 的 global fallback、新增 false disclosed 和新增 wrong source page 均为 0，audit 为 0 error、0 warning。后端 774 项测试和 Ruff、前端 30 个测试文件 119 项测试、typecheck 和 production build 全部通过。
+v3 技术结构为 `577/499/78/0`。部分失败、失败项 retry 和服务重启恢复统一通过运行谱系有效视图形成当前产品状态；范围表、dashboard、review、export gate 和 report status 读取同一语义。失败或未生成项独立展示分析状态，不能形成虚假正式结论。dashboard 分别返回失败数、未生成数和聚合分析不完整数；旧失败数字段不扩大语义。Envision v3 gate 的 global fallback、新增 false disclosed 和新增 wrong source page 均为 0，audit 为 0 error、0 warning。后端 792 项测试和 Ruff、前端 39 个测试文件 149 项测试、typecheck 和 production build 全部通过。
 
 报告级审计接口聚合报告级事件和该报告全部 run 的事件，按时间和稳定序号倒序；公开 payload 递归脱敏和截断。审计覆盖上传、metadata、profile 解析、分析、retry、人工快照、适用性、整改、草稿/正式输出和文件下载。前端使用业务中文名称，不展示原始 JSON。
 
@@ -469,7 +471,7 @@ v3 技术结构为 `577/499/78/0`。部分失败、失败项 retry 和服务重�
 
 正式输出后的纠正复用 assessment `reopen`。reopen 快照使报告进入 `reopened`；完成新的解决型人工复核并重新满足有效完整性 gate 后生成 N+1 正式版本，旧正式版本转为 `superseded`，历史快照和文件保持可读。当前没有独立 report reopen API，也没有启用 `voided` 操作。
 
-225 条真实 DeepSeek 评估继续作为 AI 辅助工程基线；模型和 Prompt 未因本轮解冻改变。最终 Envision 和 Goldwind 产品 run 均使用 `confirm_llm=false`，OCR/VLM 均未启用。规则、AI 和人工三层权威关系保持独立。该发布基线属于本地产品与工程验收，不构成 GRI 专家认证、外部鉴证或企业部署承诺。
+225 条真实 DeepSeek 评估继续作为 AI 辅助工程基线；模型和 Prompt 未因本轮解冻改变。2026-08-17 的候选路由解冻仅阻止 `image_body_not_extracted` 弱证据触发模型，并增加只读观测和中文跳过原因；没有执行新的真实 DeepSeek 对比。规则、AI 和人工三层权威关系保持独立。该发布基线属于本地产品与工程验收，不构成 GRI 专家认证、外部鉴证或企业部署承诺。
 
 通用 verdict 批量复核、生产 OCR、RAG Phase 2 和企业级平台能力进入条件化路线图。旧 `review_decisions` 和旧 API 继续处于兼容窗口。完整结果、限制和触发条件见 `docs/product/phase1.7-final-closure-acceptance.md`。
 
