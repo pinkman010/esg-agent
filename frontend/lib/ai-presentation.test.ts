@@ -36,6 +36,10 @@ describe("AI presentation", () => {
 
   it("localizes known and unknown guardrails without exposing internal codes", () => {
     expect(aiGuardrailLabel("verdict_upgrade_requires_human_review")).toContain("不能直接升级");
+    expect(aiGuardrailLabel("structure_not_independent")).toContain("上下文");
+    expect(aiGuardrailLabel("no_substantive_evidence")).toContain("证据不足");
+    expect(aiGuardrailLabel("low_review_priority")).toContain("优先级较低");
+    expect(aiGuardrailLabel("call_budget_exhausted")).toContain("数量上限");
     expect(aiGuardrailLabel("unexpected_internal_code")).toBe(
       "AI 建议触发安全校验，需要人工判断。",
     );

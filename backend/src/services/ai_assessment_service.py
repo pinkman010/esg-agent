@@ -257,6 +257,12 @@ class AIAssessmentService:
         *,
         confirm_llm: bool,
     ) -> list[AIAssessmentSuggestion]:
+        """Run candidates for offline evaluation; this deliberately bypasses should_call.
+
+        This method is limited to offline evaluation and targeted tests. It must
+        not be used by the default product workflow, API, runner, or background
+        jobs.
+        """
         ordered = sorted(
             candidates,
             key=lambda item: item.task.requirement_id,

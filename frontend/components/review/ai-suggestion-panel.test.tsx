@@ -133,4 +133,20 @@ describe("AISuggestionPanel", () => {
     ).not.toBeInTheDocument();
     expect(screen.queryByText("AI 辅助未完成，规则结果仍有效")).not.toBeInTheDocument();
   });
+
+  it.each([
+    ["structure_not_independent", "该项属于上下文结构，不单独调用 AI。"],
+    ["no_substantive_evidence", "当前证据不足以支持 AI 判断，本项未调用 AI。"],
+    ["call_budget_exhausted", "本次 AI 调用已达到数量上限。"],
+  ])("localizes skipped reason %s without exposing its internal code", (code, label) => {
+    renderPanel(suggestion({
+      status: "skipped",
+      suggested_verdict: null,
+      guardrail_codes: [code],
+      error_code: code,
+    }));
+
+    expect(screen.getByText(label)).toBeInTheDocument();
+    expect(screen.queryByText(code)).not.toBeInTheDocument();
+  });
 });
