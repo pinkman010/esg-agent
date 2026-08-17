@@ -9,7 +9,8 @@
 - 分页响应：`items`、`page`、`page_size`、`total`；
 - 写操作返回最新资源；审计事件通过报告级审计接口读取；
 - 冲突返回 409，字段校验返回 422，正式输出门槛未满足返回 409；
-- 客户端通过 OpenAPI 生成 TypeScript 类型，不手写重复 DTO。
+- 客户端通过 OpenAPI 生成 TypeScript 类型，不手写重复 DTO；
+- 当前后端包、前端包和 OpenAPI `info.version` 统一为 `1.3.0`。
 
 接口状态标记：未特别标注的接口已进入当前 OpenAPI；标题包含“规划中”的接口尚未实现，不得作为 MVP 验收前提。后端 `/openapi.json` 是运行时契约唯一事实源。
 
@@ -143,7 +144,25 @@ EvidenceItem 对普通界面只返回：`evidence_id`、`source_pdf_page`、`sou
 
 `unit_status` 只有 `assessed | context_incorporated`。上下文行的 assessment、结论、优先级、复核状态、证据页和 `analysis_status` 必须为空。独立判断项的 `analysis_status` 为 `succeeded | failed | not_generated`；后四个 Phase 1.7 字段均为可选 nullable 字段，兼容旧客户端。
 
+### 2.7 OcrCapability
+
+```json
+{
+  "enabled": false,
+  "available": true,
+  "dependency_codes": [],
+  "language": "chi_sim+eng",
+  "max_pages": 5
+}
+```
+
+`enabled` 表示服务端全局门禁，`available` 表示 OCRmyPDF、Ghostscript、Tesseract 和所需语言包均可用。`dependency_codes` 只返回稳定代码，不返回命令路径、原始 stderr 或本机目录。
+
 ## 3. 报告接口
+
+### `GET /api/capabilities/ocr`
+
+返回 `OcrCapability`。该接口只读且不阻断核心 `/api/health`；全局关闭时仍可用于检查依赖状态。当前稳定 dependency code 为 `ocrmypdf_missing | ghostscript_missing | tesseract_missing | tesseract_language_missing`。
 
 ### `GET /api/reports`
 
@@ -203,6 +222,16 @@ multipart 上传 PDF。查询参数 `duplicate_policy` 取值为 `reject | creat
 ### `POST /api/reports/{report_id}/analyze`
 
 请求保留 `confirm_llm`、`enable_ocr`、`ocr_pages`。`confirm_llm` 默认 false；只有用户明确授权后才能传 true。报告必须处于 `ready_for_analysis`；否则返回 `409 report_not_ready`。同一报告已有 `pending/running` run 时返回 `409 analysis_already_running` 和已有 `run_id`，并发竞态由 `0009` 数据库部分唯一索引兜底。成功响应为新建的 `pending` run；后台任务只接收 ID 并使用独立数据库 session。
+
+OCR 必须同时满足服务端 `OCR_ENABLED=true` 和请求 `enable_ocr=true`。请求提供 `ocr_pages` 时只处理去重后的指定页；未提供时依次选择报告画像 `requires_ocr` 页和扫描/低文本密度页，总数不超过 `OCR_MAX_PAGES`。没有目标页时不执行 OCR 依赖检查。OCR 只生成派生 PDF 和带 `needs_manual_review` 的 evidence，不覆盖原始 PDF、规则 assessment、风险、适用性、人工 snapshot 或正式输出结论。
+
+创建 run 前的 OCR 结构化错误：
+
+- 全局门禁关闭：`409 ocr_feature_disabled`；
+- 页码小于 1 或超过报告页数：`422 ocr_page_out_of_range`；
+- 去重后页数超过上限：`422 ocr_page_limit_exceeded`，响应附带 `max_pages`。
+
+run 创建后的 preflight 或执行失败通过 `failure_summary.error_code` 和脱敏 `error_message` 返回。稳定代码为 `ocrmypdf_missing | ghostscript_missing | tesseract_missing | tesseract_language_missing | ocr_execution_timeout | ocr_execution_failed`；审计事件使用相同代码，不保存命令路径或原始 stderr。
 
 数字文本 PDF 为正式支持输入。未启用 OCR 且报告全部页面均判定为扫描页时，run 以 `failure_summary.error_code=unsupported_scanned_pdf` 失败，`error_message` 为可操作的安全提示；该失败发生在规则判定前。混合型或低文本密度报告不会被误判为全扫描报告。
 

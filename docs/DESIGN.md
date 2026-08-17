@@ -464,9 +464,9 @@ pnpm build
 
 ## 18. 当前实现与验收状态
 
-截至 2026-08-17，Phase 1.7 已完成最终闭环与发布就绪验收，并以提交 `876859f` 形成正式 `v1.2` 发布基线；其后的前端体验、审计展示和 AI 候选路由修改作为本地补丁候选继续验证。代码迁移 head、main 数据库和 demo 数据库均为 `0012_chunk_embeddings`；本轮没有 migration 或表结构变化。结构 manifest 为 `gri-requirement-checklist-v3`；产品方法版本为 `envision-method-v1.1`；结果裁决版本为 `envision-result-v1.1`；复核优先级规则为 `risk-v2.1`。
+截至 2026-08-17，Phase 1.7 已完成最终闭环与发布就绪验收；v1.2 后的产品缺陷修复、前端视觉与中文展示、AI 候选路由治理和 OCR 单页受控试点已通过完整门禁并纳入正式 `v1.3` 发布基线。代码迁移 head、main 数据库和 demo 数据库均为 `0012_chunk_embeddings`；本轮没有 migration 或表结构变化。结构 manifest 为 `gri-requirement-checklist-v3`；产品方法版本为 `envision-method-v1.1`；结果裁决版本为 `envision-result-v1.1`；复核优先级规则为 `risk-v2.1`。
 
-v3 技术结构为 `577/499/78/0`。部分失败、失败项 retry 和服务重启恢复统一通过运行谱系有效视图形成当前产品状态；范围表、dashboard、review、export gate 和 report status 读取同一语义。失败或未生成项独立展示分析状态，不能形成虚假正式结论。dashboard 分别返回失败数、未生成数和聚合分析不完整数；旧失败数字段不扩大语义。Envision v3 gate 的 global fallback、新增 false disclosed 和新增 wrong source page 均为 0，audit 为 0 error、0 warning。后端 792 项测试和 Ruff、前端 39 个测试文件 149 项测试、typecheck 和 production build 全部通过。
+v3 技术结构为 `577/499/78/0`。部分失败、失败项 retry 和服务重启恢复统一通过运行谱系有效视图形成当前产品状态；范围表、dashboard、review、export gate 和 report status 读取同一语义。失败或未生成项独立展示分析状态，不能形成虚假正式结论。dashboard 分别返回失败数、未生成数和聚合分析不完整数；旧失败数字段不扩大语义。Envision v3 gate 的 global fallback、新增 false disclosed 和新增 wrong source page 均为 0，audit 为 0 error、0 warning。后端 823 项测试和 Ruff、前端 39 个测试文件 149 项测试、typecheck 和 production build 全部通过。后端包、前端包和 OpenAPI `info.version` 统一为 `1.3.0`；当前运行时 OpenAPI 的 40 条 `/api/*` 路径已全部同步到前端生成类型。
 
 报告级审计接口聚合报告级事件和该报告全部 run 的事件，按时间和稳定序号倒序；公开 payload 递归脱敏和截断。审计覆盖上传、metadata、profile 解析、分析、retry、人工快照、适用性、整改、草稿/正式输出和文件下载。前端使用业务中文名称，不展示原始 JSON。
 
@@ -478,7 +478,7 @@ v3 技术结构为 `577/499/78/0`。部分失败、失败项 retry 和服务重�
 
 225 条真实 DeepSeek 评估继续作为 AI 辅助工程基线；模型和 Prompt 未因本轮解冻改变。2026-08-17 的候选路由解冻阻止 `image_body_not_extracted` 弱证据触发模型，并增加只读观测和中文跳过原因。独立授权的 Task 9 使用默认 analyze 路径和 `confirm_llm=true` 新建 Envision run，499 项全部得到可解释 skipped，合格候选和真实 DeepSeek 请求均为 0；与历史 run 相比，4 个 GRI 2-5 弱证据调用被消除，规则、风险、适用性、证据数量和证据页均无差异。规则、AI 和人工三层权威关系保持独立。该发布基线属于本地产品与工程验收，不构成 GRI 专家认证、外部鉴证或企业部署承诺。
 
-通用 verdict 批量复核、生产 OCR、RAG Phase 2 和企业级平台能力进入条件化路线图。旧 `review_decisions` 和旧 API 继续处于兼容窗口。完整结果、限制和触发条件见 `docs/product/phase1.7-final-closure-acceptance.md`。
+通用 verdict 批量复核、生产 OCR、RAG Phase 2 和企业级平台能力进入条件化路线图。旧 `review_decisions` 和旧 API 继续处于兼容窗口。完整结果、限制和触发条件见 `docs/product/phase1.7-final-closure-acceptance.md`、`docs/product/v1.3-final-release-acceptance.md`。
 
 ## 19. 本地演示环境隔离
 
