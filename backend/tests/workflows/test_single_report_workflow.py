@@ -9,7 +9,7 @@ from src.agents.disclosure_agent import DisclosureAgent, DisclosureAgentResult
 from src.db.base import Base
 from src.db.models import AnalysisStageEventRecord, AssessmentRecord, AuditEventRecord, DisclosureTaskRecord, EvidenceItemRecord, RecommendationRecord
 from src.db.repositories import Repository
-from src.domain.enums import AssessmentVerdict, EvidenceSourceMethod, RunStatus
+from src.domain.enums import AssessmentVerdict, EvidenceSourceMethod, PageQualityFlag, RunStatus
 from src.domain.models import DisclosureAssessment, DisclosureRequirement, DocumentChunk, EvidenceItem, PageExtraction, Report
 from src.services.ai_assessment_service import AIAssessmentService
 from src.services.document_parser import ParsedDocument
@@ -221,6 +221,19 @@ class DirectEvidenceAgent:
         )
 
 
+class UnresolvedImageEvidenceAgent(DirectEvidenceAgent):
+    def analyze(self, task, chunks, confirm_llm=False):
+        result = super().analyze(task, chunks, confirm_llm=confirm_llm)
+        evidence = result.assessment.evidence[0]
+        evidence.metadata.pop("evidence_type")
+        evidence.quality_flags = [
+            PageQualityFlag.DIGITAL_TEXT,
+            PageQualityFlag.SHORT_TEXT,
+            PageQualityFlag.IMAGE_BODY_NOT_EXTRACTED,
+        ]
+        return result
+
+
 class WorkflowFakeLLMClient:
     model = "deepseek-v4-flash"
 
@@ -412,6 +425,39 @@ def test_single_report_workflow_appends_ai_suggestions_without_overwriting_rule_
     )
     assert ai_stage.status == "completed"
     assert (ai_stage.completed_units, ai_stage.total_units) == (2, 2)
+
+
+def test_authorized_zero_candidate_run_persists_skip_reasons_without_model_calls(
+    repo_session,
+):
+    repo = Repository(repo_session)
+    seed_report(repo)
+    client = WorkflowFakeLLMClient()
+    workflow = SingleReportWorkflow(
+        repo,
+        FakeParser(),
+        TwoTaskAdapter(),
+        UnresolvedImageEvidenceAgent(),
+        ai_assessment_service=AIAssessmentService(client, max_calls_per_run=2),
+    )
+
+    run = workflow.run("report-1", Path("report.pdf"), "hash-1", confirm_llm=True)
+
+    assessments = repo.list_assessments_by_run(run.run_id)
+    suggestions = repo.list_ai_suggestions_for_run(run.run_id)
+    ai_stage = next(
+        stage
+        for stage in repo.list_latest_analysis_stages(run.run_id)
+        if stage.stage_code == "ai_assistance"
+    )
+    assert client.calls == []
+    assert run.status is RunStatus.COMPLETED
+    assert all(not item.model_called for item in assessments)
+    assert len(suggestions) == len(assessments) == 2
+    assert all(item.status.value == "skipped" for item in suggestions)
+    assert all(item.error_code == "no_substantive_evidence" for item in suggestions)
+    assert ai_stage.status == "skipped"
+    assert (ai_stage.completed_units, ai_stage.total_units) == (0, 0)
 
 
 def test_ai_timeout_only_marks_ai_stage_partially_failed(repo_session):

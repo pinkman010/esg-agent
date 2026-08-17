@@ -8,6 +8,7 @@ from src.domain.enums import (
     AISuggestionStatus,
     AssessmentVerdict,
     EvidenceSourceMethod,
+    PageQualityFlag,
     RiskLevel,
 )
 from src.domain.models import DisclosureAssessment, DisclosureTask, EvidenceItem
@@ -22,9 +23,14 @@ def _evidence(
     evidence_id: str = "evidence-1",
     page: int = 41,
     *,
-    evidence_type: str = "substantive_report_evidence",
+    evidence_type: str | None = "substantive_report_evidence",
     source_text: str = "报告披露了控制措施。",
+    metadata: dict[str, object] | None = None,
+    quality_flags: list[PageQualityFlag] | None = None,
 ) -> EvidenceItem:
+    evidence_metadata = dict(metadata or {})
+    if evidence_type is not None:
+        evidence_metadata.setdefault("evidence_type", evidence_type)
     return EvidenceItem(
         evidence_id=evidence_id,
         run_id="run-1",
@@ -34,7 +40,8 @@ def _evidence(
         source_pdf_page=page,
         source_file_hash="f" * 64,
         source_method=EvidenceSourceMethod.PDFPLUMBER,
-        metadata={"evidence_type": evidence_type},
+        quality_flags=quality_flags or [],
+        metadata=evidence_metadata,
     )
 
 
@@ -123,6 +130,86 @@ def test_should_call_only_independent_high_or_medium_items_with_direct_evidence(
     assert service.should_call(
         _candidate(evidence=[_evidence(evidence_type="index_statement")])
     ) is False
+
+
+@pytest.mark.parametrize(
+    ("metadata", "quality_flags", "expected"),
+    [
+        ({"evidence_type": "substantive_report_evidence"}, [], True),
+        ({}, [], True),
+        ({"evidence_type": "index_statement"}, [], False),
+        ({"evidence_type": "omission_note"}, [], False),
+        ({}, [PageQualityFlag.IMAGE_BODY_NOT_EXTRACTED], False),
+        (
+            {"evidence_type": "substantive_report_evidence"},
+            [PageQualityFlag.IMAGE_BODY_NOT_EXTRACTED],
+            False,
+        ),
+        (
+            {
+                "retrieval_strategy": "index_page_bounded",
+                "candidate_page_source": "gri_report_index",
+            },
+            [PageQualityFlag.DIGITAL_TEXT],
+            True,
+        ),
+    ],
+)
+def test_should_call_rejects_unresolved_image_body_without_treating_routes_as_types(
+    metadata,
+    quality_flags,
+    expected,
+):
+    service = AIAssessmentService(FakeLLMClient())
+    evidence = _evidence(
+        evidence_type=None,
+        metadata=metadata,
+        quality_flags=quality_flags,
+    )
+
+    assert service.should_call(_candidate(evidence=[evidence])) is expected
+
+
+def test_assess_candidates_skips_envision_assurance_page_without_image_body_text():
+    client = FakeLLMClient()
+    service = AIAssessmentService(client)
+    candidates = [
+        _candidate(
+            requirement_id=requirement_id,
+            evidence=[
+                _evidence(
+                    evidence_id=f"evidence-{requirement_id}",
+                    page=77,
+                    evidence_type=None,
+                    source_text="目录 独立有限鉴证报告",
+                    metadata={
+                        "retrieval_strategy": "index_page_bounded",
+                        "candidate_page_source": "gri_report_index",
+                    },
+                    quality_flags=[
+                        PageQualityFlag.DIGITAL_TEXT,
+                        PageQualityFlag.SHORT_TEXT,
+                        PageQualityFlag.IMAGE_BODY_NOT_EXTRACTED,
+                    ],
+                )
+            ],
+        )
+        for requirement_id in (
+            "GRI 2-5-a",
+            "GRI 2-5-b-i",
+            "GRI 2-5-b-ii",
+            "GRI 2-5-b-iii",
+        )
+    ]
+
+    suggestions = service.assess_candidates(candidates, confirm_llm=True)
+
+    assert client.calls == []
+    assert len(suggestions) == 4
+    assert {item.status for item in suggestions} == {AISuggestionStatus.SKIPPED}
+    assert {
+        code for item in suggestions for code in item.guardrail_codes
+    } == {"no_substantive_evidence"}
 
 
 def test_prompt_contract_is_bounded_deterministic_and_contains_required_json_example():

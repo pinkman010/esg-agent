@@ -255,11 +255,8 @@ class SingleReportWorkflow:
             self.ai_assessment_service.should_call(candidate)
             for candidate in candidates
         )
-        if eligible_count == 0:
-            self._stage(run_id, "ai_assistance", "skipped", 0, 0)
-            return
-
-        self._stage(run_id, "ai_assistance", "running", 0, eligible_count)
+        if eligible_count:
+            self._stage(run_id, "ai_assistance", "running", 0, eligible_count)
         suggestions = self.ai_assessment_service.assess_candidates(
             candidates,
             confirm_llm=True,
@@ -269,7 +266,12 @@ class SingleReportWorkflow:
             self.repository.append_ai_suggestion(suggestion)
             if suggestion.status is not AISuggestionStatus.SKIPPED:
                 attempted_assessment_ids.append(suggestion.assessment_id)
-        self.repository.mark_assessments_model_called(attempted_assessment_ids)
+        if attempted_assessment_ids:
+            self.repository.mark_assessments_model_called(attempted_assessment_ids)
+
+        if eligible_count == 0:
+            self._stage(run_id, "ai_assistance", "skipped", 0, 0)
+            return
 
         failed_count = sum(
             suggestion.status is AISuggestionStatus.FAILED

@@ -9,12 +9,10 @@ from pydantic import ValidationError
 from src.domain.ai_models import AIAssessmentResponse, AIAssessmentSuggestion
 from src.domain.enums import AISuggestionStatus, AssessmentVerdict, RiskLevel
 from src.domain.models import DisclosureAssessment, DisclosureTask, EvidenceItem
+from src.services.ai_evidence_eligibility import classify_ai_evidence
 from src.tools.llm_client import LLMClient, LLMCompletionError, LLMCompletionResult
 
 
-NON_SUBSTANTIVE_EVIDENCE_TYPES = frozenset(
-    {"omission_note", "index_statement", "chapter_cover", "candidate_page"}
-)
 INDEPENDENT_STRUCTURE_STATUSES = frozenset({"verified", "normalized"})
 AI_REVIEW_PRIORITIES = frozenset({RiskLevel.HIGH, RiskLevel.MEDIUM})
 PRIORITY_ORDER = {RiskLevel.HIGH: 0, RiskLevel.MEDIUM: 1, RiskLevel.LOW: 2}
@@ -426,12 +424,8 @@ class AIAssessmentService:
         return candidate.assessment.evidence[:MAX_EVIDENCE_ITEMS]
 
     @staticmethod
-    def _evidence_type(evidence: EvidenceItem) -> str:
-        return str(evidence.metadata.get("evidence_type", "substantive_report_evidence"))
-
-    @classmethod
-    def _is_substantive(cls, evidence: EvidenceItem) -> bool:
-        return cls._evidence_type(evidence) not in NON_SUBSTANTIVE_EVIDENCE_TYPES
+    def _is_substantive(evidence: EvidenceItem) -> bool:
+        return classify_ai_evidence(evidence).is_substantive
 
     @staticmethod
     def _skip_code(candidate: AIAssessmentCandidate) -> str:
