@@ -52,16 +52,15 @@ const payloadLabels: Record<string, string> = {
   matched: "画像匹配",
   confirm_llm: "启用外部模型",
   formats: "输出格式",
-  format: "文件格式",
+  format: "文件类型",
   file_id: "文件",
-  size: "文件大小（字节）",
+  size: "文件大小",
   sha256: "文件校验值",
   page_count: "PDF 页数",
-  chunk_count: "文本块数",
-  digital_text_page_count: "数字文本页数",
+  digital_text_page_count: "可检索文本页数",
   low_text_density_page_count: "低文本密度页数",
   scanned_page_count: "扫描页数",
-  document_capability: "文档处理能力",
+  document_capability: "文档解析状态",
   old_due_date: "原截止日期",
   new_due_date: "新截止日期",
   old_owner_name: "原负责人",
@@ -117,10 +116,35 @@ const reviewOperationLabels: Record<string, string> = {
   reopen: "重新开启",
   legacy_import: "历史数据导入",
 };
+const exportFormatLabels: Record<string, string> = {
+  assessment_xlsx: "GRI 核查表（XLSX）",
+  actions_xlsx: "整改任务清单（XLSX）",
+  management_pdf: "管理层摘要（PDF）",
+  print_html: "可打印核查表（HTML）",
+};
+const documentCapabilityLabels: Record<string, string> = {
+  supported: "可直接解析",
+  supported_with_review: "可解析，部分页面需复核",
+  unsupported_scanned_pdf: "全扫描 PDF，当前无法直接解析",
+};
+const pageCountKeys = new Set([
+  "page_count",
+  "digital_text_page_count",
+  "low_text_density_page_count",
+  "scanned_page_count",
+]);
 const internalIdentifierPattern = /assessment:run-[A-Za-z0-9_-]+(?::GRI\s+[A-Za-z0-9.-]+)?|\b(?:report|run|action|assessment|snapshot|export|file|profile|batch|suggestion)-[A-Za-z0-9][A-Za-z0-9_-]*\b/g;
 
 function redactInternalIdentifiers(value: string): string {
   return value.replace(internalIdentifierPattern, "[内部标识已隐藏]");
+}
+
+function formatFileSize(value: unknown): string {
+  const size = Number(value);
+  if (!Number.isFinite(size) || size < 0) return "-";
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${Math.round(size / 1024)} KB`;
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function payloadValue(key: string, value: unknown): string {
@@ -134,6 +158,10 @@ function payloadValue(key: string, value: unknown): string {
   if (key === "old_status" || key === "new_status") return actionStatusLabels[text] ?? redactInternalIdentifiers(text);
   if (key === "reviewed_applicability_status") return applicabilityStatusLabels[text] ?? redactInternalIdentifiers(text);
   if (key === "operation_type") return reviewOperationLabels[text] ?? redactInternalIdentifiers(text);
+  if (key === "format" || key === "formats") return exportFormatLabels[text] ?? redactInternalIdentifiers(text);
+  if (key === "size") return formatFileSize(value);
+  if (key === "document_capability") return documentCapabilityLabels[text] ?? redactInternalIdentifiers(text);
+  if (pageCountKeys.has(key)) return `${text} 页`;
   return redactInternalIdentifiers(text);
 }
 

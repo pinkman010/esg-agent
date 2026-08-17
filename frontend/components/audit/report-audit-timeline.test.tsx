@@ -103,6 +103,164 @@ describe("ReportAuditTimeline", () => {
     expect(screen.getByText("人工确认不适用")).toBeInTheDocument();
   });
 
+  it("presents downloaded export types and file sizes in product language", async () => {
+    vi.stubGlobal("fetch", vi.fn(() => Promise.resolve(new Response(JSON.stringify({
+      items: [
+        {
+          audit_event_id: 12,
+          run_id: "run-2",
+          event_type: "export_file_downloaded",
+          payload: { format: "assessment_xlsx", size: 188668 },
+          created_at: "2026-08-17T12:04:15Z",
+        },
+        {
+          audit_event_id: 11,
+          run_id: "run-2",
+          event_type: "export_file_downloaded",
+          payload: { format: "actions_xlsx", size: 1023 },
+          created_at: "2026-08-17T12:03:15Z",
+        },
+        {
+          audit_event_id: 10,
+          run_id: "run-2",
+          event_type: "export_file_downloaded",
+          payload: { format: "management_pdf", size: 1024 },
+          created_at: "2026-08-17T12:02:15Z",
+        },
+        {
+          audit_event_id: 9,
+          run_id: "run-2",
+          event_type: "export_file_downloaded",
+          payload: { format: "print_html", size: 1048575 },
+          created_at: "2026-08-17T12:01:15Z",
+        },
+        {
+          audit_event_id: 8,
+          run_id: "run-2",
+          event_type: "export_file_downloaded",
+          payload: { format: "assessment_xlsx", size: 1048576 },
+          created_at: "2026-08-17T12:00:15Z",
+        },
+      ],
+      total: 5,
+      offset: 0,
+      limit: 20,
+    }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    }))));
+
+    renderWithQuery(<ReportAuditTimeline reportId="report-1" />);
+
+    expect(await screen.findAllByText("文件类型")).toHaveLength(5);
+    expect(screen.getAllByText("文件大小")).toHaveLength(5);
+    expect(screen.getAllByText("GRI 核查表（XLSX）")).toHaveLength(2);
+    expect(screen.getByText("整改任务清单（XLSX）")).toBeInTheDocument();
+    expect(screen.getByText("管理层摘要（PDF）")).toBeInTheDocument();
+    expect(screen.getByText("可打印核查表（HTML）")).toBeInTheDocument();
+    expect(screen.getByText("184 KB")).toBeInTheDocument();
+    expect(screen.getByText("1023 B")).toBeInTheDocument();
+    expect(screen.getByText("1 KB")).toBeInTheDocument();
+    expect(screen.getByText("1024 KB")).toBeInTheDocument();
+    expect(screen.getByText("1.0 MB")).toBeInTheDocument();
+  });
+
+  it("localizes output format arrays on generated version events", async () => {
+    vi.stubGlobal("fetch", vi.fn(() => Promise.resolve(new Response(JSON.stringify({
+      items: [{
+        audit_event_id: 13,
+        run_id: "run-2",
+        event_type: "draft_export_created",
+        payload: {
+          formats: ["assessment_xlsx", "actions_xlsx", "management_pdf", "print_html"],
+          version_number: 2,
+        },
+        created_at: "2026-08-17T12:05:15Z",
+      }],
+      total: 1,
+      offset: 0,
+      limit: 20,
+    }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    }))));
+
+    const view = renderWithQuery(<ReportAuditTimeline reportId="report-1" />);
+
+    expect(await screen.findByText("草稿输出已生成")).toBeInTheDocument();
+    expect(screen.getByText("GRI 核查表（XLSX）、整改任务清单（XLSX）、管理层摘要（PDF）、可打印核查表（HTML）")).toBeInTheDocument();
+    expect(view.container.textContent).not.toContain("assessment_xlsx");
+    expect(view.container.textContent).not.toContain("actions_xlsx");
+  });
+
+  it("keeps report page quality visible while hiding parser implementation counts", async () => {
+    vi.stubGlobal("fetch", vi.fn(() => Promise.resolve(new Response(JSON.stringify({
+      items: [
+        {
+          audit_event_id: 16,
+          run_id: "run-2",
+          event_type: "parse_completed",
+          payload: {
+            page_count: 78,
+            chunk_count: 77,
+            document_capability: "supported",
+            digital_text_page_count: 78,
+            scanned_page_count: 0,
+            low_text_density_page_count: 0,
+          },
+          created_at: "2026-08-17T12:08:15Z",
+        },
+        {
+          audit_event_id: 15,
+          run_id: "run-2",
+          event_type: "parse_completed",
+          payload: {
+            page_count: 10,
+            document_capability: "supported_with_review",
+            digital_text_page_count: 8,
+            scanned_page_count: 1,
+            low_text_density_page_count: 1,
+          },
+          created_at: "2026-08-17T12:07:15Z",
+        },
+        {
+          audit_event_id: 14,
+          run_id: "run-2",
+          event_type: "parse_completed",
+          payload: {
+            page_count: 5,
+            document_capability: "unsupported_scanned_pdf",
+            digital_text_page_count: 0,
+            scanned_page_count: 5,
+            low_text_density_page_count: 0,
+          },
+          created_at: "2026-08-17T12:06:15Z",
+        },
+      ],
+      total: 3,
+      offset: 0,
+      limit: 20,
+    }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    }))));
+
+    const view = renderWithQuery(<ReportAuditTimeline reportId="report-1" />);
+
+    expect(await screen.findAllByText("PDF 解析已完成")).toHaveLength(3);
+    expect(screen.getAllByText("PDF 页数")).toHaveLength(3);
+    expect(screen.getAllByText("78 页")).toHaveLength(2);
+    expect(screen.getAllByText("文档解析状态")).toHaveLength(3);
+    expect(screen.getByText("可直接解析")).toBeInTheDocument();
+    expect(screen.getByText("可解析，部分页面需复核")).toBeInTheDocument();
+    expect(screen.getByText("全扫描 PDF，当前无法直接解析")).toBeInTheDocument();
+    expect(screen.getAllByText("可检索文本页数")).toHaveLength(3);
+    expect(screen.getAllByText("扫描页数")).toHaveLength(3);
+    expect(screen.getAllByText("低文本密度页数")).toHaveLength(3);
+    expect(view.container.textContent).not.toContain("文本块数");
+    expect(view.container.textContent).not.toContain("77");
+  });
+
   it("presents report events in Chinese without rendering raw JSON", async () => {
     const fetchMock = vi.fn(() => Promise.resolve(new Response(JSON.stringify({
       items: [
