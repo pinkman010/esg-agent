@@ -150,6 +150,7 @@ capability 和 workflow 必须调用同一个 preflight 实现，避免两套判
 |---|---|
 | `ocr_feature_disabled` | 全局 OCR 开关关闭 |
 | `ocr_page_out_of_range` | 请求页码不在报告范围内 |
+| `ocr_page_limit_exceeded` | 请求页数超过单报告 OCR 上限 |
 | `ocrmypdf_missing` | OCRmyPDF 不可用 |
 | `ghostscript_missing` | Ghostscript 不可用 |
 | `tesseract_missing` | Tesseract 不可用 |
