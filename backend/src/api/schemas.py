@@ -51,6 +51,14 @@ class AnalyzeResponse(BaseModel):
     error_message: str | None = None
 
 
+class OcrCapabilityResponse(BaseModel):
+    enabled: bool
+    available: bool
+    dependency_codes: list[str]
+    language: str
+    max_pages: int
+
+
 class DemoResetRequest(BaseModel):
     confirmation: str
 

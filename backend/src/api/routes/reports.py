@@ -7,7 +7,7 @@ from uuid import uuid4
 import pdfplumber
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse, Response
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -22,6 +22,7 @@ from src.domain.versions import CURRENT_RISK_RULE_VERSION
 from src.services.document_store import DocumentStore
 from src.services.metadata_detection import detect_report_metadata
 from src.services.analysis_job import execute_analysis_job
+from src.services.ocr_errors import OCR_ERROR_MESSAGES
 
 router = APIRouter(prefix="/api/reports", tags=["reports"])
 
@@ -29,7 +30,7 @@ router = APIRouter(prefix="/api/reports", tags=["reports"])
 class AnalyzeRequest(BaseModel):
     confirm_llm: bool = False
     enable_ocr: bool = False
-    ocr_pages: list[int] = []
+    ocr_pages: list[int] = Field(default_factory=list)
 
 
 def _can_start_new_demo(session: Session) -> bool:
@@ -211,6 +212,39 @@ def analyze_report(
             status_code=409,
             detail={"code": "report_not_ready", "message": "报告信息尚未确认"},
         )
+
+    settings = get_settings()
+    if request.enable_ocr and not settings.ocr_enabled:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "ocr_feature_disabled",
+                "message": OCR_ERROR_MESSAGES["ocr_feature_disabled"],
+            },
+        )
+
+    if request.enable_ocr:
+        unique_pages = sorted(set(request.ocr_pages))
+        if any(
+            page < 1 or report.page_count is None or page > report.page_count
+            for page in unique_pages
+        ):
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "code": "ocr_page_out_of_range",
+                    "message": OCR_ERROR_MESSAGES["ocr_page_out_of_range"],
+                },
+            )
+        if len(unique_pages) > settings.ocr_max_pages:
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "code": "ocr_page_limit_exceeded",
+                    "message": OCR_ERROR_MESSAGES["ocr_page_limit_exceeded"],
+                    "max_pages": settings.ocr_max_pages,
+                },
+            )
 
     try:
         run = repo.create_run(

@@ -2,6 +2,7 @@ import pytest
 from pypdf import PdfWriter
 from sqlalchemy import select
 
+from src.config.settings import get_settings
 from src.db.models import AuditEventRecord
 from src.db.repositories import Repository
 from src.domain.enums import ReportStatus, RunStatus
@@ -12,14 +13,35 @@ from src.services.metadata_detection import DetectedReportMetadata
 pytestmark = pytest.mark.anyio
 
 
-def make_pdf_bytes():
+def make_pdf_bytes(page_count: int = 1):
     from io import BytesIO
 
     buffer = BytesIO()
     writer = PdfWriter()
-    writer.add_blank_page(width=72, height=72)
+    for _page_number in range(page_count):
+        writer.add_blank_page(width=72, height=72)
     writer.write(buffer)
     return buffer.getvalue()
+
+
+async def ready_report(api_client, *, page_count: int = 1) -> str:
+    upload = await api_client.post(
+        "/api/reports/upload",
+        files={
+            "file": (
+                "report.pdf",
+                make_pdf_bytes(page_count=page_count),
+                "application/pdf",
+            )
+        },
+    )
+    report_id = upload.json()["report_id"]
+    confirmation = await api_client.post(
+        f"/api/reports/{report_id}/confirm-metadata",
+        json={"company_name": "测试公司", "report_year": 2024, "language": "zh-CN"},
+    )
+    assert confirmation.status_code == 200
+    return report_id
 
 
 async def test_upload_accepts_pdf_and_returns_report_id(api_client):
@@ -392,6 +414,7 @@ async def test_analyze_defaults_to_ocr_disabled(api_client, monkeypatch):
 
 async def test_analyze_passes_explicit_ocr_pages(api_client, monkeypatch):
     captured = {}
+    monkeypatch.setattr(get_settings(), "ocr_enabled", True)
 
     class FakeWorkflow:
         def __init__(self, *args, **kwargs):
@@ -425,15 +448,16 @@ async def test_analyze_passes_explicit_ocr_pages(api_client, monkeypatch):
 
     response = await api_client.post(
         f"/api/reports/{report_id}/analyze",
-        json={"confirm_llm": False, "enable_ocr": True, "ocr_pages": [77]},
+        json={"confirm_llm": False, "enable_ocr": True, "ocr_pages": [1]},
     )
 
     assert response.status_code == 200
-    assert captured == {"enable_ocr": True, "ocr_pages": [77]}
+    assert captured == {"enable_ocr": True, "ocr_pages": [1]}
 
 
 async def test_analyze_queues_background_job_with_identifiers_only(api_client, monkeypatch):
     captured = {}
+    monkeypatch.setattr(get_settings(), "ocr_enabled", True)
 
     def capture_job(*args, **kwargs):
         captured["args"] = args
@@ -452,7 +476,7 @@ async def test_analyze_queues_background_job_with_identifiers_only(api_client, m
 
     response = await api_client.post(
         f"/api/reports/{report_id}/analyze",
-        json={"confirm_llm": False, "enable_ocr": True, "ocr_pages": [7]},
+        json={"confirm_llm": False, "enable_ocr": True, "ocr_pages": [1]},
     )
 
     assert response.status_code == 200
@@ -462,8 +486,78 @@ async def test_analyze_queues_background_job_with_identifiers_only(api_client, m
         "run_id": response.json()["run_id"],
         "confirm_llm": False,
         "enable_ocr": True,
-        "ocr_pages": [7],
+        "ocr_pages": [1],
     }
+
+
+async def test_analyze_rejects_ocr_when_global_feature_is_disabled(
+    api_client,
+    api_session,
+    monkeypatch,
+):
+    report_id = await ready_report(api_client)
+    monkeypatch.setattr(get_settings(), "ocr_enabled", False)
+
+    response = await api_client.post(
+        f"/api/reports/{report_id}/analyze",
+        json={"confirm_llm": False, "enable_ocr": True, "ocr_pages": [1]},
+    )
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == {
+        "code": "ocr_feature_disabled",
+        "message": "OCR 功能当前未启用。",
+    }
+    assert Repository(api_session).list_runs() == []
+
+
+@pytest.mark.parametrize("ocr_pages", [[0], [-1], [2]])
+async def test_analyze_rejects_out_of_range_ocr_pages_before_run(
+    api_client,
+    api_session,
+    monkeypatch,
+    ocr_pages,
+):
+    report_id = await ready_report(api_client)
+    monkeypatch.setattr(get_settings(), "ocr_enabled", True)
+
+    response = await api_client.post(
+        f"/api/reports/{report_id}/analyze",
+        json={"confirm_llm": False, "enable_ocr": True, "ocr_pages": ocr_pages},
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == {
+        "code": "ocr_page_out_of_range",
+        "message": "OCR 页码超出报告范围。",
+    }
+    assert Repository(api_session).list_runs() == []
+
+
+async def test_analyze_rejects_explicit_ocr_pages_above_page_budget_before_run(
+    api_client,
+    api_session,
+    monkeypatch,
+):
+    report_id = await ready_report(api_client, page_count=6)
+    monkeypatch.setattr(get_settings(), "ocr_enabled", True)
+
+    response = await api_client.post(
+        f"/api/reports/{report_id}/analyze",
+        json={
+            "confirm_llm": False,
+            "enable_ocr": True,
+            "ocr_pages": [1, 2, 3, 4, 5, 6],
+        },
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == {
+        "code": "ocr_page_limit_exceeded",
+        "message": "OCR 页数超过单报告处理上限。",
+        "max_pages": 5,
+    }
+    assert Repository(api_session).list_runs() == []
 
 
 async def test_analyze_creates_new_run_with_risk_v2_1(
