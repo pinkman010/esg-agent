@@ -20,6 +20,9 @@ type Props = {
 export function AssessmentDetail({ reportId, detail, aiAvailability, reviewerName, onEvidencePage }: Props) {
   const systemRationaleDisplay = detail.system_rationale_display ?? detail.rationale_display;
   const systemMissingItemsDisplay = detail.system_missing_items_display ?? detail.missing_items_display;
+  const requirementTextDisplay = /[\u4e00-\u9fff]/.test(detail.requirement_text)
+    ? detail.requirement_text
+    : null;
 
   return (
     <div className="space-y-5 p-5">
@@ -28,7 +31,9 @@ export function AssessmentDetail({ reportId, detail, aiAvailability, reviewerNam
           {reviewPriorityLabels[detail.review_priority] ?? detail.review_priority}
         </p>
         <h2 className="mt-1 text-base font-semibold">{detail.requirement_id}</h2>
-        <p className="mt-2 text-sm text-muted-foreground">{detail.requirement_text}</p>
+        {requirementTextDisplay && (
+          <p className="mt-2 text-sm text-muted-foreground">{requirementTextDisplay}</p>
+        )}
       </header>
 
       <section aria-labelledby="rule-analysis-heading" className="space-y-4 rounded-xl border border-border bg-slate-50/60 p-4">

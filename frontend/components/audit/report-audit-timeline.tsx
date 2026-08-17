@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { ApiError, listReportAudit } from "@/lib/api";
+import { applicabilityStatusLabels } from "@/lib/business-labels";
 
 const PAGE_SIZE = 20;
 const eventLabels: Record<string, string> = {
@@ -61,20 +62,79 @@ const payloadLabels: Record<string, string> = {
   low_text_density_page_count: "低文本密度页数",
   scanned_page_count: "扫描页数",
   document_capability: "文档处理能力",
+  old_due_date: "原截止日期",
+  new_due_date: "新截止日期",
+  old_owner_name: "原负责人",
+  new_owner_name: "新负责人",
   old_status: "原状态",
   new_status: "新状态",
   changed_fields: "变更字段",
+  reviewed_applicability_status: "适用性结论",
   row_count: "导出行数",
   error_code: "错误代码",
   error: "错误说明",
   reason: "原因",
 };
 
-function payloadValue(value: unknown): string {
-  if (Array.isArray(value)) return value.map(payloadValue).join("、");
+const hiddenPayloadKeys = new Set([
+  "report_id",
+  "duplicate_of_report_id",
+  "parent_run_id",
+  "retry_run_id",
+  "assessment_id",
+  "action_id",
+  "export_id",
+  "supersedes_export_id",
+  "snapshot_id",
+  "profile_id",
+  "file_id",
+  "file_hash",
+  "sha256",
+]);
+
+function visiblePayloadEntries(payload: Record<string, unknown>) {
+  return Object.entries(payload).filter(
+    ([key]) => Object.hasOwn(payloadLabels, key) && !hiddenPayloadKeys.has(key),
+  );
+}
+
+const actionStatusLabels: Record<string, string> = {
+  open: "待处理",
+  in_progress: "进行中",
+  completed: "已完成",
+  cancelled: "已取消",
+};
+const changedFieldLabels: Record<string, string> = {
+  due_date: "截止日期",
+  owner_name: "负责人",
+  status: "状态",
+  completion_note: "完成说明",
+};
+const reviewOperationLabels: Record<string, string> = {
+  approve: "确认通过",
+  modify: "修改结论",
+  invalidate_evidence: "证据无效",
+  reopen: "重新开启",
+  legacy_import: "历史数据导入",
+};
+const internalIdentifierPattern = /assessment:run-[A-Za-z0-9_-]+(?::GRI\s+[A-Za-z0-9.-]+)?|\b(?:report|run|action|assessment|snapshot|export|file|profile|batch|suggestion)-[A-Za-z0-9][A-Za-z0-9_-]*\b/g;
+
+function redactInternalIdentifiers(value: string): string {
+  return value.replace(internalIdentifierPattern, "[内部标识已隐藏]");
+}
+
+function payloadValue(key: string, value: unknown): string {
+  if (Array.isArray(value)) return value.map((item) => payloadValue(key, item)).join("、");
   if (value === null || value === undefined || value === "") return "-";
   if (typeof value === "object") return "详细信息已记录";
-  return String(value);
+  if (typeof value === "boolean") return value ? "是" : "否";
+
+  const text = String(value);
+  if (key === "changed_fields") return changedFieldLabels[text] ?? redactInternalIdentifiers(text);
+  if (key === "old_status" || key === "new_status") return actionStatusLabels[text] ?? redactInternalIdentifiers(text);
+  if (key === "reviewed_applicability_status") return applicabilityStatusLabels[text] ?? redactInternalIdentifiers(text);
+  if (key === "operation_type") return reviewOperationLabels[text] ?? redactInternalIdentifiers(text);
+  return redactInternalIdentifiers(text);
 }
 
 function auditErrorMessage(error: unknown): string {
@@ -121,7 +181,9 @@ export function ReportAuditTimeline({ reportId }: { reportId: string }) {
         </p>
       ) : (
         <ol className="mt-5 space-y-3">
-          {data.items.map((event) => (
+          {data.items.map((event) => {
+            const payloadEntries = visiblePayloadEntries(event.payload);
+            return (
             <li key={event.audit_event_id} className="rounded-xl border border-border bg-white p-4 shadow-sm">
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div>
@@ -129,7 +191,7 @@ export function ReportAuditTimeline({ reportId }: { reportId: string }) {
                     {eventLabels[event.event_type] ?? "系统事件"}
                   </h2>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {event.run_id ? `运行 ${event.run_id}` : "报告级事件"}
+                    {event.run_id ? "分析运行记录" : "报告级事件"}
                   </p>
                 </div>
                 <time className="text-xs text-muted-foreground" dateTime={event.created_at ?? undefined}>
@@ -138,22 +200,23 @@ export function ReportAuditTimeline({ reportId }: { reportId: string }) {
                     : "时间待记录"}
                 </time>
               </div>
-              {Object.keys(event.payload).length > 0 && (
+              {payloadEntries.length > 0 && (
                 <dl className="mt-3 grid gap-2 rounded-lg bg-slate-50 p-3 text-xs sm:grid-cols-2">
-                  {Object.entries(event.payload).map(([key, value]) => (
+                  {payloadEntries.map(([key, value]) => (
                     <div key={key}>
                       <dt className="text-muted-foreground">
                         {payloadLabels[key] ?? key}
                       </dt>
                       <dd className="mt-1 break-words font-medium">
-                        {payloadValue(value)}
+                        {payloadValue(key, value)}
                       </dd>
                     </div>
                   ))}
                 </dl>
               )}
             </li>
-          ))}
+            );
+          })}
         </ol>
       )}
 

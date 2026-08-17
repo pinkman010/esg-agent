@@ -55,6 +55,48 @@ function detail(assessmentId: string, requirementId: string): AssessmentDetailRe
 }
 
 describe("AssessmentDetail", () => {
+  it("does not expose English-only standard text in the Chinese review view", () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    const englishRequirement = "report the total number of significant instances of non-compliance;";
+    const assessment = {
+      ...detail("assessment-english", "GRI 2-27-a-i"),
+      requirement_text: englishRequirement,
+      source_requirement_text: "instances for which fines were incurred;",
+      effective_requirement_text: englishRequirement,
+    } satisfies AssessmentDetailResponse;
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <AssessmentDetail reportId="report-1" detail={assessment} aiAvailability="disabled" reviewerName="张三" onEvidencePage={() => undefined} />
+      </QueryClientProvider>,
+    );
+
+    expect(screen.getByRole("heading", { name: "GRI 2-27-a-i" })).toBeInTheDocument();
+    expect(screen.queryByText(englishRequirement)).not.toBeInTheDocument();
+  });
+
+  it("shows requirement text when a confirmed Chinese version is available", () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    const chineseRequirement = "报告报告期内重大违法违规事件总数及罚款情况。";
+    const assessment = {
+      ...detail("assessment-chinese", "GRI 2-27-a-i"),
+      requirement_text: chineseRequirement,
+      effective_requirement_text: chineseRequirement,
+    } satisfies AssessmentDetailResponse;
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <AssessmentDetail reportId="report-1" detail={assessment} aiAvailability="disabled" reviewerName="张三" onEvidencePage={() => undefined} />
+      </QueryClientProvider>,
+    );
+
+    expect(screen.getByText(chineseRequirement)).toBeInTheDocument();
+  });
+
   it("separates rule analysis, AI advice and the current human-reviewed result", () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
