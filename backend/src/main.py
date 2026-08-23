@@ -18,7 +18,7 @@ from src.config.settings import get_settings
 from src.services.analysis_job import recover_interrupted_analysis_runs
 
 
-APP_VERSION = "1.3.0"
+APP_VERSION = "1.3.1"
 
 
 @asynccontextmanager

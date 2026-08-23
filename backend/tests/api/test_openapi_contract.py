@@ -7,7 +7,7 @@ import pytest
 pytestmark = pytest.mark.anyio
 
 
-async def test_openapi_exposes_v1_3_release_version(api_client):
+async def test_openapi_exposes_v1_3_1_release_version(api_client):
     response = await api_client.get("/openapi.json")
 
     assert response.status_code == 200
@@ -23,7 +23,7 @@ async def test_openapi_exposes_v1_3_release_version(api_client):
         response.json()["info"]["version"],
         backend_version,
         frontend_version,
-    } == {"1.3.0"}
+    } == {"1.3.1"}
 
 
 async def test_openapi_exposes_response_schemas_for_frontend_generation(api_client):
