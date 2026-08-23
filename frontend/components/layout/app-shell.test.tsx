@@ -32,6 +32,21 @@ describe("AppShell", () => {
     expect(screen.queryByText(/499|78 个上下文|esg_agent_demo/)).not.toBeInTheDocument();
   });
 
+  it("keeps the desktop sidebar artwork sized to the viewport", () => {
+    renderWithQuery(<AppShell><p>页面内容</p></AppShell>);
+
+    const sidebarNavigation = screen.getByRole("navigation", { name: "页面导航" });
+    const sidebar = sidebarNavigation.closest("aside");
+
+    expect(sidebar).not.toBeNull();
+    expect(sidebar?.firstElementChild).toHaveClass(
+      "sticky",
+      "top-16",
+      "h-[calc(100vh-4rem)]",
+      "overflow-hidden",
+    );
+  });
+
   it("loads the current report and exposes report-scoped navigation", async () => {
     pathname = "/reports/report-1/dashboard";
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse({
