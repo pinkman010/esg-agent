@@ -2,11 +2,11 @@
 
 ## 0. 当前发布基线
 
-截至 2026-08-18，当前正式发布基线为 `v1.3`，后端包、前端包和 OpenAPI `info.version` 统一为 `1.3.0`。运行时 OpenAPI 的 40 条 `/api/*` 路径已全部同步到 `frontend/lib/generated/api-types.ts`，其中包括 `GET /api/capabilities/ocr`。
+截至 2026-08-23，当前正式发布基线为 `v1.3.1`，后端包、前端包和 OpenAPI `info.version` 统一为 `1.3.1`。运行时 OpenAPI 的 40 条 `/api/*` 路径已全部同步到 `frontend/lib/generated/api-types.ts`，其中包括 `GET /api/capabilities/ocr`。
 
-v1.3 发布门禁按顺序执行，避免 PostgreSQL、pytest、前端构建和 Envision regeneration 并发争用本机内存。最终记录为：后端 823 项测试与 Ruff 通过；前端 39 个测试文件、149 项测试、lint（0 error、2 条既有 warning）、typecheck 和 production build 通过；Envision v3 regeneration 与 audit 通过，`577/499/78/0`、0 global fallback、0 新增 false disclosed、0 新增 wrong source page。发布门禁使用 `confirm_llm=false`、`OCR_ENABLED=false`，不会发起 DeepSeek、embedding、OCR 或 VLM 调用。
+v1.3.1 发布门禁按顺序执行，避免 PostgreSQL、pytest、前端构建和 Envision regeneration 并发争用本机内存。最终记录为：后端 823 项测试与 Ruff 通过；前端 39 个测试文件、150 项测试、lint（0 error、2 条既有 warning）、typecheck 和 production build 通过；Envision v3 regeneration 与 audit 通过，`577/499/78/0`、0 global fallback、0 新增 false disclosed、0 新增 wrong source page。发布门禁使用 `confirm_llm=false`、`OCR_ENABLED=false`，不会发起 DeepSeek、embedding、OCR 或 VLM 调用。
 
-完整发布范围、限制和终止条件见 `docs/product/v1.3-final-release-acceptance.md`。
+完整发布范围、限制和终止条件见 `docs/product/v1.3.1-final-release-acceptance.md`；`docs/product/v1.3-final-release-acceptance.md` 保留为历史发布记录。
 
 ## 1. 本地开发方式
 

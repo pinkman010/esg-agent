@@ -4,15 +4,17 @@
 
 ## 项目状态
 
-Phase 1.7 已完成最终闭环与发布就绪验收，当前正式发布基线为 `v1.3`。产品统一对外表达为“完成 577 项 GRI 核查”；内部结构为 577 个标准单元、499 个独立判断项、78 个上下文项、0 个方法待确认项。规则 assessment、AI suggestion 和人工 snapshot 分层保存；部分失败和 retry 通过运行谱系形成完整、可审计的 577 项有效视图。
+Phase 1.7 已完成最终闭环与发布就绪验收，当前正式发布基线为 `v1.3.1`。产品统一对外表达为“完成 577 项 GRI 核查”；内部结构为 577 个标准单元、499 个独立判断项、78 个上下文项、0 个方法待确认项。规则 assessment、AI suggestion 和人工 snapshot 分层保存；部分失败和 retry 通过运行谱系形成完整、可审计的 577 项有效视图。
 
 v1.2 之后的发布后缺陷修复已纳入 `v1.3`：普通产品运行统一使用 demo 环境，health 可核对运行身份，复核人每次进入均为空，主流程开发字段名已产品化，审计接口版本错配会给出明确提示。完整验收见 `docs/product/v1.2.1-post-release-remediation-acceptance.md`。
 
 前端视觉升级已完成工程验收：统一语义色板、指标卡、骨架屏、按钮和状态标签，新增 ECharts 披露结论饼图与复核工作量雷达图，并迁移经授权的品牌视觉资产。中文人工复核页不再默认展示英文标准原文；审计时间线隐藏完整内部关联 ID、未知 payload 字段和解析文本块数，输出文件类型、文件大小及 PDF 页面质量均使用产品化中文展示。业务 API、规则、AI/人工分层和导出口径均未改变。完整结论见 `docs/product/frontend-visual-migration-acceptance.md` 和 `docs/product/v1.2.1-post-release-remediation-acceptance.md`。
 
+`v1.3.1` 为产品闭环补丁发布：桌面侧边栏视觉容器改为固定视口高度，报告总览和完整核查不再因主内容高度改变图片裁切，完整核查加载前后也不再出现背景跳变。六个报告工作区页面已完成浏览器对比；本补丁只调整共享前端布局和版本元数据，不改变 API、规则、数据、AI、OCR、RAG、人工复核或导出语义。完整结论见 `docs/product/v1.3.1-final-release-acceptance.md`。
+
 AI 候选路由已完成受控解冻：`image_body_not_extracted` evidence 不再进入默认外部模型候选，显式非实质证据和图片正文未提取证据使用统一 AI 本地分类；索引限定路由本身不被误判为非实质证据。`confirm_llm=false` 继续保持零调用和无逐项 suggestion；已授权但零合格候选的运行保存逐项跳过原因，便于前端解释和只读审计。Task 9 已通过新的 Envision 产品 run 完成授权对比：旧 run 的 4 次弱证据调用降为 0，499 项规则、风险、适用性和证据页差异均为 0。模型、Prompt、数据库、规则、风险、人工复核和导出口径均未改变。完整结论见 `docs/product/ai-candidate-routing-acceptance.md`。
 
-当前记录门禁：后端 823 项测试和 Ruff 通过；前端 lint 通过（0 error、2 条已知 warning），39 个测试文件、149 项测试、typecheck 和 production build 通过；Envision v3 回归的新增 false disclosed、wrong source page 和 global fallback 均为 0，audit 为 0 error、0 warning。Goldwind 52 页真实数字文本报告已完成独立上传、分析、复核、整改、草稿、下载和审计闭环，用作产品泛化工程证据。内置报告画像同时校验文件名、页数和源 PDF SHA-256，防止同名同页文件误用报告专属证据路由。
+当前记录门禁：后端 823 项测试和 Ruff 通过；前端 lint 通过（0 error、2 条已知 warning），39 个测试文件、150 项测试、typecheck 和 production build 通过；Envision v3 回归的新增 false disclosed、wrong source page 和 global fallback 均为 0，audit 为 0 error、0 warning。Goldwind 52 页真实数字文本报告已完成独立上传、分析、复核、整改、草稿、下载和审计闭环，用作产品泛化工程证据。内置报告画像同时校验文件名、页数和源 PDF SHA-256，防止同名同页文件误用报告专属证据路由。
 
 混合影子 RAG Phase 1.5 已完成自动工程验收。499 个独立判断项均生成确定性的规则、向量和混合 Top 5 对比；在其中 119 条具有历史工程 gold 的样本中，混合 Hit@5、Recall@5 和 MRR 均高于规则基线，正式业务表和 Envision 冻结门禁保持不变。该能力继续只用于离线诊断，不进入正式 evidence、assessment、risk、AI suggestion、API 或前端，也不构成 ESG 专家判断。Phase 2 为可选增强且未启动，Phase 3 保持关闭。
 
@@ -47,6 +49,7 @@ esg-agent/
 - Phase 1.6 产品闭环验收：`docs/product/phase1.6-product-closure-acceptance.md`
 - Phase 1.7 最终闭环与发布就绪验收：`docs/product/phase1.7-final-closure-acceptance.md`
 - v1.3 最终发布验收：`docs/product/v1.3-final-release-acceptance.md`
+- v1.3.1 补丁发布验收：`docs/product/v1.3.1-final-release-acceptance.md`
 - 前端视觉迁移验收：`docs/product/frontend-visual-migration-acceptance.md`
 - 实施计划：`docs/plan/`
 
@@ -119,4 +122,4 @@ pnpm typecheck
 pnpm build
 ```
 
-普通页面只使用 577 项产品口径。内部技术审计可以使用 `577/499/78/0`，含义依次为标准单元、独立判断项、上下文项和方法待确认项。`v1.3` 已作为当前产品闭环发布基线冻结；任何 GRI 清单、结构裁决、证据规则、risk-v2.1、模型/Prompt、数据库 schema 或 API 语义变更都需要解除冻结并重跑完整门禁。
+普通页面只使用 577 项产品口径。内部技术审计可以使用 `577/499/78/0`，含义依次为标准单元、独立判断项、上下文项和方法待确认项。`v1.3.1` 已作为当前产品闭环发布基线冻结；任何 GRI 清单、结构裁决、证据规则、risk-v2.1、模型/Prompt、数据库 schema 或 API 语义变更都需要解除冻结并重跑完整门禁。
