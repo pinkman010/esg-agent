@@ -49,7 +49,7 @@
 
 ### 阶段 3：页面美化与布局升级
 
-1. **AppShell**：参考 esg-dashboard 侧边栏 + hero 思路改造 `app-shell.tsx`：桌面端侧边栏加品牌视觉图与渐变遮罩；首页/报告 dashboard 头部加 hero 视觉；业务页保持现有简洁头部。路由改用 `next/link` + `usePathname`。
+1. **AppShell**：参考 esg-dashboard 侧边栏 + hero 思路改造 `app-shell.tsx`：桌面端侧边栏加品牌视觉图与渐变遮罩；初始迁移只为首页/报告 dashboard 增加 hero，报告工作区静态主图的后续扩展见第 7 节。路由改用 `next/link` + `usePathname`。
 2. **首页工作台 `home-workspace.tsx`**：指标卡换成新 MetricCard（count-up），加载态换骨架屏，空态换 EmptyState。
 3. **报告 dashboard**：应用 Panel/MetricCard/新图表。
 4. **静态资产**：复制 `public/brand/`、`public/visuals/*.webp` 到 `frontend/public/` 对应目录。
@@ -97,3 +97,13 @@
 本次调整没有触及后端、API、业务语义或图片资产，不需要更新技术架构基线。详细参数和执行记录见 `docs/plan/frontend-visual-clarity-light-adjustment-plan.md`。
 
 后续主观反馈认为轻度档仍偏浅，尤其是首页横向主图。经用户批准，侧边栏的白色渐变和绿色光晕、工作台两种状态及报告总览的线性渐变均已移除，共删除 5 个遮罩元素；图片 opacity 保持轻度档参数。目标测试、完整前端门禁及桌面/390px 浏览器核查通过，业务和技术边界保持不变。
+
+## 7. 报告工作区统一主图头部（2026-08-24）
+
+经用户确认，完整核查、人工复核、整改任务、输出版本和审计时间线改用与报告总览同体系的紧凑主图头部。实现抽取共享 `ReportPageHero`，报告总览也迁入该组件；完整核查/输出版本使用 `module-policy-disclosure.webp`，人工复核使用 `module-materiality-benchmark.webp`，整改任务/审计时间线使用 `module-claw-monitor.webp`。五个业务页图片静态，报告总览保留 Ken Burns；所有页面 opacity 固定为 0.23，不恢复遮罩。
+
+实施按 TDD 分批完成：共享组件先因模块缺失失败，三类分析/复核页面出现 3 个预期失败，后三个路由出现 3 个预期失败，首屏 eager 加载测试先观察到 `lazy` 失败；最小实现后目标测试全部通过。代码提交为 `391c42c`、`7cfccc3`、`2714bf9` 和 `933dcc7`。
+
+完整门禁为 41 个测试文件、155 项测试通过，typecheck 和 production build 通过；lint 保持 0 error、2 个既有 warning。桌面 1280×720 和 390×844 浏览器验收覆盖六页，图片映射、静态/动效边界、单一 `h1`、人工复核桌面三栏和窄屏切换栏均正确，页面级横向溢出为 0。六页主图均为 eager 加载，控制台无模块主图告警和 error。
+
+本轮未增加资产，未修改后端、API、数据库或业务语义。当前仍为 `v1.3.2` 视觉补丁候选，等待用户主观确认后再冻结视觉基线和决定版本号。

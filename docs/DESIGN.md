@@ -391,14 +391,14 @@ SiliconFlow `BAAI/bge-m3` 第一阶段属于离线影子 RAG。`EMBEDDING_ENABLE
 
 - 工作台式界面，不做聊天入口；
 - 报告和核查对象是首屏信号；
-- 使用紧凑信息密度，不使用全屏营销式 hero；首页首次使用态与报告总览允许使用受控高度的任务型 hero；
+- 使用紧凑信息密度，不使用全屏营销式 hero；首页首次使用态与报告总览允许使用受控高度的任务型 hero，报告工作区业务页面允许使用同体系的紧凑静态主图头部；
 - 按钮使用 lucide icons 和明确 tooltip；
 - 页面不直接依赖 Recharts 或 ECharts API，统一经 `components/charts/` 封装；
 - 基础 UI 组件集中在 `components/ui/`（kebab-case 文件名）：`panel`（卡片容器，配 globals.css `.panel`/`.subpanel` 组件层）、`metric-card`（count-up + sparkline，tone: neutral/danger/warning/success/info）、`status-badge`（soft/outline 两种 variant）、`skeleton`、`empty-state`、`select`、`back-to-top`、`button`（cva，variant: primary/secondary/ghost/danger）；
 - 图表封装在 `components/charts/`：`echart.tsx`（ECharts 按需引入、ResizeObserver 自适应、默认合并 `lib/chart-theme.ts` 文本样式）；报告 dashboard 的分布饼图与工作负载雷达图放在 `components/analysis/`（`verdict-distribution-pie`、`workload-radar-chart`），数据全部 derive 自现有 dashboard API 响应；
 - 图表语义色板与 ECharts 统一样式集中在 `lib/chart-theme.ts`（hex 值，与 globals.css 的 `--gap-*`、`--priority-*`、`--applicability` HSL 变量对齐）；
 - 计数动画 hook 在 `lib/hooks/use-count-up.ts`，测试环境和 `prefers-reduced-motion` 下跳过动画，保证断言确定并尊重用户动效偏好；
-- 动效集中在 globals.css（`.animate-fade-in`、`.animate-shimmer`、`.accent-sheen`、`.progress-sheen`、`.animate-ken-burns`），全部带 `prefers-reduced-motion` 降级；Ken Burns 与玻璃拟态 hero 仅限首页与报告 dashboard 头部，业务页保持简洁头部；
+- 动效集中在 globals.css（`.animate-fade-in`、`.animate-shimmer`、`.accent-sheen`、`.progress-sheen`、`.animate-ken-burns`），全部带 `prefers-reduced-motion` 降级；Ken Burns 仅限首页与报告 dashboard 头部，完整核查、人工复核、整改任务、输出版本和审计时间线只使用静态、低透明度、无遮罩的紧凑主图头部；
 - 正文字体以 globals.css 的中文系统字体栈为唯一来源，tailwind.config.ts 只保留等宽字体；
 - 报告状态、verdict、优先级等业务中文标签统一在 `lib/business-labels.ts`，组件内不重复定义；
 - 品牌与视觉资产在 `public/brand/`、`public/visuals/`，来源 `esg-dashboard`，登记见 `docs/ASSETS.md` 第 11 节；

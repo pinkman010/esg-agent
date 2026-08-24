@@ -34,7 +34,7 @@
 - Create: `frontend/components/layout/report-page-hero.test.tsx`
 - Create: `frontend/components/layout/report-page-hero.tsx`
 
-- [ ] **Step 1：先写共享组件失败测试**
+- [x] **Step 1：先写共享组件失败测试**
 
 测试应渲染静态头部和显式动效头部，锁定标题层级、图片、透明度、无遮罩和插槽：
 
@@ -83,7 +83,7 @@ describe("ReportPageHero", () => {
 });
 ```
 
-- [ ] **Step 2：运行测试并确认按预期失败**
+- [x] **Step 2：运行测试并确认按预期失败**
 
 Run:
 
@@ -94,7 +94,7 @@ npm test -- components/layout/report-page-hero.test.tsx
 
 Expected: FAIL，原因是 `report-page-hero.tsx` 尚不存在；不得出现依赖、网络或测试环境错误。
 
-- [ ] **Step 3：实现最小共享组件**
+- [x] **Step 3：实现最小共享组件**
 
 组件使用固定视觉参数，页面只能传内容、图片和裁切位置：
 
@@ -146,13 +146,13 @@ export function ReportPageHero({
 }
 ```
 
-- [ ] **Step 4：运行共享组件测试并确认通过**
+- [x] **Step 4：运行共享组件测试并确认通过**
 
 Run: `npm test -- components/layout/report-page-hero.test.tsx`
 
 Expected: 1 个测试文件、2 项测试 PASS。
 
-- [ ] **Step 5：提交共享组件**
+- [x] **Step 5：提交共享组件**
 
 ```powershell
 git add -- frontend/components/layout/report-page-hero.tsx frontend/components/layout/report-page-hero.test.tsx
@@ -170,7 +170,7 @@ git commit -m "feat: add shared report page hero"
 - Modify: `frontend/components/review/reviewer-gate.tsx`
 - Modify: `frontend/components/review/review-workspace.tsx`
 
-- [ ] **Step 1：先补三类页面的失败断言**
+- [x] **Step 1：先补三类页面的失败断言**
 
 在报告总览测试中补充动效断言：
 
@@ -197,7 +197,7 @@ expect(heroArtwork).toHaveClass("opacity-[0.23]");
 expect(heroArtwork).not.toHaveClass("animate-ken-burns");
 ```
 
-- [ ] **Step 2：运行三类目标测试并确认预期失败**
+- [x] **Step 2：运行三类目标测试并确认预期失败**
 
 Run:
 
@@ -207,7 +207,7 @@ npm test -- components/analysis/report-dashboard.test.tsx components/analysis/as
 
 Expected: 新增断言 FAIL；原有业务断言继续通过。
 
-- [ ] **Step 3：迁移报告总览头部**
+- [x] **Step 3：迁移报告总览头部**
 
 删除 `report-dashboard.tsx` 对 `next/image` 的直接导入，导入 `ReportPageHero`，用以下结构替换现有头部 `section`：
 
@@ -236,7 +236,7 @@ Expected: 新增断言 FAIL；原有业务断言继续通过。
 />
 ```
 
-- [ ] **Step 4：完整核查接入静态主图**
+- [x] **Step 4：完整核查接入静态主图**
 
 在 `AssessmentTable` 中导入 `ReportPageHero`，替换原文字头部：
 
@@ -257,7 +257,7 @@ Expected: 新增断言 FAIL；原有业务断言继续通过。
 
 搜索筛选容器保留原功能，并把顶部间距保持为 `mt-4`。
 
-- [ ] **Step 5：人工复核接入静态主图**
+- [x] **Step 5：人工复核接入静态主图**
 
 让 `ReviewerGate` 始终渲染统一头部，再根据 `confirmed` 切换表单或工作台：
 
@@ -308,7 +308,7 @@ return (
 
 同时把 `ReviewWorkspace` 根元素的 `min-h-[calc(100vh-3.5rem)]` 删除，依靠 PDF 查看器现有 `min-h-[520px]` 和自然页面滚动，避免主图加入后形成重复视口高度。
 
-- [ ] **Step 6：运行三类目标测试**
+- [x] **Step 6：运行三类目标测试**
 
 Run:
 
@@ -318,7 +318,7 @@ npm test -- components/layout/report-page-hero.test.tsx components/analysis/repo
 
 Expected: 4 个测试文件全部 PASS；报告总览有动效，完整核查和人工复核无动效。
 
-- [ ] **Step 7：提交前三页接入**
+- [x] **Step 7：提交前三页接入**
 
 ```powershell
 git add -- frontend/components/analysis/report-dashboard.tsx frontend/components/analysis/report-dashboard.test.tsx frontend/components/analysis/assessment-table.tsx frontend/components/analysis/assessment-table.test.tsx frontend/components/review/reviewer-gate.tsx frontend/components/review/reviewer-gate.test.tsx frontend/components/review/review-workspace.tsx
@@ -334,7 +334,7 @@ git commit -m "feat: unify analysis and review page heroes"
 - Modify: `frontend/app/reports/[reportId]/audit/page.tsx`
 - Modify: `frontend/components/audit/report-audit-timeline.tsx`
 
-- [ ] **Step 1：先写三个路由的失败测试**
+- [x] **Step 1：先写三个路由的失败测试**
 
 测试中 mock 业务子组件，只验证页面结构与资产映射：
 
@@ -373,13 +373,13 @@ describe("report workspace page heroes", () => {
 });
 ```
 
-- [ ] **Step 2：运行路由测试并确认预期失败**
+- [x] **Step 2：运行路由测试并确认预期失败**
 
 Run: `npm test -- 'app/reports/[reportId]/report-workspace-pages.test.tsx'`
 
 Expected: 3 项测试因目标页面尚无图片而 FAIL。
 
-- [ ] **Step 3：整改和输出页面接入共享头部**
+- [x] **Step 3：整改和输出页面接入共享头部**
 
 在两个页面导入 `ReportPageHero`，保留原容器宽度和业务组件。`actions/page.tsx` 完整结构为：
 
@@ -427,7 +427,7 @@ export default async function ExportsPage({ params }: { params: Promise<{ report
 }
 ```
 
-- [ ] **Step 4：审计页面接入共享头部并删除重复标题**
+- [x] **Step 4：审计页面接入共享头部并删除重复标题**
 
 在 `audit/page.tsx` 中把共享主图放在 `ReportAuditTimeline` 之前，完整结构为：
 
@@ -454,7 +454,7 @@ export default async function ReportAuditPage({ params }: { params: Promise<{ re
 
 从 `report-audit-timeline.tsx` 删除原 `header`，保留加载、错误、空态、列表和分页逻辑。
 
-- [ ] **Step 5：运行路由与审计目标测试**
+- [x] **Step 5：运行路由与审计目标测试**
 
 Run:
 
@@ -464,7 +464,7 @@ npm test -- 'app/reports/[reportId]/report-workspace-pages.test.tsx' components/
 
 Expected: 新增路由测试 3 项及现有业务测试全部 PASS。
 
-- [ ] **Step 6：提交后三页接入**
+- [x] **Step 6：提交后三页接入**
 
 ```powershell
 git add -- 'frontend/app/reports/[reportId]/report-workspace-pages.test.tsx' 'frontend/app/reports/[reportId]/actions/page.tsx' 'frontend/app/reports/[reportId]/exports/page.tsx' 'frontend/app/reports/[reportId]/audit/page.tsx' frontend/components/audit/report-audit-timeline.tsx
@@ -476,13 +476,13 @@ git commit -m "feat: add heroes to action export and audit pages"
 **Files:**
 - 预计无代码修改。
 
-- [ ] **Step 1：运行全部前端测试**
+- [x] **Step 1：运行全部前端测试**
 
 Run: `npm test`
 
 Expected: 所有测试文件和测试项 PASS；基线约为 39 个测试文件、150 项测试，新增后数量应增加且不得减少既有测试。
 
-- [ ] **Step 2：运行类型、构建和静态检查**
+- [x] **Step 2：运行类型、构建和静态检查**
 
 Run:
 
@@ -494,7 +494,7 @@ npm run lint
 
 Expected: typecheck 和 production build 成功；lint 为 0 error，允许保留当前已有的 2 个非阻塞 warning，不得新增 warning。
 
-- [ ] **Step 3：核对服务并做桌面浏览器验收**
+- [x] **Step 3：核对服务并做桌面浏览器验收**
 
 确认 `http://localhost:3000` 和 `http://localhost:8000/health` 可访问；若服务未运行，按 `docs/DEVELOPMENT.md` 的 demo 启动方式启动。依次打开报告总览、完整核查、人工复核、整改任务、输出版本和审计时间线：
 
@@ -507,7 +507,7 @@ Expected: typecheck 和 production build 成功；lint 为 0 error，允许保�
 - 人工复核输入默认空，进入后三栏仍可操作；
 - 审计加载、事件和分页正常。
 
-- [ ] **Step 4：做约 390px 窄屏验收**
+- [x] **Step 4：做约 390px 窄屏验收**
 
 使用浏览器移动视口检查同一组页面，确认头部纵向排列、无横向溢出、一级标题不重复，复核工作台“队列／判断／证据”切换栏未被遮挡。
 
@@ -519,11 +519,11 @@ Expected: typecheck 和 production build 成功；lint 为 0 error，允许保�
 - Modify: `docs/plan/frontend-visual-migration-plan.md`
 - Modify: `docs/product/frontend-visual-migration-acceptance.md`
 
-- [ ] **Step 1：更新设计边界**
+- [x] **Step 1：更新设计边界**
 
 把 `docs/DESIGN.md` 中“业务页保持简洁头部”细化为：报告工作区允许使用紧凑静态主图头部；Ken Burns 仍只限首页和报告总览；图片继续遵守低透明度、无遮罩和 `prefers-reduced-motion` 边界。
 
-- [ ] **Step 2：记录实施与门禁结果**
+- [x] **Step 2：记录实施与门禁结果**
 
 在 `docs/DEVELOPMENT.md` 和 `docs/plan/frontend-visual-migration-plan.md` 记录：
 
@@ -534,11 +534,11 @@ Expected: typecheck 和 production build 成功；lint 为 0 error，允许保�
 - 桌面和窄屏浏览器验收结果；
 - 本轮没有后端、API、数据库或业务语义变化。
 
-- [ ] **Step 3：更新视觉验收报告**
+- [x] **Step 3：更新视觉验收报告**
 
 在 `docs/product/frontend-visual-migration-acceptance.md` 增加本轮验收小节，写明通过项、已知限制和 `v1.3.2` 仍为视觉补丁候选，版本号需等待用户主观确认后再决定。
 
-- [ ] **Step 4：检查文档并提交**
+- [x] **Step 4：检查文档并提交**
 
 Run:
 
