@@ -48,7 +48,7 @@ export function ReviewWorkspace({ reportId, reviewerName, initialAssessmentId }:
   }
 
   return (
-    <div className="min-h-[calc(100vh-3.5rem)]">
+    <div>
       <nav className="sticky top-0 z-20 grid grid-cols-3 border-b border-border bg-white p-2 xl:hidden" aria-label="复核工作台栏位">
         {([["queue", "队列"], ["detail", "判断"], ["evidence", "证据"]] as const).map(([value, label]) => (
           <button

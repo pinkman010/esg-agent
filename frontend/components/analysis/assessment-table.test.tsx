@@ -49,7 +49,7 @@ describe("AssessmentTable", () => {
       return Promise.resolve(new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json" } }));
     });
     vi.stubGlobal("fetch", fetchMock);
-    renderWithQuery(<AssessmentTable reportId="report-1" />);
+    const { container } = renderWithQuery(<AssessmentTable reportId="report-1" />);
     const assessmentLink = await screen.findByRole("link", { name: "GRI 2-1-a" });
     expect(assessmentLink).toHaveAttribute(
       "href",
@@ -73,6 +73,11 @@ describe("AssessmentTable", () => {
     expect(screen.getByText("已纳入相关判断")).toBeInTheDocument();
     expect(screen.getByText("GRI 2-1")).not.toHaveAttribute("href");
     expect(screen.queryByText(/493|499|78|6 个方法待确认/)).not.toBeInTheDocument();
+    const heroArtwork = container.querySelector(
+      'img[src*="module-policy-disclosure"]',
+    );
+    expect(heroArtwork).toHaveClass("opacity-[0.23]");
+    expect(heroArtwork).not.toHaveClass("animate-ken-burns");
 
     fireEvent.click(screen.getByRole("button", { name: "下一页" }));
     expect(await screen.findByText("GRI 2-51-a")).toBeInTheDocument();

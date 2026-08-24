@@ -12,9 +12,9 @@ import {
   Scale,
   UserCheck,
 } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 
+import { ReportPageHero } from "@/components/layout/report-page-hero";
 import { MetricCard } from "@/components/ui/metric-card";
 import { Skeleton, SkeletonCard, SkeletonMetricCard } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -67,37 +67,28 @@ export function ReportDashboard({ reportId }: { reportId: string }) {
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-5 py-6 lg:px-7">
-      <section className="relative flex flex-col gap-5 overflow-hidden rounded-2xl border border-emerald-100/80 bg-emerald-50/60 p-6 lg:flex-row lg:items-end lg:justify-between">
-        {/* dashboard 头部 hero 视觉（Ken Burns 仅限首页与 dashboard 头部） */}
-        <Image
-          src="/visuals/module-policy-disclosure.webp"
-          alt=""
-          aria-hidden="true"
-          fill
-          sizes="(min-width: 1280px) 1152px, 100vw"
-          className="animate-ken-burns pointer-events-none object-cover object-[28%_50%] opacity-[0.23] brightness-95 saturate-125"
-        />
-        <div className="relative">
-          <p className="text-sm font-semibold text-emerald-700">当前报告</p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight">报告总览</h1>
-          <div className="mt-3 flex flex-wrap items-center gap-2">
+      <ReportPageHero
+        eyebrow="当前报告"
+        title="报告总览"
+        imageSrc="/visuals/module-policy-disclosure.webp"
+        imagePosition="28% 50%"
+        animated
+        meta={(
+          <>
             <StatusBadge tone="success">核查范围 {data.standard_unit_count} 项</StatusBadge>
             <StatusBadge tone={data.high_priority_unresolved > 0 ? "danger" : "success"}>
               高优先级复核 {data.high_priority_reviewed}/{data.high_priority_total}
             </StatusBadge>
-          </div>
-          <p className="mt-3 text-xs leading-5 text-muted-foreground">
-            高优先级复核完成不代表全部 577 项均已人工确认。
-          </p>
-        </div>
-        <Link
-          href={`/reports/${reportId}/review`}
-          className={`relative ${buttonVariants()}`}
-        >
-          <ListChecks aria-hidden="true" className="h-4 w-4" />
-          进入复核工作台
-        </Link>
-      </section>
+          </>
+        )}
+        description="高优先级复核完成不代表全部 577 项均已人工确认。"
+        action={(
+          <Link href={`/reports/${reportId}/review`} className={buttonVariants()}>
+            <ListChecks aria-hidden="true" className="h-4 w-4" />
+            进入复核工作台
+          </Link>
+        )}
+      />
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="报告核查指标">
         <MetricCard

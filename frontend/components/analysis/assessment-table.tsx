@@ -7,6 +7,7 @@ import {
   listReportScopeItems,
   type ReportScopeFilters,
 } from "@/lib/api";
+import { ReportPageHero } from "@/components/layout/report-page-hero";
 import { reviewStatusLabels, riskLabels, verdictLabels } from "@/lib/business-labels";
 import { PaginationControls } from "@/components/ui/pagination-controls";
 
@@ -60,18 +61,16 @@ export function AssessmentTable({ reportId }: { reportId: string }) {
 
   return (
     <div>
-      <div className="flex flex-wrap items-end justify-between gap-3 border-b border-border pb-4">
-        <div>
-          <p className="text-sm font-semibold text-emerald-700">报告核查清单</p>
-          <h1 className="mt-1 text-2xl font-semibold">完整 GRI 核查范围</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-            独立判断项可进入人工复核；上下文条款已纳入相关判断，不重复生成结论。
-          </p>
-        </div>
-        {query.data && (
+      <ReportPageHero
+        eyebrow="报告核查清单"
+        title="完整 GRI 核查范围"
+        description="独立判断项可进入人工复核；上下文条款已纳入相关判断，不重复生成结论。"
+        imageSrc="/visuals/module-policy-disclosure.webp"
+        imagePosition="28% 50%"
+        meta={query.data ? (
           <span className="rounded-full bg-emerald-50 px-3 py-1.5 text-sm font-semibold text-emerald-800">共 {query.data.total} 项</span>
-        )}
-      </div>
+        ) : null}
+      />
       <div className="mt-4 space-y-3 rounded-xl border border-border bg-white p-4 shadow-sm">
         <form
           aria-label="核查范围搜索"

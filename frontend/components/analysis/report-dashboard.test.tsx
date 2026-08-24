@@ -66,6 +66,8 @@ describe("ReportDashboard", () => {
     expect(screen.getByRole("link", { name: "查看输出与版本" })).toHaveAttribute("href", "/reports/report-1/exports");
     const heroArtwork = container.querySelector('img[src*="module-policy-disclosure"]');
     expect(heroArtwork).toHaveClass("opacity-[0.23]");
+    expect(heroArtwork).toHaveClass("animate-ken-burns");
+    expect(heroArtwork).toHaveStyle({ objectPosition: "28% 50%" });
     expect(
       Array.from(heroArtwork?.parentElement?.children ?? []).some(
         (element) => typeof element.className === "string" && element.className.includes("linear-gradient"),

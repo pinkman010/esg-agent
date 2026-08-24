@@ -10,8 +10,16 @@ describe("ReviewerGate", () => {
   it("starts blank even when an automated reviewer name remains in browser storage", () => {
     localStorage.setItem("esg-agent-reviewer-name", "Chrome 自动验收");
 
-    renderWithQuery(<ReviewerGate reportId="report-1" />);
+    const { container } = renderWithQuery(<ReviewerGate reportId="report-1" />);
 
+    expect(
+      screen.getByRole("heading", { level: 1, name: "人工复核" }),
+    ).toBeInTheDocument();
+    const heroArtwork = container.querySelector(
+      'img[src*="module-materiality-benchmark"]',
+    );
+    expect(heroArtwork).toHaveClass("opacity-[0.23]");
+    expect(heroArtwork).not.toHaveClass("animate-ken-burns");
     expect(screen.getByRole("textbox", { name: "复核人名称" })).toHaveValue("");
     expect(screen.getByRole("button", { name: "进入复核工作台" })).toBeDisabled();
   });
