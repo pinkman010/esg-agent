@@ -195,20 +195,12 @@ export function ReportAuditTimeline({ reportId }: { reportId: string }) {
   const data = query.data;
   return (
     <section>
-      <header className="border-b border-border pb-5">
-        <p className="text-sm font-semibold text-emerald-700">报告留痕</p>
-        <h1 className="mt-1 text-2xl font-semibold">审计时间线</h1>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-          汇总报告上传、分析、重跑、人工复核、整改和输出事件。技术敏感信息已从公开视图移除。
-        </p>
-      </header>
-
       {data.items.length === 0 ? (
-        <p className="mt-5 rounded-xl border border-dashed border-border bg-white p-8 text-center text-sm text-muted-foreground">
+        <p className="rounded-xl border border-dashed border-border bg-white p-8 text-center text-sm text-muted-foreground">
           当前报告暂无审计事件
         </p>
       ) : (
-        <ol className="mt-5 space-y-3">
+        <ol className="space-y-3">
           {data.items.map((event) => {
             const payloadEntries = visiblePayloadEntries(event.payload);
             return (
