@@ -42,7 +42,7 @@ describe("ReportDashboard", () => {
       }));
     }));
 
-    renderWithQuery(<ReportDashboard reportId="report-1" />);
+    const { container } = renderWithQuery(<ReportDashboard reportId="report-1" />);
 
     expect(await screen.findByText("高优先级")).toBeInTheDocument();
     expect(screen.getByText("中优先级")).toBeInTheDocument();
@@ -64,6 +64,11 @@ describe("ReportDashboard", () => {
     expect(screen.getByText("高优先级复核完成不代表全部 577 项均已人工确认。")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "查看整改任务" })).toHaveAttribute("href", "/reports/report-1/actions");
     expect(screen.getByRole("link", { name: "查看输出与版本" })).toHaveAttribute("href", "/reports/report-1/exports");
+    const heroArtwork = container.querySelector('img[src*="module-policy-disclosure"]');
+    expect(heroArtwork).toHaveClass("opacity-[0.23]");
+    expect(heroArtwork?.nextElementSibling).toHaveClass(
+      "bg-[linear-gradient(90deg,rgba(255,255,255,0.82)_0%,rgba(236,253,245,0.52)_52%,rgba(209,250,229,0.27)_100%)]",
+    );
   });
 
   it("separately explains failed requirements inside the high-priority total", async () => {

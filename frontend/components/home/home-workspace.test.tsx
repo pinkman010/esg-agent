@@ -37,11 +37,16 @@ describe("HomeWorkspace", () => {
       total: 0,
     })));
 
-    renderWithQuery(<HomeWorkspace />);
+    const { container } = renderWithQuery(<HomeWorkspace />);
 
     expect(await screen.findByText("从第一份 ESG 报告开始")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "上传第一份报告" })).toHaveAttribute("href", "/reports");
     expect(screen.queryByText("577")).not.toBeInTheDocument();
+    const heroArtwork = container.querySelector('img[src*="overview-dashboard-hero"]');
+    expect(heroArtwork).toHaveClass("opacity-[0.28]");
+    expect(heroArtwork?.nextElementSibling).toHaveClass(
+      "bg-[linear-gradient(90deg,rgba(255,255,255,0.82)_0%,rgba(236,253,245,0.54)_52%,rgba(209,250,229,0.28)_100%)]",
+    );
   });
 
   it("presents the latest completed report with API-backed metrics", async () => {
@@ -65,7 +70,7 @@ describe("HomeWorkspace", () => {
       }));
     vi.stubGlobal("fetch", fetchMock);
 
-    renderWithQuery(<HomeWorkspace />);
+    const { container } = renderWithQuery(<HomeWorkspace />);
 
     expect(await screen.findByText("远景能源有限公司 · 2024 年")).toBeInTheDocument();
     expect(await screen.findByText("577")).toBeInTheDocument();
@@ -84,6 +89,11 @@ describe("HomeWorkspace", () => {
     expect(screen.getByText("AI 输出仅供分析辅助，不替代 ESG 专业判断或最终合规结论。")).toBeInTheDocument();
     expect(screen.queryByText(/499|78 个上下文|6 个方法|16 条差异/)).not.toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("page_size=1"), expect.anything());
+    const heroArtwork = container.querySelector('img[src*="overview-dashboard-hero"]');
+    expect(heroArtwork).toHaveClass("opacity-[0.25]");
+    expect(heroArtwork?.nextElementSibling).toHaveClass(
+      "bg-[linear-gradient(90deg,rgba(255,255,255,0.84)_0%,rgba(236,253,245,0.56)_52%,rgba(209,250,229,0.30)_100%)]",
+    );
   });
 
   it("shows a retryable error instead of a blank workspace", async () => {

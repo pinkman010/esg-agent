@@ -40,7 +40,7 @@
 - 修改：`frontend/components/home/home-workspace.test.tsx`
 - 修改：`frontend/components/analysis/report-dashboard.test.tsx`
 
-- [ ] **Step 1：为侧边栏增加失败断言**
+- [x] **Step 1：为侧边栏增加失败断言**
 
 在现有桌面侧边栏测试中取得渲染容器，定位 `sidebar-renewable-energy` 图片和其后的遮罩元素，断言：
 
@@ -51,15 +51,15 @@ expect(sidebarArtwork?.nextElementSibling).toHaveClass(
 );
 ```
 
-- [ ] **Step 2：为工作台两种状态增加失败断言**
+- [x] **Step 2：为工作台两种状态增加失败断言**
 
 首次使用状态断言 `opacity-[0.28]` 与 `0.82/0.54/0.28` 遮罩；已有报告状态断言 `opacity-[0.25]` 与 `0.84/0.56/0.30` 遮罩。
 
-- [ ] **Step 3：为报告总览增加失败断言**
+- [x] **Step 3：为报告总览增加失败断言**
 
 定位 `module-policy-disclosure` 图片，断言 `opacity-[0.23]` 与 `0.82/0.52/0.27` 遮罩。
 
-- [ ] **Step 4：运行目标测试并确认按预期失败**
+- [x] **Step 4：运行目标测试并确认按预期失败**
 
 ```powershell
 cd frontend
@@ -75,19 +75,19 @@ pnpm test components/layout/app-shell.test.tsx components/home/home-workspace.te
 - 修改：`frontend/components/home/home-workspace.tsx`
 - 修改：`frontend/components/analysis/report-dashboard.tsx`
 
-- [ ] **Step 1：调整侧边栏**
+- [x] **Step 1：调整侧边栏**
 
 把图片类 `opacity-40` 改为 `opacity-50`，把遮罩 alpha 改为 `0.64/0.48/0.34/0.26`；保留定位、亮度、饱和度、对比度和径向绿色装饰。
 
-- [ ] **Step 2：调整工作台主图**
+- [x] **Step 2：调整工作台主图**
 
 首次使用状态改为 `opacity-[0.28]` 和 `0.82/0.54/0.28` 遮罩；已有报告状态改为 `opacity-[0.25]` 和 `0.84/0.56/0.30` 遮罩。保留内容层 `relative` 和现有 Ken Burns 动效。
 
-- [ ] **Step 3：调整报告总览主图**
+- [x] **Step 3：调整报告总览主图**
 
 改为 `opacity-[0.23]` 和 `0.82/0.52/0.27` 遮罩；保留按钮、状态徽章和文字层级。
 
-- [ ] **Step 4：运行目标测试并确认通过**
+- [x] **Step 4：运行目标测试并确认通过**
 
 ```powershell
 cd frontend
@@ -101,11 +101,11 @@ pnpm test components/layout/app-shell.test.tsx components/home/home-workspace.te
 **文件：**
 - 更新：`docs/plan/frontend-visual-migration-plan.md`
 
-- [ ] **Step 1：浏览器核查**
+- [x] **Step 1：浏览器核查**
 
 在桌面宽度核查工作台首页、报告总览和带报告上下文的侧边栏，确认图片可辨识度提高，标题、按钮、导航和指标仍清晰；窄屏确认桌面侧边栏隐藏逻辑未改变。
 
-- [ ] **Step 2：运行完整前端门禁**
+- [x] **Step 2：运行完整前端门禁**
 
 ```powershell
 cd frontend
@@ -117,11 +117,11 @@ pnpm build
 
 预期：全量测试、类型检查和生产构建通过；lint 不新增 error 或 warning。
 
-- [ ] **Step 3：记录结果**
+- [x] **Step 3：记录结果**
 
 在 `docs/plan/frontend-visual-migration-plan.md` 中追加“轻度清晰化修正”结果，记录改动边界、测试结果和主观视觉限制。
 
-- [ ] **Step 4：分批提交**
+- [x] **Step 4：分批提交**
 
 ```powershell
 git add docs/plan/frontend-visual-clarity-light-adjustment-plan.md
@@ -139,3 +139,11 @@ git commit -m "style: improve background image clarity"
 - 不替换或锐化图片源文件。
 - 不因本次视觉修正改动业务逻辑、API 或后端。
 - 自动门禁通过后交付用户做主观确认；主观确认只判断清晰度和可读性，不替代工程测试。
+
+## 5. 执行结果
+
+- 目标测试先观察到 3 个文件中的 4 个视觉参数断言按预期失败；完成最小修改后，3 个文件、9 项测试全部通过。
+- 桌面浏览器核查覆盖工作台和报告总览：侧边栏、主图、标题、按钮、状态徽章和正文保持可读；轻度档没有改变布局层级。
+- 390px 窄屏核查确认桌面侧边栏继续隐藏，移动端主导航继续显示。
+- 完整前端门禁通过：39 个测试文件、150 项测试，typecheck 和 production build 通过；lint 为 0 error、2 个既有 warning，本次未新增 warning。
+- 本次没有修改图片资产、后端、API、业务状态或数据库；`首页.png` 保持用户未跟踪文件状态。

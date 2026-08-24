@@ -75,9 +75,9 @@ export function ReportDashboard({ reportId }: { reportId: string }) {
           aria-hidden="true"
           fill
           sizes="(min-width: 1280px) 1152px, 100vw"
-          className="animate-ken-burns pointer-events-none object-cover object-[28%_50%] opacity-[0.16] brightness-95 saturate-125"
+          className="animate-ken-burns pointer-events-none object-cover object-[28%_50%] opacity-[0.23] brightness-95 saturate-125"
         />
-        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.88)_0%,rgba(236,253,245,0.58)_52%,rgba(209,250,229,0.30)_100%)]" />
+        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.82)_0%,rgba(236,253,245,0.52)_52%,rgba(209,250,229,0.27)_100%)]" />
         <div className="relative">
           <p className="text-sm font-semibold text-emerald-700">当前报告</p>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight">报告总览</h1>

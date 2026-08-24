@@ -33,10 +33,11 @@ describe("AppShell", () => {
   });
 
   it("keeps the desktop sidebar artwork sized to the viewport", () => {
-    renderWithQuery(<AppShell><p>页面内容</p></AppShell>);
+    const { container } = renderWithQuery(<AppShell><p>页面内容</p></AppShell>);
 
     const sidebarNavigation = screen.getByRole("navigation", { name: "页面导航" });
     const sidebar = sidebarNavigation.closest("aside");
+    const sidebarArtwork = container.querySelector('img[src*="sidebar-renewable-energy"]');
 
     expect(sidebar).not.toBeNull();
     expect(sidebar?.firstElementChild).toHaveClass(
@@ -44,6 +45,10 @@ describe("AppShell", () => {
       "top-16",
       "h-[calc(100vh-4rem)]",
       "overflow-hidden",
+    );
+    expect(sidebarArtwork).toHaveClass("opacity-50");
+    expect(sidebarArtwork?.nextElementSibling).toHaveClass(
+      "bg-[linear-gradient(180deg,rgba(255,255,255,0.64)_0%,rgba(255,255,255,0.48)_32%,rgba(255,255,255,0.34)_62%,rgba(236,253,245,0.26)_100%)]",
     );
   });
 
