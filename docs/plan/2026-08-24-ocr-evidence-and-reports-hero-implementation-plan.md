@@ -459,4 +459,4 @@ git diff HEAD~3..HEAD --stat
 - ESG 报告入口主图提交：`db1eb02`。`/reports` 复用共享 `ReportPageHero` 和 `module-policy-disclosure.webp`，图片静态、无遮罩、eager 加载；报告列表和上传能力保持。
 - 完整前端门禁：42 个测试文件、158 项测试通过；typecheck、production build 通过；lint 为 0 error、2 个既有 warning。
 - 浏览器验收覆盖 1280×720 与 390×844。`/reports` 和人工复核页面均无横向溢出；OCR 原始文本初始折叠，可显式展开审计；移动端“队列／判断／证据”切换正常，证据页定位到 PDF 第 77 页。
-- 本轮没有修改后端、数据库、API、GRI 口径、规则、AI、人工快照、历史 run 或导出语义；`v1.3.2` 继续保持候选状态。
+- 本轮没有修改后端、数据库、API、GRI 口径、规则、AI、人工快照、历史 run 或导出语义；用户已确认验收收尾，当前视觉与 OCR 展示基线冻结，正式版本号与 tag 仍保持 `v1.3.1`。

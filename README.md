@@ -12,6 +12,8 @@ v1.2 之后的发布后缺陷修复已纳入 `v1.3`：普通产品运行统一�
 
 `v1.3.1` 为产品闭环补丁发布：桌面侧边栏视觉容器改为固定视口高度，报告总览和完整核查不再因主内容高度改变图片裁切，完整核查加载前后也不再出现背景跳变。六个报告工作区页面已完成浏览器对比；本补丁只调整共享前端布局和版本元数据，不改变 API、规则、数据、AI、OCR、RAG、人工复核或导出语义。完整结论见 `docs/product/v1.3.1-final-release-acceptance.md`。
 
+2026-08-24 已完成 `v1.3.1` 后续前端视觉与 OCR 证据展示验收收尾：报告工作区和 ESG 报告入口统一主图体系，低质量 OCR 原文默认降级折叠并保留 PDF 原页核对。该基线已冻结，正式发布版本号与 tag 仍保持 `v1.3.1`，后续版本发布单独执行。完整结论见 `docs/product/frontend-visual-migration-acceptance.md`。
+
 AI 候选路由已完成受控解冻：`image_body_not_extracted` evidence 不再进入默认外部模型候选，显式非实质证据和图片正文未提取证据使用统一 AI 本地分类；索引限定路由本身不被误判为非实质证据。`confirm_llm=false` 继续保持零调用和无逐项 suggestion；已授权但零合格候选的运行保存逐项跳过原因，便于前端解释和只读审计。Task 9 已通过新的 Envision 产品 run 完成授权对比：旧 run 的 4 次弱证据调用降为 0，499 项规则、风险、适用性和证据页差异均为 0。模型、Prompt、数据库、规则、风险、人工复核和导出口径均未改变。完整结论见 `docs/product/ai-candidate-routing-acceptance.md`。
 
 当前记录门禁：后端 823 项测试和 Ruff 通过；前端 lint 通过（0 error、2 条已知 warning），39 个测试文件、150 项测试、typecheck 和 production build 通过；Envision v3 回归的新增 false disclosed、wrong source page 和 global fallback 均为 0，audit 为 0 error、0 warning。Goldwind 52 页真实数字文本报告已完成独立上传、分析、复核、整改、草稿、下载和审计闭环，用作产品泛化工程证据。内置报告画像同时校验文件名、页数和源 PDF SHA-256，防止同名同页文件误用报告专属证据路由。
