@@ -118,7 +118,6 @@ export function HomeWorkspace() {
             sizes="(min-width: 1152px) 1152px, 100vw"
             className="animate-ken-burns pointer-events-none object-cover object-[38%_50%] opacity-[0.28] brightness-95 saturate-125"
           />
-          <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.82)_0%,rgba(236,253,245,0.54)_52%,rgba(209,250,229,0.28)_100%)]" />
           <div className="relative">
           <p className="text-sm font-semibold text-emerald-700">企业 ESG 核查工作台</p>
           <h1 className="mt-3 text-3xl font-semibold tracking-tight">从第一份 ESG 报告开始</h1>
@@ -154,7 +153,6 @@ export function HomeWorkspace() {
           sizes="(min-width: 1280px) 1152px, 100vw"
           className="animate-ken-burns pointer-events-none object-cover object-[38%_50%] opacity-[0.25] brightness-95 saturate-125"
         />
-        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.84)_0%,rgba(236,253,245,0.56)_52%,rgba(209,250,229,0.30)_100%)]" />
         <div className="relative">
           <div className="flex flex-wrap items-center gap-2">
             <p className="text-sm font-semibold text-emerald-700">当前演示报告</p>

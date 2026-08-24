@@ -55,8 +55,6 @@ export function AppShell({ children }: { children: ReactNode }) {
               sizes="236px"
               className="pointer-events-none object-cover object-[88%_58%] opacity-50 brightness-95 saturate-125 contrast-125"
             />
-            <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.64)_0%,rgba(255,255,255,0.48)_32%,rgba(255,255,255,0.34)_62%,rgba(236,253,245,0.26)_100%)]" />
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_76%_10%,rgba(20,184,166,0.10),transparent_38%),radial-gradient(circle_at_25%_86%,rgba(16,185,129,0.10),transparent_34%)]" />
             <div className="relative px-3 py-5">
               <ReportContextNav />
             </div>

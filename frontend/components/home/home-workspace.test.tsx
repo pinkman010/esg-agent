@@ -44,9 +44,11 @@ describe("HomeWorkspace", () => {
     expect(screen.queryByText("577")).not.toBeInTheDocument();
     const heroArtwork = container.querySelector('img[src*="overview-dashboard-hero"]');
     expect(heroArtwork).toHaveClass("opacity-[0.28]");
-    expect(heroArtwork?.nextElementSibling).toHaveClass(
-      "bg-[linear-gradient(90deg,rgba(255,255,255,0.82)_0%,rgba(236,253,245,0.54)_52%,rgba(209,250,229,0.28)_100%)]",
-    );
+    expect(
+      Array.from(heroArtwork?.parentElement?.children ?? []).some(
+        (element) => typeof element.className === "string" && element.className.includes("linear-gradient"),
+      ),
+    ).toBe(false);
   });
 
   it("presents the latest completed report with API-backed metrics", async () => {
@@ -91,9 +93,11 @@ describe("HomeWorkspace", () => {
     expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("page_size=1"), expect.anything());
     const heroArtwork = container.querySelector('img[src*="overview-dashboard-hero"]');
     expect(heroArtwork).toHaveClass("opacity-[0.25]");
-    expect(heroArtwork?.nextElementSibling).toHaveClass(
-      "bg-[linear-gradient(90deg,rgba(255,255,255,0.84)_0%,rgba(236,253,245,0.56)_52%,rgba(209,250,229,0.30)_100%)]",
-    );
+    expect(
+      Array.from(heroArtwork?.parentElement?.children ?? []).some(
+        (element) => typeof element.className === "string" && element.className.includes("linear-gradient"),
+      ),
+    ).toBe(false);
   });
 
   it("shows a retryable error instead of a blank workspace", async () => {

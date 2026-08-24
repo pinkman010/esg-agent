@@ -47,9 +47,11 @@ describe("AppShell", () => {
       "overflow-hidden",
     );
     expect(sidebarArtwork).toHaveClass("opacity-50");
-    expect(sidebarArtwork?.nextElementSibling).toHaveClass(
-      "bg-[linear-gradient(180deg,rgba(255,255,255,0.64)_0%,rgba(255,255,255,0.48)_32%,rgba(255,255,255,0.34)_62%,rgba(236,253,245,0.26)_100%)]",
-    );
+    expect(
+      Array.from(sidebarArtwork?.parentElement?.children ?? []).some(
+        (element) => typeof element.className === "string" && element.className.includes("gradient"),
+      ),
+    ).toBe(false);
   });
 
   it("loads the current report and exposes report-scoped navigation", async () => {

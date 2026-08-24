@@ -66,9 +66,11 @@ describe("ReportDashboard", () => {
     expect(screen.getByRole("link", { name: "查看输出与版本" })).toHaveAttribute("href", "/reports/report-1/exports");
     const heroArtwork = container.querySelector('img[src*="module-policy-disclosure"]');
     expect(heroArtwork).toHaveClass("opacity-[0.23]");
-    expect(heroArtwork?.nextElementSibling).toHaveClass(
-      "bg-[linear-gradient(90deg,rgba(255,255,255,0.82)_0%,rgba(236,253,245,0.52)_52%,rgba(209,250,229,0.27)_100%)]",
-    );
+    expect(
+      Array.from(heroArtwork?.parentElement?.children ?? []).some(
+        (element) => typeof element.className === "string" && element.className.includes("linear-gradient"),
+      ),
+    ).toBe(false);
   });
 
   it("separately explains failed requirements inside the high-priority total", async () => {
