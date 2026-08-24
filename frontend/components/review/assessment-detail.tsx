@@ -17,6 +17,12 @@ type Props = {
   onEvidencePage: (page: number) => void;
 };
 
+function evidenceSourceLabel(sourceMethod: string) {
+  if (sourceMethod === "pdfplumber") return "PDF 原文";
+  if (sourceMethod === "ocr") return "OCR 识别文本";
+  return sourceMethod;
+}
+
 export function AssessmentDetail({ reportId, detail, aiAvailability, reviewerName, onEvidencePage }: Props) {
   const systemRationaleDisplay = detail.system_rationale_display ?? detail.rationale_display;
   const systemMissingItemsDisplay = detail.system_missing_items_display ?? detail.missing_items_display;
@@ -80,17 +86,50 @@ export function AssessmentDetail({ reportId, detail, aiAvailability, reviewerNam
           <h4 className="text-sm font-semibold">规则证据</h4>
           {detail.evidence_items.length > 0 ? (
             <div className="mt-2 space-y-2">
-              {detail.evidence_items.map((item) => (
-                <button
-                  type="button"
-                  key={item.evidence_id}
-                  className="w-full border-l-2 border-accent py-2 pl-3 text-left text-sm"
-                  onClick={() => onEvidencePage(item.source_pdf_page)}
-                >
-                  <span className="block text-xs font-medium text-accent">{item.page_label}</span>
-                  <span className="mt-1 block leading-5 text-muted-foreground">{item.evidence_preview}</span>
-                </button>
-              ))}
+              {detail.evidence_items.map((item) => {
+                const isLowQualityOcr =
+                  item.source_method === "ocr" &&
+                  item.quality_flags.includes("needs_manual_review");
+
+                return (
+                  <div
+                    key={item.evidence_id}
+                    className="w-full border-l-2 border-accent py-2 pl-3 text-left text-sm"
+                  >
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-xs font-medium text-accent">{item.page_label}</span>
+                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-muted-foreground">
+                        {evidenceSourceLabel(item.source_method)}
+                      </span>
+                    </div>
+                    {isLowQualityOcr ? (
+                      <div className="mt-2 space-y-2">
+                        <p className="text-sm font-medium text-amber-800">
+                          OCR 识别质量不足，请核对右侧 PDF 原页。
+                        </p>
+                        <details className="text-muted-foreground">
+                          <summary className="cursor-pointer text-xs font-medium text-foreground">
+                            查看原始 OCR 识别文本
+                          </summary>
+                          <p className="mt-2 break-words leading-5">{item.evidence_preview}</p>
+                        </details>
+                      </div>
+                    ) : (
+                      <p className="mt-1 break-words leading-5 text-muted-foreground">
+                        {item.evidence_preview}
+                      </p>
+                    )}
+                    <button
+                      type="button"
+                      aria-label={`核对 PDF 原页：${item.page_label}`}
+                      className="mt-2 text-xs font-medium text-accent underline-offset-4 hover:underline"
+                      onClick={() => onEvidencePage(item.source_pdf_page)}
+                    >
+                      核对 PDF 原页
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           ) : (
             <p className="mt-2 text-sm text-muted-foreground">暂无规则证据</p>

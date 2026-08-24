@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { AssessmentDetailResponse } from "@/lib/types";
 import { AssessmentDetail } from "./assessment-detail";
@@ -155,5 +155,96 @@ describe("AssessmentDetail", () => {
 
     expect(screen.getByLabelText("复核备注")).toHaveValue("");
     expect(screen.getByLabelText("任务标题")).toHaveValue("补充 GRI 2-6-a 披露缺口");
+  });
+
+  it("downgrades low-quality OCR evidence while keeping the raw preview auditable", () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    const onEvidencePage = vi.fn();
+    const rawOcrPreview = "...e OE ee se le 我们的责任是在执行你证工作的莫础上...";
+    const assessment = {
+      ...detail("assessment-ocr", "GRI 2-5-b-ii"),
+      evidence_items: [
+        {
+          evidence_id: "evidence-ocr",
+          source_pdf_page: 77,
+          source_report_page: 76,
+          page_label: "PDF 第 77 页 / 报告页 76",
+          evidence_preview: rawOcrPreview,
+          source_method: "ocr",
+          quality_flags: ["needs_manual_review"],
+          bbox: null,
+        },
+      ],
+    } satisfies AssessmentDetailResponse;
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <AssessmentDetail
+          reportId="report-1"
+          detail={assessment}
+          aiAvailability="disabled"
+          reviewerName="张三"
+          onEvidencePage={onEvidencePage}
+        />
+      </QueryClientProvider>,
+    );
+
+    expect(screen.getByText("OCR 识别文本")).toBeInTheDocument();
+    expect(
+      screen.getByText("OCR 识别质量不足，请核对右侧 PDF 原页。"),
+    ).toBeInTheDocument();
+    const disclosure = screen
+      .getByText("查看原始 OCR 识别文本")
+      .closest("details");
+    if (!disclosure) throw new Error("OCR disclosure not found");
+    expect(disclosure).not.toHaveAttribute("open");
+    expect(within(disclosure).getByText(rawOcrPreview)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /^核对 PDF 原页/ }));
+    expect(onEvidencePage).toHaveBeenCalledWith(77);
+    fireEvent.click(screen.getByText("查看原始 OCR 识别文本"));
+    expect(onEvidencePage).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps pdfplumber evidence directly readable and linked to its PDF page", () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    const onEvidencePage = vi.fn();
+    const assessment = {
+      ...detail("assessment-pdf", "GRI 2-5-b-ii"),
+      evidence_items: [
+        {
+          evidence_id: "evidence-pdf",
+          source_pdf_page: 77,
+          source_report_page: 76,
+          page_label: "PDF 第 77 页 / 报告页 76",
+          evidence_preview: "独立有限鉴证报告",
+          source_method: "pdfplumber",
+          quality_flags: ["digital_text"],
+          bbox: null,
+        },
+      ],
+    } satisfies AssessmentDetailResponse;
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <AssessmentDetail
+          reportId="report-1"
+          detail={assessment}
+          aiAvailability="disabled"
+          reviewerName="张三"
+          onEvidencePage={onEvidencePage}
+        />
+      </QueryClientProvider>,
+    );
+
+    expect(screen.getByText("PDF 原文")).toBeInTheDocument();
+    expect(screen.getByText("独立有限鉴证报告")).toBeInTheDocument();
+    expect(screen.queryByText("查看原始 OCR 识别文本")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /^核对 PDF 原页/ }));
+    expect(onEvidencePage).toHaveBeenCalledWith(77);
   });
 });
