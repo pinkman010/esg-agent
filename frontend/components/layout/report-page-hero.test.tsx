@@ -29,6 +29,7 @@ describe("ReportPageHero", () => {
       'img[src*="module-policy-disclosure"]',
     );
     expect(artwork).toHaveAttribute("alt", "");
+    expect(artwork).toHaveAttribute("loading", "eager");
     expect(artwork).toHaveClass("opacity-[0.23]");
     expect(artwork).not.toHaveClass("animate-ken-burns");
     expect(artwork).toHaveStyle({ objectPosition: "28% 50%" });

@@ -29,6 +29,7 @@ export function ReportPageHero({
         alt=""
         aria-hidden="true"
         fill
+        loading="eager"
         sizes="(min-width: 1280px) 1152px, 100vw"
         style={{ objectPosition: imagePosition }}
         className={`${animated ? "animate-ken-burns " : ""}pointer-events-none object-cover opacity-[0.23] brightness-95 saturate-125`}
