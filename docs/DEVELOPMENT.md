@@ -661,6 +661,10 @@ uv run --no-sync python -m src.tools.evaluate_shadow_rag `
 - 最新前端门禁为 41 个测试文件、155 项测试通过，typecheck 和 production build 通过；lint 仍为 0 error、2 个既有 warning。demo health 返回 `status=ok`、`app_env=demo`。
 - 桌面 1280×720 与 390×844 浏览器验收覆盖上述六页：资产映射和动效边界正确，每页只有一个 `h1`，无页面级横向溢出；人工复核人输入默认空，进入后桌面三栏及窄屏“队列／判断／证据”切换栏均可见。浏览器控制台无 error；侧边栏 `fill + sticky` 与首页 LCP 为既有告警，不在本轮视觉补丁范围。
 - 统一主图仍属于 `v1.3.1` 后的 `v1.3.2` 视觉补丁候选；没有修改后端、API、数据库、GRI、AI/OCR/RAG、人工复核或导出语义，版本号等待用户主观确认后再决定。
+- ESG 报告入口 `/reports` 已复用共享 `ReportPageHero` 与 `module-policy-disclosure.webp`；主图静态、无遮罩、opacity 为 0.23、eager 加载，报告列表和上传面板保持原行为。
+- 人工复核页按现有 `source_method` 与 `quality_flags` 区分“PDF 原文”和“OCR 识别文本”。带 `needs_manual_review` 的 OCR 原文默认折叠并显示质量警告，仍可展开审计和定位 PDF 原页；后端字段、OCR 执行链路、证据数据与结论均未修改。
+- 本轮最新前端门禁为 42 个测试文件、158 项测试通过，typecheck 和 production build 通过；lint 为 0 error、2 个既有 warning。桌面 1280×720 和移动端 390×844 浏览器验收无横向溢出，移动端证据切换可定位 PDF 第 77 页，控制台无本轮新增 error。
+- 两项补丁仅涉及前端展示、测试和文档，没有写入人工快照、修改历史 run 或调用外部模型/OCR；继续作为 `v1.3.2` 候选等待最终主观验收与版本冻结。
 
 ### 2026-08-17
 

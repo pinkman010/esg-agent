@@ -4,6 +4,8 @@
 
 **目标：** 在不修改后端的前提下，降级展示需人工复核的 OCR 证据，并为 `/reports` 补齐已批准的静态主图头部。
 
+**执行状态：** 2026-08-24 已按本计划完成。代码、完整前端门禁、桌面端与移动端浏览器验收均通过；实施提交与实际结果见文末“执行结果”。
+
 **架构：** 两个补丁共享前端验证周期，但保持独立代码边界和独立提交。人工复核组件仅依据现有 `source_method` 与 `quality_flags` 调整展示；报告入口页仅复用现有 `ReportPageHero`，不修改共享组件、列表、上传和数据请求。
 
 **技术栈：** Next.js 16、React 19、TypeScript、Tailwind CSS、Vitest、Testing Library、现有 `ReportPageHero`。
@@ -450,3 +452,11 @@ git diff HEAD~3..HEAD --stat
 - [ ] **Step 3：汇报候选版本状态**
 
 汇报每个 commit、自动门禁、浏览器结果、已知既有 warning、未 push 状态和 `v1.3.2` 最终冻结建议。
+
+## 执行结果（2026-08-24）
+
+- 低质量 OCR 证据降级展示提交：`6db25a1`。普通 PDF 文本继续直接显示；带 `needs_manual_review` 的 OCR 文本默认折叠，并显示质量警告与“核对 PDF 原页”操作。
+- ESG 报告入口主图提交：`db1eb02`。`/reports` 复用共享 `ReportPageHero` 和 `module-policy-disclosure.webp`，图片静态、无遮罩、eager 加载；报告列表和上传能力保持。
+- 完整前端门禁：42 个测试文件、158 项测试通过；typecheck、production build 通过；lint 为 0 error、2 个既有 warning。
+- 浏览器验收覆盖 1280×720 与 390×844。`/reports` 和人工复核页面均无横向溢出；OCR 原始文本初始折叠，可显式展开审计；移动端“队列／判断／证据”切换正常，证据页定位到 PDF 第 77 页。
+- 本轮没有修改后端、数据库、API、GRI 口径、规则、AI、人工快照、历史 run 或导出语义；`v1.3.2` 继续保持候选状态。
