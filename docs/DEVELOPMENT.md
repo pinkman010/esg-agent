@@ -235,7 +235,7 @@ Docker Desktop 4.80.0 可能在异常退出后留下 Windows AF_UNIX 套接字�
 - `$env:LOCALAPPDATA\Docker\run\dockerInference`；
 - `$env:LOCALAPPDATA\docker-secrets-engine\engine.sock`。
 
-Docker Desktop 4.89.0 已修复 Windows 异常退出遗留 stuck socket 导致无法启动的问题，Windows 本地环境建议使用 4.89.0 或更高版本。版本事实以 [Docker Desktop release notes](https://docs.docker.com/desktop/release-notes/) 为准。
+Docker Desktop 4.89.0 已修复 Windows 异常退出遗留 stuck socket 导致无法启动的问题，Windows 本地环境建议使用 4.89.0 或更高版本。该修复不能保证自动接管升级前已经处于不可访问状态的旧 socket；从受影响版本原位升级后，首次启动仍可能需要按下述流程做一次受控目录重命名。版本事实以 [Docker Desktop release notes](https://docs.docker.com/desktop/release-notes/) 为准。
 
 出现错误对话框时选择 `Quit`。不要选择 `Reset to factory defaults` 或 `Clean up data`；这两个动作超出套接字修复范围，可能影响 Docker 配置和数据。Windows WSL2 backend 的容器、镜像和 volume 数据盘按版本可能位于 `$env:LOCALAPPDATA\Docker\wsl\disk\docker_data.vhdx` 或 `$env:LOCALAPPDATA\Docker\wsl\data\docker_data.vhdx`，实际存在的数据盘不得删除、移动或覆盖。数据盘备份方式见 [Docker Desktop backup and restore](https://docs.docker.com/desktop/settings-and-maintenance/backup-and-restore/)。
 
@@ -262,7 +262,7 @@ $dockerDataDiskCandidates |
   Select-Object FullName, Length, CreationTime, LastWriteTime
 ```
 
-若进程检查仍有结果，先退出 Docker Desktop，不执行重命名。`Docker\run` 只允许出现零字节 `ReparsePoint` 项 `dockerInference`、`dockerEthernetVfkit` 和 `userAnalyticsOtlpHttp.sock`；`docker-secrets-engine` 只允许出现零字节 `ReparsePoint` 项 `engine.sock`。存在其他文件、子目录或非零内容时停止处理。目录内容与上述边界一致后执行：
+若进程检查仍有结果，先退出 Docker Desktop，不执行重命名。`Docker\run` 只允许出现零字节 `ReparsePoint` 项 `dockerInference`、`dockerEthernetVfkit` 和 `userAnalyticsOtlpHttp.sock`；4.89.0 已经发生过一次失败启动时还可能出现本次启动新建的 `sailor-ingest.sock`，只有其时间戳对应当前启动且同样为零字节 `ReparsePoint` 时才纳入允许清单。`docker-secrets-engine` 只允许出现零字节 `ReparsePoint` 项 `engine.sock`。存在其他文件、子目录或非零内容时停止处理。目录内容与上述边界一致后执行：
 
 ```powershell
 $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
@@ -276,7 +276,45 @@ if (Test-Path -LiteralPath $dockerSecretsDir) {
 }
 ```
 
-重命名保留回滚材料，不删除 Docker 数据。重新启动 Docker Desktop 后先执行 `docker info`、`docker volume ls` 和 `docker ps -a`，确认原 volume 和容器可见，再执行 `docker compose up -d postgres`。若曾触发 factory reset，在确认原 volume 之前不要创建同名新 volume，避免把空环境误判为原数据已恢复。
+重命名保留回滚材料，不删除 Docker 数据。重新启动 Docker Desktop 后先执行 `docker info`、`docker volume ls` 和 `docker ps -a`，确认原 volume 和容器可见。已有 PostgreSQL 容器时优先执行 `docker compose start postgres`，避免新版 Compose 在 `up` 阶段调和元数据并重建容器；需要执行 `docker compose up -d postgres` 时，先记录容器 ID、镜像 ID、Compose config hash、volume 名称、创建时间和挂载路径。若容器被重建，必须暂停应用启动并核对上述字段、报告数量和 Alembic revision。若曾触发 factory reset，在确认原 volume 之前不要创建同名新 volume，避免把空环境误判为原数据已恢复。
+
+#### Docker Desktop per-user 升级
+
+Docker Desktop 安装在 `$env:LOCALAPPDATA\Programs\DockerDesktop` 且卸载登记位于 HKCU 时属于 per-user 模式。winget 可能显示新版本可用，但目标版本清单只暴露 machine 范围安装器时，直接执行 `winget upgrade` 会返回 `0x8a150010`。不要为绕过该错误切换到 all-users 模式或先卸载现有版本。
+
+先停止应用并完成数据库、运行文件和 Docker 数据盘备份，再从 winget 官方源下载目标版本安装器：
+
+```powershell
+$targetVersion = "4.89.0"
+$installerDir = Join-Path $env:TEMP "docker-desktop-$targetVersion"
+New-Item -ItemType Directory -Path $installerDir | Out-Null
+
+winget show --id Docker.DockerDesktop --exact --source winget `
+  --version $targetVersion --scope machine --accept-source-agreements
+winget download --id Docker.DockerDesktop --exact --source winget `
+  --version $targetVersion --scope machine --architecture x64 `
+  --download-directory $installerDir `
+  --accept-source-agreements --accept-package-agreements
+
+$installer = @(Get-ChildItem -LiteralPath $installerDir -Recurse -File -Filter "*.exe")
+if ($installer.Count -ne 1) {
+  throw "Docker Desktop installer count is not one"
+}
+Get-FileHash -Algorithm SHA256 -LiteralPath $installer[0].FullName
+```
+
+将输出的 SHA-256 与 `winget show` 或 release notes 中的目标版本 checksum 严格比对。校验一致后按 Docker 官方 Windows 安装说明保持原范围升级：
+
+```powershell
+$process = Start-Process -FilePath $installer[0].FullName `
+  -Wait -PassThru -WindowStyle Hidden `
+  -ArgumentList "install", "--user", "--quiet"
+if ($process.ExitCode -ne 0) {
+  throw "Docker Desktop installer failed: $($process.ExitCode)"
+}
+```
+
+升级后通过 HKCU 的 `DisplayVersion` 和 `InstallLocation` 确认版本与范围均符合预期，再启动 Docker Desktop。完整备份、停止条件和本机验证记录见 [Docker Desktop 4.89.0 升级与自检实施计划](plan/2026-09-03-docker-desktop-upgrade-and-validation.md)。
 
 #### `8000` 端口被 Windows 排除
 
@@ -752,6 +790,11 @@ uv run --no-sync python -m src.tools.evaluate_shadow_rag `
 - 故障处理中曾触发两次 `Reset to factory defaults`。引擎恢复后核对到原 `esg-agent_postgres_data` volume、原 PostgreSQL 容器及 `esg_agent_demo` 中 9 份报告仍在，Alembic 为 `0012_chunk_embeddings`，未发现本次事件造成的数据丢失。
 - Docker 恢复后，Windows 将 `7993–8192` 列入 TCP 排除范围，后端绑定默认 `8000` 返回 `WinError 10013`。本次会话改用 `8200`，前端通过 `NEXT_PUBLIC_API_BASE_URL=http://localhost:8200` 连接；默认项目配置仍保留 `8000`。
 - 最终验证覆盖 PostgreSQL `5432`、后端 health、OpenAPI 1.3.1 的 40 条路径和前端 HTTP 200。运行环境为 `demo`；外部模型、OCR、embedding 和 VLM 均未调用，业务代码、API、数据库 schema 和原始资产均未修改。
+- 按受控升级计划将 Docker Desktop 从 4.80.0 升级到 4.89.0。当前安装属于 per-user 模式，winget 目标清单只暴露 machine 安装器，直接升级返回 `0x8a150010`；通过 winget 下载并核对官方安装器 SHA-256 后，使用 `install --user --quiet` 保持原安装范围完成升级。
+- 升级前分别生成 `esg_agent`、`esg_agent_demo` 的 PostgreSQL custom dump，备份运行文件和约 4.11 GB Docker 数据盘；逻辑 dump 回传后通过 `pg_restore --list`，最终自检再次确认全部备份校验值未变化。审计材料保存在 `tmp/docker-desktop-upgrade-20260903-202834/`，由 `.gitignore` 排除。
+- 4.89.0 首次启动仍遇到 4.80.0 已经遗留的不可访问 `dockerInference`。新版尝试重命名为 `.stale` 时被 Windows 拒绝；确认 Docker 完全退出并核对四个 `Docker\run` socket 和 `engine.sock` 均为零字节 `ReparsePoint` 后，将两个临时目录重命名留档。第二次启动成功，之后没有新增 stuck-socket 启动错误。
+- Compose 从 5.1.4 升级到 5.5.0 后，`docker compose up -d postgres` 重建了 PostgreSQL 容器。原 `esg-agent_postgres_data` volume 名称、创建时间和挂载路径保持一致，实际镜像 ID、Compose config hash、环境配置哈希、77/9 份报告及两个数据库的 `0012_chunk_embeddings` revision 均通过比对。
+- 升级后 Docker Engine 为 29.7.2、Compose 为 5.5.0；Docker Desktop 状态为 `running`，后端 health 为 `status=ok`、`app_env=demo`，OpenAPI 为 40 条路径，前端返回 HTTP 200，3000/5432/8200 均正常监听。全程未调用外部模型、OCR、embedding 或 VLM，也未执行 factory reset、volume 删除或数据库 downgrade。
 
 ### 2026-08-24
 
