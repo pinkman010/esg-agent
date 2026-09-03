@@ -224,6 +224,104 @@ uv run --no-sync uvicorn src.main:app --reload --port 8000
 
 后端重启会在 lifespan 启动阶段把数据库中遗留的 `pending/running` run 标记为 `failed`，原因固定为“分析服务重启，任务已中断”。该恢复只收敛状态，不自动重跑、不清库；用户随后可从报告页重新启动分析。
 
+### Windows 启动故障排查
+
+以下流程只处理 Windows 本地开发环境的 Docker Desktop 启动和端口问题。处理期间不得删除 Docker 数据盘、volume、原始报告或共享只读资产；外部模型、OCR、embedding 和 VLM 继续保持关闭。
+
+#### Docker Desktop 残留套接字
+
+Docker Desktop 4.80.0 可能在异常退出后留下 Windows AF_UNIX 套接字。后续启动会出现 `The file cannot be accessed by the system`，常见路径为：
+
+- `$env:LOCALAPPDATA\Docker\run\dockerInference`；
+- `$env:LOCALAPPDATA\docker-secrets-engine\engine.sock`。
+
+Docker Desktop 4.89.0 已修复 Windows 异常退出遗留 stuck socket 导致无法启动的问题，Windows 本地环境建议使用 4.89.0 或更高版本。版本事实以 [Docker Desktop release notes](https://docs.docker.com/desktop/release-notes/) 为准。
+
+出现错误对话框时选择 `Quit`。不要选择 `Reset to factory defaults` 或 `Clean up data`；这两个动作超出套接字修复范围，可能影响 Docker 配置和数据。Windows WSL2 backend 的容器、镜像和 volume 数据盘按版本可能位于 `$env:LOCALAPPDATA\Docker\wsl\disk\docker_data.vhdx` 或 `$env:LOCALAPPDATA\Docker\wsl\data\docker_data.vhdx`，实际存在的数据盘不得删除、移动或覆盖。数据盘备份方式见 [Docker Desktop backup and restore](https://docs.docker.com/desktop/settings-and-maintenance/backup-and-restore/)。
+
+先确认 Docker Desktop 已完全退出，再检查临时目录。只有目录内仍然只包含预期的零字节 `ReparsePoint` 套接字时，才允许把整个临时目录重命名为带时间戳的备份：
+
+```powershell
+Get-Process -ErrorAction SilentlyContinue |
+  Where-Object { $_.ProcessName -match 'docker|com\.docker|vpnkit' }
+
+$dockerRunDir = Join-Path $env:LOCALAPPDATA "Docker\run"
+$dockerSecretsDir = Join-Path $env:LOCALAPPDATA "docker-secrets-engine"
+$dockerDataDiskCandidates = @(
+  Join-Path $env:LOCALAPPDATA "Docker\wsl\disk\docker_data.vhdx"
+  Join-Path $env:LOCALAPPDATA "Docker\wsl\data\docker_data.vhdx"
+)
+
+Get-ChildItem -LiteralPath $dockerRunDir -Force -ErrorAction SilentlyContinue |
+  Select-Object Name, Length, Attributes, LastWriteTime
+Get-ChildItem -LiteralPath $dockerSecretsDir -Force -ErrorAction SilentlyContinue |
+  Select-Object Name, Length, Attributes, LastWriteTime
+$dockerDataDiskCandidates |
+  Where-Object { Test-Path -LiteralPath $_ } |
+  ForEach-Object { Get-Item -LiteralPath $_ } |
+  Select-Object FullName, Length, CreationTime, LastWriteTime
+```
+
+若进程检查仍有结果，先退出 Docker Desktop，不执行重命名。`Docker\run` 只允许出现零字节 `ReparsePoint` 项 `dockerInference`、`dockerEthernetVfkit` 和 `userAnalyticsOtlpHttp.sock`；`docker-secrets-engine` 只允许出现零字节 `ReparsePoint` 项 `engine.sock`。存在其他文件、子目录或非零内容时停止处理。目录内容与上述边界一致后执行：
+
+```powershell
+$stamp = Get-Date -Format "yyyyMMdd-HHmmss"
+
+if (Test-Path -LiteralPath $dockerRunDir) {
+  Rename-Item -LiteralPath $dockerRunDir -NewName "run.stale-$stamp"
+}
+if (Test-Path -LiteralPath $dockerSecretsDir) {
+  Rename-Item -LiteralPath $dockerSecretsDir `
+    -NewName "docker-secrets-engine.stale-$stamp"
+}
+```
+
+重命名保留回滚材料，不删除 Docker 数据。重新启动 Docker Desktop 后先执行 `docker info`、`docker volume ls` 和 `docker ps -a`，确认原 volume 和容器可见，再执行 `docker compose up -d postgres`。若曾触发 factory reset，在确认原 volume 之前不要创建同名新 volume，避免把空环境误判为原数据已恢复。
+
+#### `8000` 端口被 Windows 排除
+
+后端启动返回 `WinError 10013` 时，先区分进程占用和 Windows 排除端口：
+
+```powershell
+Get-NetTCPConnection -LocalPort 8000 -ErrorAction SilentlyContinue
+netsh interface ipv4 show excludedportrange protocol=tcp
+netsh interface ipv6 show excludedportrange protocol=tcp
+```
+
+若 `8000` 没有监听进程但落在排除范围内，不修改系统排除规则。选择一个未占用且未被排除的端口，例如 `8200`，并让前端使用相同的后端地址：
+
+```powershell
+# 后端终端；先按本节前文加载完整 demo 环境变量
+cd backend
+uv run --no-sync uvicorn src.main:app --reload --port 8200
+
+# 前端终端
+cd frontend
+$env:NEXT_PUBLIC_API_BASE_URL="http://localhost:8200"
+pnpm dev
+```
+
+`8000` 仍是项目默认后端端口；备用端口只用于当前系统无法绑定默认端口的本地会话，不写入项目配置。
+
+#### 启动后验证
+
+启动完成至少核对数据库、运行身份、迁移版本、既有报告数量和前端 HTTP：
+
+```powershell
+$backendPort = 8200  # 使用默认端口时改为 8000
+
+docker compose ps postgres
+docker compose exec -T postgres pg_isready -U esg_agent -d esg_agent_demo
+docker compose exec -T postgres `
+  psql -U esg_agent -d esg_agent_demo -Atc `
+  "SELECT current_database(); SELECT version_num FROM alembic_version; SELECT COUNT(*) FROM reports;"
+
+Invoke-RestMethod "http://localhost:$backendPort/api/health"
+(Invoke-WebRequest "http://localhost:3000" -UseBasicParsing).StatusCode
+```
+
+成功条件为 PostgreSQL 接受连接、数据库为 `esg_agent_demo`、Alembic 为当前 head、报告数量符合启动前预期、health 返回 `status=ok` 与 `app_env=demo`，且前端返回 HTTP 200。
+
 ## 6. 测试策略
 
 后端测试使用 `pytest`，重点覆盖：
@@ -647,6 +745,13 @@ uv run --no-sync python -m src.tools.evaluate_shadow_rag `
 影子输出使用 `shadow_*` 字段和 `shadow-chunk:<chunk_id>`，不构成最终合规结论。真实 SiliconFlow 和真实 DeepSeek 调用需要分别批准。
 
 ## 12. 开发日志
+
+### 2026-09-03
+
+- Windows 本地 Docker Desktop 4.80.0 启动失败。日志分别定位到 `$env:LOCALAPPDATA\Docker\run\dockerInference` 和 `$env:LOCALAPPDATA\docker-secrets-engine\engine.sock` 两个异常退出遗留的零字节 AF_UNIX 套接字，Windows 返回错误 1920。停止 Docker 后将两个临时目录重命名留档，未删除或移动 `docker_data.vhdx`。
+- 故障处理中曾触发两次 `Reset to factory defaults`。引擎恢复后核对到原 `esg-agent_postgres_data` volume、原 PostgreSQL 容器及 `esg_agent_demo` 中 9 份报告仍在，Alembic 为 `0012_chunk_embeddings`，未发现本次事件造成的数据丢失。
+- Docker 恢复后，Windows 将 `7993–8192` 列入 TCP 排除范围，后端绑定默认 `8000` 返回 `WinError 10013`。本次会话改用 `8200`，前端通过 `NEXT_PUBLIC_API_BASE_URL=http://localhost:8200` 连接；默认项目配置仍保留 `8000`。
+- 最终验证覆盖 PostgreSQL `5432`、后端 health、OpenAPI 1.3.1 的 40 条路径和前端 HTTP 200。运行环境为 `demo`；外部模型、OCR、embedding 和 VLM 均未调用，业务代码、API、数据库 schema 和原始资产均未修改。
 
 ### 2026-08-24
 

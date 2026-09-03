@@ -86,6 +86,8 @@ esg-agent/
 
 ## 本地运行
 
+Windows 本地运行建议使用 Docker Desktop 4.89.0 或更高版本。若 Docker Desktop 因残留套接字无法启动，或后端绑定 `8000` 返回 `WinError 10013`，先按 [Windows 启动故障排查](docs/DEVELOPMENT.md#windows-启动故障排查) 处理；不要在 Docker 报错窗口选择 `Reset to factory defaults`。
+
 ```powershell
 docker compose up -d postgres
 
