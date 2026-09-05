@@ -47,6 +47,8 @@ dist/
 *.sqlite3
 *.dump
 *.bak
+backups/
+*.pid
 
 # 压缩包和归档文件
 *.zip

@@ -624,7 +624,7 @@ create unique empty database
 alembic upgrade head
 assert current revision == 0012_chunk_embeddings
 assert vector extension exists
-alembic downgrade 0011_standard_structure_and_ai_suggestions
+alembic downgrade 0011_ai_suggestions
 assert document_chunk_embeddings table is absent
 alembic upgrade head
 assert current revision == 0012_chunk_embeddings
