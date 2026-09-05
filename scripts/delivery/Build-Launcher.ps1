@@ -50,10 +50,10 @@ function Test-LauncherArtifact {
     }
   }
   $compilerInfo = Get-LauncherCompilerInfo
-  if ((Get-FileHash -LiteralPath $sourcePath -Algorithm SHA256).Hash -ne $Manifest.source_sha256) {
+  if ((Get-EsgCanonicalTextSha256 -Path $sourcePath) -ne $Manifest.source_sha256) {
     throw "LAUNCHER_SOURCE_HASH_MISMATCH: source does not match launcher manifest"
   }
-  if ((Get-FileHash -LiteralPath $appManifestPath -Algorithm SHA256).Hash -ne $Manifest.app_manifest_sha256) {
+  if ((Get-EsgCanonicalTextSha256 -Path $appManifestPath) -ne $Manifest.app_manifest_sha256) {
     throw "LAUNCHER_APP_MANIFEST_HASH_MISMATCH: app manifest does not match launcher manifest"
   }
   if ((Get-FileHash -LiteralPath $ArtifactPath -Algorithm SHA256).Hash -ne $Manifest.artifact.sha256) {
@@ -152,8 +152,8 @@ $manifest = [ordered]@{
   assembly_version = "1.5.0.0"
   file_version = "1.5.0.0"
   product_version = "1.5"
-  source_sha256 = (Get-FileHash -LiteralPath $sourcePath -Algorithm SHA256).Hash
-  app_manifest_sha256 = (Get-FileHash -LiteralPath $appManifestPath -Algorithm SHA256).Hash
+  source_sha256 = Get-EsgCanonicalTextSha256 -Path $sourcePath
+  app_manifest_sha256 = Get-EsgCanonicalTextSha256 -Path $appManifestPath
   compiler = $compiler
   compile_arguments = @(
     "/nologo",

@@ -330,6 +330,31 @@ def test_process_manifest_json_timestamp_keeps_utc_semantics():
     assert completed.stdout.strip() == "2026-09-05T07:59:24.3420244Z"
 
 
+def test_launcher_text_hash_is_independent_of_windows_line_endings(tmp_path):
+    lf_path = tmp_path / "launcher-lf.txt"
+    crlf_path = tmp_path / "launcher-crlf.txt"
+    lf_path.write_bytes(b"first\nsecond\n")
+    crlf_path.write_bytes(b"first\r\nsecond\r\n")
+    environment = os.environ.copy()
+    environment["ESG_AGENT_DELIVERY_COMMON_PATH"] = str(
+        PROJECT_ROOT / "scripts/delivery/Delivery.Common.ps1"
+    )
+    environment["ESG_AGENT_LF_PATH"] = str(lf_path)
+    environment["ESG_AGENT_CRLF_PATH"] = str(crlf_path)
+    script = (
+        ". $env:ESG_AGENT_DELIVERY_COMMON_PATH; "
+        "$lf = Get-EsgCanonicalTextSha256 -Path $env:ESG_AGENT_LF_PATH; "
+        "$crlf = Get-EsgCanonicalTextSha256 -Path $env:ESG_AGENT_CRLF_PATH; "
+        "[ordered]@{lf=$lf;crlf=$crlf} | ConvertTo-Json -Compress"
+    )
+
+    completed = _windows_powershell(script, environment)
+
+    assert completed.returncode == 0, completed.stderr
+    hashes = json.loads(completed.stdout)
+    assert hashes["lf"] == hashes["crlf"]
+
+
 def test_delivery_scripts_do_not_embed_secrets_or_full_database_urls_in_results():
     script_root = PROJECT_ROOT / "scripts/delivery"
     preflight = (script_root / "Test-Preflight.ps1").read_text(encoding="utf-8")

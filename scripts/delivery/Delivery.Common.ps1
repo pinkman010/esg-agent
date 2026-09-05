@@ -245,7 +245,7 @@ function Get-EsgRootHash {
   $bytes = [System.Text.Encoding]::UTF8.GetBytes($normalized)
   $sha = [System.Security.Cryptography.SHA256]::Create()
   try {
-    return -join ($sha.ComputeHash($bytes) | ForEach-Object { $_.ToString("x2") })
+    return -join ($sha.ComputeHash($bytes) | ForEach-Object { $_.ToString("X2") })
   } finally {
     $sha.Dispose()
   }
@@ -292,6 +292,23 @@ function ConvertTo-EsgUtcDateTime {
     ).UtcDateTime
   } catch {
     throw "TIMESTAMP_INVALID: process start time is invalid"
+  }
+}
+
+function Get-EsgCanonicalTextSha256 {
+  param([Parameter(Mandatory)][string]$Path)
+
+  if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+    throw "TEXT_INPUT_MISSING: required text file is unavailable"
+  }
+  $text = [System.IO.File]::ReadAllText($Path)
+  $canonical = $text.Replace("`r`n", "`n").Replace("`r", "`n")
+  $bytes = (New-Object System.Text.UTF8Encoding($false)).GetBytes($canonical)
+  $sha = [System.Security.Cryptography.SHA256]::Create()
+  try {
+    return -join ($sha.ComputeHash($bytes) | ForEach-Object { $_.ToString("x2") })
+  } finally {
+    $sha.Dispose()
   }
 }
 

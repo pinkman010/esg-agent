@@ -22,6 +22,11 @@ def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def _canonical_text_sha256(path: Path) -> str:
+    canonical = path.read_text(encoding="utf-8").replace("\r\n", "\n").replace("\r", "\n")
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
 def _manifest() -> dict:
     return json.loads(LAUNCHER_MANIFEST.read_text(encoding="utf-8"))
 
@@ -97,8 +102,8 @@ def test_launcher_allows_only_fixed_actions():
 def test_launcher_manifest_matches_tracked_inputs_and_binary():
     manifest = _manifest()
 
-    assert _sha256(SOURCE) == manifest["source_sha256"].casefold()
-    assert _sha256(APP_MANIFEST) == manifest["app_manifest_sha256"].casefold()
+    assert _canonical_text_sha256(SOURCE) == manifest["source_sha256"].casefold()
+    assert _canonical_text_sha256(APP_MANIFEST) == manifest["app_manifest_sha256"].casefold()
     assert _sha256(LAUNCHER) == manifest["artifact"]["sha256"].casefold()
     assert LAUNCHER.stat().st_size == manifest["artifact"]["size_bytes"]
     assert manifest["public_version"] == "1.5"
