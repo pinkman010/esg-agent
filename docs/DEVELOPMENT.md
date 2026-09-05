@@ -795,7 +795,7 @@ uv run --no-sync python -m src.tools.evaluate_shadow_rag `
 
 固定版本的唯一机器可读来源为 `delivery/toolchain-lock.json`：Python 3.11.14、uv 0.9.28、Node.js 24.15.0、Corepack 0.34.6、pnpm 11.19.0、PostgreSQL 16.14、pgvector 0.8.4、Docker Desktop 接收方最低 4.89.0。PowerShell 7 是维护者可选工具；接收脚本和 launcher 固定兼容系统 Windows PowerShell 5.1。
 
-首次初始化前的 preflight 只核对基础工具、固定版本、Docker daemon、端口、交付锁和 migration head 文件；`.env`、Python 环境或 pnpm 尚未生成时返回 `INITIALIZATION_REQUIRED:*` warning。初始化生成 `.env` 后，preflight 恢复为完整门禁，要求 Python 环境、Compose 配置、确认过的 volume、demo 环境和所有外部能力关闭。
+首次初始化前的 preflight 只核对基础工具、固定版本、Docker daemon、端口、交付锁和 migration head 文件；`.env`、Python 环境或 Corepack 管理的 pnpm 尚未准备时返回 `INITIALIZATION_REQUIRED:*` warning。初始化生成 `.env` 后，preflight 恢复为完整门禁，要求 Python 环境、可由 `corepack pnpm` 离线解析的固定 pnpm、Compose 配置、确认过的 volume、demo 环境和所有外部能力关闭。接收脚本不要求全局 `pnpm.cmd` shim。
 
 维护者门禁：
 

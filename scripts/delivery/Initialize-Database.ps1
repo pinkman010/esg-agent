@@ -15,8 +15,7 @@ $config = Import-EsgEnvironment -Path $envPath
 
 Assert-EsgCommand -Name "docker" -ErrorCode "DOCKER_MISSING"
 Assert-EsgCommand -Name "uv" -ErrorCode "UV_MISSING"
-docker info *> $null
-if ($LASTEXITCODE -ne 0) {
+if (-not (Test-EsgNativeCommand -Command { docker info })) {
   throw "DOCKER_DAEMON_UNAVAILABLE: Docker Desktop is not running"
 }
 
@@ -33,11 +32,7 @@ if (-not [int]::TryParse($postgresPortText, [ref]$postgresPort) -or $postgresPor
 
 $projectName = Get-EsgComposeProjectName -Config $config
 $volumeName = "${projectName}_postgres_data"
-$volumeExists = $true
-docker volume inspect $volumeName *> $null
-if ($LASTEXITCODE -ne 0) {
-  $volumeExists = $false
-}
+$volumeExists = Test-EsgNativeCommand -Command { docker volume inspect $volumeName }
 
 if ($VolumeMode -eq "new" -and $volumeExists) {
   throw "DOCKER_VOLUME_ALREADY_EXISTS: refusing to reuse $volumeName"

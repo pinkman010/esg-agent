@@ -53,8 +53,7 @@ try {
 }
 
 $dockerReady = $false
-docker info *> $null
-if ($LASTEXITCODE -ne 0) {
+if (-not (Test-EsgNativeCommand -Command { docker info })) {
   Add-HealthError "DOCKER_DAEMON_UNAVAILABLE"
 } else {
   $dockerReady = $true
@@ -66,8 +65,7 @@ $databaseName = "esg_agent_demo"
 if ($dockerReady -and $config.Count -gt 0) {
   $projectName = Get-EsgComposeProjectName -Config $config
   $volumeName = "${projectName}_postgres_data"
-  docker volume inspect $volumeName *> $null
-  if ($LASTEXITCODE -ne 0) {
+  if (-not (Test-EsgNativeCommand -Command { docker volume inspect $volumeName })) {
     Add-HealthError "DOCKER_VOLUME_MISSING"
   } else {
     $checks["postgres_volume"] = $true

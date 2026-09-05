@@ -266,6 +266,19 @@ function Write-EsgJsonFile {
   )
 }
 
+function Test-EsgNativeCommand {
+  param([Parameter(Mandatory)][scriptblock]$Command)
+
+  $previousErrorAction = $ErrorActionPreference
+  try {
+    $ErrorActionPreference = "SilentlyContinue"
+    & $Command *> $null
+    return ($LASTEXITCODE -eq 0)
+  } finally {
+    $ErrorActionPreference = $previousErrorAction
+  }
+}
+
 function ConvertTo-EsgUtcDateTime {
   param([Parameter(Mandatory)]$Value)
 

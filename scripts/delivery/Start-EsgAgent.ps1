@@ -86,8 +86,7 @@ try {
 
   $projectName = Get-EsgComposeProjectName -Config $config
   $volumeName = "${projectName}_postgres_data"
-  docker volume inspect $volumeName *> $null
-  if ($LASTEXITCODE -ne 0) {
+  if (-not (Test-EsgNativeCommand -Command { docker volume inspect $volumeName })) {
     throw "DOCKER_VOLUME_MISSING: refusing to create an unconfirmed empty volume"
   }
   $containerId = Get-EsgPostgresContainerId -ProjectName $projectName
@@ -136,7 +135,7 @@ try {
   $frontendOut = Join-Path $logRoot "frontend-$stamp.out.log"
   $frontendErr = Join-Path $logRoot "frontend-$stamp.err.log"
   $uvCommand = Get-Command uv.exe -ErrorAction Stop
-  $pnpmCommand = Get-Command pnpm.cmd -ErrorAction Stop
+  $corepackCommand = Get-Command corepack.cmd -ErrorAction Stop
 
   $backendProcess = Start-Process `
     -FilePath $uvCommand.Source `
@@ -147,8 +146,8 @@ try {
     -RedirectStandardOutput $backendOut `
     -RedirectStandardError $backendErr
   $frontendProcess = Start-Process `
-    -FilePath $pnpmCommand.Source `
-    -ArgumentList @("start", "--hostname", "127.0.0.1", "--port", $frontendPort) `
+    -FilePath $corepackCommand.Source `
+    -ArgumentList @("pnpm", "start", "--hostname", "127.0.0.1", "--port", $frontendPort) `
     -WorkingDirectory (Join-Path $projectRoot "frontend") `
     -WindowStyle Hidden `
     -PassThru `
@@ -175,7 +174,7 @@ try {
       process_started_at_utc = $frontendProcess.StartTime.ToUniversalTime().ToString("o")
       working_directory = (Join-Path $projectRoot "frontend")
       port = $frontendPort
-      command_signature = "pnpm start"
+      command_signature = "corepack pnpm start"
       stdout_log = $frontendOut
       stderr_log = $frontendErr
     }

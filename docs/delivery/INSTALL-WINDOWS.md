@@ -18,13 +18,15 @@
 | uv | 0.9.28 | 安装 Python 3.11.14 和后端锁定依赖 |
 | Python | 3.11.14 | 后端运行时，由 uv 管理 |
 | Node.js | 24.15.0 | 前端构建与运行 |
-| Corepack | 0.34.6 | 激活固定 pnpm |
+| Corepack | 0.34.6 | 提供固定 pnpm 入口 |
 | pnpm | 11.19.0 | 前端锁定依赖 |
 | Docker Desktop | 4.89.0 或更高 | 运行 PostgreSQL/pgvector |
 | PostgreSQL / pgvector | 16.14 / 0.8.4 | 由固定 digest 的 Compose 镜像提供 |
 | 浏览器 | 已验证版本或更高稳定版 Chrome/Edge | 本机网页访问 |
 
 Ghostscript、Tesseract、`chi_sim+eng+osd` 语言包和 OCRmyPDF 是可选 OCR 依赖。默认 `OCR_ENABLED=false`，缺少这些组件不阻断普通数字 PDF 演示。
+
+交付脚本统一通过 `corepack pnpm` 调用固定版本，接收方不需要单独安装全局 pnpm，也不依赖 Corepack 是否成功生成 `pnpm.cmd` shim。首次初始化仍需联网下载或读取 Corepack 缓存中的 pnpm 11.19.0。
 
 ## 3. 网络和预计耗时
 

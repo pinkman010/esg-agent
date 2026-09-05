@@ -68,14 +68,6 @@ foreach ($command in @("uv", "node", "corepack", "docker")) {
     Add-PreflightError ("COMMAND_MISSING:{0}" -f $command.ToUpperInvariant())
   }
 }
-if ($null -eq (Get-Command pnpm -ErrorAction SilentlyContinue)) {
-  if ($configInitialized) {
-    Add-PreflightError "COMMAND_MISSING:PNPM"
-  } else {
-    Add-PreflightWarning "INITIALIZATION_REQUIRED:PNPM"
-    $checks["initialization_required"] = $true
-  }
-}
 
 $pythonEnvironment = Join-Path $projectRoot "backend\.venv\Scripts\python.exe"
 $pythonEnvironmentReady = Test-Path -LiteralPath $pythonEnvironment -PathType Leaf
@@ -115,8 +107,30 @@ if (Get-Command uv -ErrorAction SilentlyContinue) {
 if (Get-Command node -ErrorAction SilentlyContinue) {
   $versions["node"] = (node --version).TrimStart("v")
 }
-if (Get-Command pnpm -ErrorAction SilentlyContinue) {
-  $versions["pnpm"] = (pnpm --version)
+if (Get-Command corepack -ErrorAction SilentlyContinue) {
+  $previousCorepackNetwork = [System.Environment]::GetEnvironmentVariable("COREPACK_ENABLE_NETWORK", "Process")
+  $previousErrorAction = $ErrorActionPreference
+  try {
+    [System.Environment]::SetEnvironmentVariable("COREPACK_ENABLE_NETWORK", "0", "Process")
+    $ErrorActionPreference = "Continue"
+    $pnpmVersionText = @(corepack pnpm --version 2>$null)
+    $pnpmExitCode = $LASTEXITCODE
+  } finally {
+    $ErrorActionPreference = $previousErrorAction
+    [System.Environment]::SetEnvironmentVariable(
+      "COREPACK_ENABLE_NETWORK",
+      $previousCorepackNetwork,
+      "Process"
+    )
+  }
+  if ($pnpmExitCode -eq 0 -and $pnpmVersionText.Count -gt 0) {
+    $versions["pnpm"] = [string]($pnpmVersionText | Select-Object -First 1)
+  } elseif ($configInitialized) {
+    Add-PreflightError "COREPACK_PNPM_UNAVAILABLE"
+  } else {
+    Add-PreflightWarning "INITIALIZATION_REQUIRED:PNPM"
+    $checks["initialization_required"] = $true
+  }
 }
 
 $windowsPowerShell = Join-Path $env:WINDIR "System32\WindowsPowerShell\v1.0\powershell.exe"
@@ -223,8 +237,7 @@ if ($config.Count -gt 0) {
 }
 if ($dockerAvailable -and $projectName) {
   $volumeName = "${projectName}_postgres_data"
-  docker volume inspect $volumeName *> $null
-  if ($LASTEXITCODE -ne 0) {
+  if (-not (Test-EsgNativeCommand -Command { docker volume inspect $volumeName })) {
     Add-PreflightError "DOCKER_VOLUME_MISSING"
   } else {
     $checks["postgres_volume_present"] = $true

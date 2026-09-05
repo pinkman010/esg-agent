@@ -99,13 +99,13 @@ if ($LASTEXITCODE -ne 0) {
 [System.Environment]::SetEnvironmentVariable("NEXT_PUBLIC_API_BASE_URL", $apiBase, "Process")
 Push-Location (Join-Path $projectRoot "frontend")
 try {
-  pnpm install --frozen-lockfile
+  corepack pnpm install --frozen-lockfile
   if ($LASTEXITCODE -ne 0) {
-    throw "FRONTEND_INSTALL_FAILED: pnpm install --frozen-lockfile failed"
+    throw "FRONTEND_INSTALL_FAILED: corepack pnpm install --frozen-lockfile failed"
   }
-  pnpm build
+  corepack pnpm build
   if ($LASTEXITCODE -ne 0) {
-    throw "FRONTEND_BUILD_FAILED: pnpm build failed"
+    throw "FRONTEND_BUILD_FAILED: corepack pnpm build failed"
   }
 } finally {
   Pop-Location

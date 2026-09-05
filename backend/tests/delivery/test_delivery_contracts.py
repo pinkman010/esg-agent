@@ -271,11 +271,15 @@ def test_windows_lifecycle_scripts_follow_safety_contract():
 
     assert "$psscriptroot" in combined
     assert "uv sync --frozen" in texts["Initialize-Environment.ps1"]
-    assert "pnpm install --frozen-lockfile" in texts["Initialize-Environment.ps1"]
-    assert "corepack" in texts["Initialize-Environment.ps1"]
+    assert "corepack pnpm install --frozen-lockfile" in texts["Initialize-Environment.ps1"]
+    assert "corepack pnpm build" in texts["Initialize-Environment.ps1"]
     assert "['http://localhost:" not in texts["Initialize-Environment.ps1"]
     assert "uv run --frozen --no-sync uvicorn" in texts["Start-EsgAgent.ps1"]
-    assert "pnpm start" in texts["Start-EsgAgent.ps1"]
+    assert "corepack pnpm start" in texts["Start-EsgAgent.ps1"]
+    assert "Get-Command corepack.cmd" in texts["Start-EsgAgent.ps1"]
+    assert "Get-Command pnpm.cmd" not in texts["Start-EsgAgent.ps1"]
+    assert "COREPACK_ENABLE_NETWORK" in texts["Test-Preflight.ps1"]
+    assert "Get-Command pnpm" not in texts["Test-Preflight.ps1"]
     assert "--reload" not in texts["Start-EsgAgent.ps1"]
     assert "-WindowStyle Hidden" in texts["Start-EsgAgent.ps1"]
     assert "-PassThru" in texts["Start-EsgAgent.ps1"]
@@ -286,6 +290,14 @@ def test_windows_lifecycle_scripts_follow_safety_contract():
     assert "Get-EsgProcessManifestPath" in texts["Start-EsgAgent.ps1"]
     assert "Get-EsgProcessManifestPath" in texts["Stop-EsgAgent.ps1"]
     assert "processes.json" in texts["Delivery.Common.ps1"]
+    assert "function Test-EsgNativeCommand" in texts["Delivery.Common.ps1"]
+    for script_name in (
+        "Initialize-Database.ps1",
+        "Start-EsgAgent.ps1",
+        "Test-Preflight.ps1",
+        "Test-EsgAgent.ps1",
+    ):
+        assert "Test-EsgNativeCommand" in texts[script_name]
     assert "root_hash" in texts["Start-EsgAgent.ps1"]
     assert "root_hash" in texts["Stop-EsgAgent.ps1"]
     assert "Get-NetTCPConnection" in texts["Test-Preflight.ps1"]
@@ -389,6 +401,14 @@ def test_preflight_supports_uninitialized_release_layout(tmp_path):
             "FRONTEND_PORT": "13000",
         }
     )
+    path_entries = [
+        entry
+        for entry in environment["PATH"].split(os.pathsep)
+        if entry and not (Path(entry) / "pnpm.cmd").exists()
+    ]
+    environment["PATH"] = os.pathsep.join(path_entries)
+    assert shutil.which("pnpm", path=environment["PATH"]) is None
+    assert shutil.which("corepack", path=environment["PATH"]) is not None
     powershell = Path(os.environ["WINDIR"]) / "System32/WindowsPowerShell/v1.0/powershell.exe"
     completed = subprocess.run(
         [
@@ -416,3 +436,60 @@ def test_preflight_supports_uninitialized_release_layout(tmp_path):
     assert result["checks"]["initialization_required"] is True
     assert "INITIALIZATION_REQUIRED:CONFIG" in result["warnings"]
     assert "INITIALIZATION_REQUIRED:PYTHON_ENVIRONMENT" in result["warnings"]
+
+
+def test_preflight_reports_missing_volume_after_partial_initialization(tmp_path):
+    release_root = tmp_path / "release"
+    for relative_path in (
+        ".env.example",
+        "docker-compose.yml",
+        "delivery/toolchain-lock.json",
+        "delivery/release-policy.json",
+        "scripts/delivery/Delivery.Common.ps1",
+        "scripts/delivery/Test-Preflight.ps1",
+        "backend/alembic/versions/0012_chunk_embeddings.py",
+    ):
+        source = PROJECT_ROOT / relative_path
+        target = release_root / relative_path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, target)
+
+    project_name = f"esg-agent-preflight-{os.getpid()}"
+    config = (release_root / ".env.example").read_text(encoding="utf-8")
+    config = config.replace("COMPOSE_PROJECT_NAME=esg-agent", f"COMPOSE_PROJECT_NAME={project_name}")
+    config = config.replace("POSTGRES_PASSWORD=", "POSTGRES_PASSWORD=contract-test-only")
+    (release_root / ".env").write_text(config, encoding="utf-8")
+
+    environment = os.environ.copy()
+    environment.update(
+        {
+            "POSTGRES_PORT": "15432",
+            "BACKEND_PORT": "18000",
+            "FRONTEND_PORT": "13000",
+        }
+    )
+    powershell = Path(os.environ["WINDIR"]) / "System32/WindowsPowerShell/v1.0/powershell.exe"
+    completed = subprocess.run(
+        [
+            str(powershell),
+            "-NoLogo",
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            str(release_root / "scripts/delivery/Test-Preflight.ps1"),
+            "-Quiet",
+        ],
+        env=environment,
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=False,
+    )
+
+    assert completed.returncode == 1
+    result = json.loads(
+        (release_root / "backend/data/runtime/logs/preflight.json").read_text(encoding="utf-8")
+    )
+    assert result["status"] == "failed"
+    assert "DOCKER_VOLUME_MISSING" in result["errors"]
