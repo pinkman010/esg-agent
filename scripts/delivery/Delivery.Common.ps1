@@ -266,6 +266,35 @@ function Write-EsgJsonFile {
   )
 }
 
+function ConvertTo-EsgUtcDateTime {
+  param([Parameter(Mandatory)]$Value)
+
+  if ($Value -is [datetime]) {
+    $dateTime = [datetime]$Value
+    if ($dateTime.Kind -eq [System.DateTimeKind]::Unspecified) {
+      return [datetime]::SpecifyKind($dateTime, [System.DateTimeKind]::Utc)
+    }
+    return $dateTime.ToUniversalTime()
+  }
+  if ($Value -is [datetimeoffset]) {
+    return ([datetimeoffset]$Value).UtcDateTime
+  }
+
+  $text = [string]$Value
+  if ($text -notmatch '(Z|[+-][0-9]{2}:[0-9]{2})$') {
+    throw "TIMESTAMP_INVALID: UTC offset is required"
+  }
+  try {
+    return [datetimeoffset]::Parse(
+      $text,
+      [System.Globalization.CultureInfo]::InvariantCulture,
+      [System.Globalization.DateTimeStyles]::None
+    ).UtcDateTime
+  } catch {
+    throw "TIMESTAMP_INVALID: process start time is invalid"
+  }
+}
+
 function Get-EsgPackageVersion {
   $projectFile = Join-Path (Get-EsgProjectRoot) "backend\pyproject.toml"
   $match = Select-String -LiteralPath $projectFile -Pattern '^version\s*=\s*"([^"]+)"' |

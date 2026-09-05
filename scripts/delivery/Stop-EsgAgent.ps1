@@ -23,13 +23,9 @@ if (Test-Path -LiteralPath $manifestPath -PathType Leaf) {
     $process = Get-Process -Id $recordedPid -ErrorAction SilentlyContinue
     if (-not $process) { continue }
 
-    $expectedStart = [datetime]::Parse(
-      [string]$record.process_started_at_utc,
-      [System.Globalization.CultureInfo]::InvariantCulture,
-      [System.Globalization.DateTimeStyles]::RoundtripKind
-    )
+    $expectedStart = ConvertTo-EsgUtcDateTime -Value $record.process_started_at_utc
     $actualStart = $process.StartTime.ToUniversalTime()
-    if ([math]::Abs(($actualStart - $expectedStart.ToUniversalTime()).TotalSeconds) -gt 2) {
+    if ([math]::Abs(($actualStart - $expectedStart).TotalSeconds) -gt 2) {
       throw "PROCESS_ID_REUSED: recorded $serviceName PID has a different start time"
     }
 

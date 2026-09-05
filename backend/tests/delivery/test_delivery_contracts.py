@@ -64,6 +64,18 @@ def _launcher_versions() -> dict[str, str]:
     return json.loads(completed.stdout)
 
 
+def _windows_powershell(script: str, environment: dict[str, str] | None = None):
+    powershell = Path(os.environ["WINDIR"]) / "System32/WindowsPowerShell/v1.0/powershell.exe"
+    return subprocess.run(
+        [str(powershell), "-NoLogo", "-NoProfile", "-Command", script],
+        env=environment,
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+
+
 def test_toolchain_lock_matches_supported_delivery_baseline():
     toolchain = _json("delivery/toolchain-lock.json")
 
@@ -298,6 +310,24 @@ def test_windows_lifecycle_scripts_follow_safety_contract():
         "remove-item -recurse $home",
     ):
         assert forbidden not in combined
+
+
+def test_process_manifest_json_timestamp_keeps_utc_semantics():
+    environment = os.environ.copy()
+    environment["ESG_AGENT_DELIVERY_COMMON_PATH"] = str(
+        PROJECT_ROOT / "scripts/delivery/Delivery.Common.ps1"
+    )
+    script = (
+        ". $env:ESG_AGENT_DELIVERY_COMMON_PATH; "
+        "$record = '{\"started_at_utc\":\"2026-09-05T07:59:24.3420244Z\"}' "
+        "| ConvertFrom-Json; "
+        "(ConvertTo-EsgUtcDateTime -Value $record.started_at_utc).ToString('o')"
+    )
+
+    completed = _windows_powershell(script, environment)
+
+    assert completed.returncode == 0, completed.stderr
+    assert completed.stdout.strip() == "2026-09-05T07:59:24.3420244Z"
 
 
 def test_delivery_scripts_do_not_embed_secrets_or_full_database_urls_in_results():
