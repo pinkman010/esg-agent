@@ -12,6 +12,7 @@ from src.services.ai_assessment_service import AIAssessmentService
 from src.services.effective_run_view_service import EffectiveRunViewService
 from src.services.ocr import run_ocr_for_pages
 from src.services.ocr_capability import require_ocr_capability
+from src.services.runtime_paths import PROJECT_ROOT, resolve_stored_path
 from src.standards.gri import GRIAdapter
 from src.workflows.single_report_workflow import SingleReportWorkflow
 from src.tools.llm_client import LLMClient
@@ -140,7 +141,7 @@ def execute_analysis(
     )
     result = workflow.run(
         report.report_id,
-        Path(report.stored_path),
+        resolve_stored_path(report.stored_path, project_root=PROJECT_ROOT),
         report.file_hash,
         confirm_llm=confirm_llm,
         enable_ocr=enable_ocr,

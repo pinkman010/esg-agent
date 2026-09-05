@@ -1,6 +1,5 @@
 from io import BytesIO
 from hashlib import sha256
-from pathlib import Path
 from typing import Literal
 from uuid import uuid4
 
@@ -23,6 +22,7 @@ from src.services.document_store import DocumentStore
 from src.services.metadata_detection import detect_report_metadata
 from src.services.analysis_job import execute_analysis_job
 from src.services.ocr_errors import OCR_ERROR_MESSAGES
+from src.services.runtime_paths import PROJECT_ROOT, resolve_stored_path
 
 router = APIRouter(prefix="/api/reports", tags=["reports"])
 
@@ -75,7 +75,7 @@ def get_report_file(report_id: str, session: Session = Depends(get_db_session)):
     report = Repository(session).get_report(report_id)
     if report is None:
         raise HTTPException(status_code=404, detail="report not found")
-    path = Path(report.stored_path)
+    path = resolve_stored_path(report.stored_path, project_root=PROJECT_ROOT)
     if not path.exists():
         raise HTTPException(status_code=404, detail="report file not found")
     return FileResponse(path, media_type="application/pdf", headers={"Content-Disposition": "inline"})
@@ -90,7 +90,7 @@ def get_report_page_image(
     report = Repository(session).get_report(report_id)
     if report is None:
         raise HTTPException(status_code=404, detail="report not found")
-    path = Path(report.stored_path)
+    path = resolve_stored_path(report.stored_path, project_root=PROJECT_ROOT)
     if not path.exists():
         raise HTTPException(status_code=404, detail="report file not found")
     if page_number < 1:
