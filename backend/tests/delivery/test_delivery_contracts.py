@@ -11,6 +11,18 @@ def _json(path: str) -> dict:
     return json.loads((PROJECT_ROOT / path).read_text(encoding="utf-8"))
 
 
+def _env(path: str) -> dict[str, str]:
+    values: dict[str, str] = {}
+    for raw_line in (PROJECT_ROOT / path).read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        key, separator, value = line.partition("=")
+        assert separator, f"invalid environment line in {path}: {raw_line}"
+        values[key] = value
+    return values
+
+
 def test_toolchain_lock_matches_supported_delivery_baseline():
     toolchain = _json("delivery/toolchain-lock.json")
 
@@ -92,3 +104,56 @@ def test_release_policy_denies_secrets_runtime_data_and_unapproved_binaries():
     }.issubset(denied)
     assert policy["allowed_root_executables"] == ["ESG-Agent.exe"]
     assert policy["pdf_policy"] == "deny_unless_explicitly_allowed"
+
+
+def test_delivery_environment_templates_are_safe_by_default():
+    root_env = _env(".env.example")
+    backend_env = _env("backend/.env.example")
+    demo_env = _env("backend/.env.demo.example")
+    frontend_env = _env("frontend/.env.example")
+    all_example_text = "\n".join(
+        (PROJECT_ROOT / path).read_text(encoding="utf-8")
+        for path in (
+            ".env.example",
+            "backend/.env.example",
+            "backend/.env.demo.example",
+            "frontend/.env.example",
+        )
+    )
+
+    assert root_env["APP_ENV"] == "demo"
+    assert root_env["DATABASE_URL"] == ""
+    assert root_env["POSTGRES_PASSWORD"] == ""
+    assert root_env["OCR_ENABLED"] == "false"
+    assert root_env["EMBEDDING_ENABLED"] == "false"
+    assert root_env["POSTGRES_PORT"] == "5432"
+    assert root_env["BACKEND_PORT"] == "8000"
+    assert root_env["FRONTEND_PORT"] == "3000"
+    assert root_env["STARTUP_TIMEOUT_SECONDS"] == "180"
+    assert root_env["OPENAI_COMPATIBLE_API_KEY"] == ""
+    assert root_env["EMBEDDING_API_KEY"] == ""
+    assert backend_env["GHOSTSCRIPT_CMD"] == ""
+    assert backend_env["OCR_TIMEOUT_SECONDS"] == "300"
+    assert backend_env["LLM_PROMPT_VERSION"] == "deepseek-gri-assist-v1.2"
+    assert demo_env["APP_ENV"] == "demo"
+    assert demo_env["OCR_ENABLED"] == "false"
+    assert demo_env["EMBEDDING_ENABLED"] == "false"
+    assert demo_env["UPLOAD_DIR"] == "backend/data/runtime/demo/uploads"
+    assert demo_env["DERIVED_DIR"] == "backend/data/runtime/demo/derived"
+    assert frontend_env["NEXT_PUBLIC_API_BASE_URL"] == "http://localhost:8000"
+    assert "esg_agent:esg_agent" not in all_example_text
+    assert "POSTGRES_PASSWORD=esg_agent" not in all_example_text
+
+
+def test_compose_uses_pinned_image_secret_input_and_healthcheck():
+    compose = (PROJECT_ROOT / "docker-compose.yml").read_text(encoding="utf-8")
+    toolchain = _json("delivery/toolchain-lock.json")
+
+    assert toolchain["postgres_image"] in compose
+    assert "${POSTGRES_PASSWORD:?" in compose
+    assert "POSTGRES_PASSWORD: esg_agent" not in compose
+    assert "${POSTGRES_PORT:-5432}:5432" in compose
+    assert "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB" in compose
+    assert "interval: 5s" in compose
+    assert "timeout: 5s" in compose
+    assert "retries: 20" in compose
