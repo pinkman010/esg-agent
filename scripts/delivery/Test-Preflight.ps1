@@ -53,37 +53,63 @@ if (-not (Test-Path -LiteralPath $toolchainPath -PathType Leaf) -or
 }
 
 $configPath = Join-Path $projectRoot ".env"
-if (-not (Test-Path -LiteralPath $configPath -PathType Leaf)) {
-  Add-PreflightError "CONFIG_MISSING"
+$configInitialized = Test-Path -LiteralPath $configPath -PathType Leaf
+if (-not $configInitialized) {
+  Add-PreflightWarning "INITIALIZATION_REQUIRED:CONFIG"
+  $checks["initialization_required"] = $true
   $config = @{}
 } else {
   $config = Import-EsgEnvironment -Path $configPath
   $checks["config_present"] = $true
 }
 
-foreach ($command in @("uv", "node", "corepack", "pnpm", "docker")) {
+foreach ($command in @("uv", "node", "corepack", "docker")) {
   if ($null -eq (Get-Command $command -ErrorAction SilentlyContinue)) {
     Add-PreflightError ("COMMAND_MISSING:{0}" -f $command.ToUpperInvariant())
   }
 }
+if ($null -eq (Get-Command pnpm -ErrorAction SilentlyContinue)) {
+  if ($configInitialized) {
+    Add-PreflightError "COMMAND_MISSING:PNPM"
+  } else {
+    Add-PreflightWarning "INITIALIZATION_REQUIRED:PNPM"
+    $checks["initialization_required"] = $true
+  }
+}
 
+$pythonEnvironment = Join-Path $projectRoot "backend\.venv\Scripts\python.exe"
+$pythonEnvironmentReady = Test-Path -LiteralPath $pythonEnvironment -PathType Leaf
 if (Get-Command uv -ErrorAction SilentlyContinue) {
   $versions["uv"] = ((uv --version) -split "\s+")[1]
-  Push-Location (Join-Path $projectRoot "backend")
-  try {
-    $pythonVersionText = uv run --no-sync python --version 2>&1
-    if ($LASTEXITCODE -eq 0) {
-      $versions["python"] = (($pythonVersionText | Select-Object -First 1) -split "\s+")[1]
-    } else {
-      Add-PreflightError "PYTHON_ENVIRONMENT_MISSING"
+  if ($pythonEnvironmentReady) {
+    Push-Location (Join-Path $projectRoot "backend")
+    try {
+      $pythonVersionText = uv run --no-sync python --version 2>&1
+      if ($LASTEXITCODE -eq 0) {
+        $versions["python"] = (($pythonVersionText | Select-Object -First 1) -split "\s+")[1]
+      } else {
+        Add-PreflightError "PYTHON_ENVIRONMENT_MISSING"
+      }
+      $heads = @(uv run --no-sync alembic heads 2>&1)
+      $checks["migration_head_file"] = ($LASTEXITCODE -eq 0 -and ($heads -join " ") -match "0012_chunk_embeddings")
+      if (-not $checks["migration_head_file"]) {
+        Add-PreflightError "MIGRATION_HEAD_FILE_MISMATCH"
+      }
+    } finally {
+      Pop-Location
     }
-    $heads = @(uv run --no-sync alembic heads 2>&1)
-    $checks["migration_head_file"] = ($LASTEXITCODE -eq 0 -and ($heads -join " ") -match "0012_chunk_embeddings")
+  } else {
+    if ($configInitialized) {
+      Add-PreflightError "PYTHON_ENVIRONMENT_MISSING"
+    } else {
+      Add-PreflightWarning "INITIALIZATION_REQUIRED:PYTHON_ENVIRONMENT"
+      $checks["initialization_required"] = $true
+    }
+    $migrationHeadFile = Join-Path $projectRoot "backend\alembic\versions\0012_chunk_embeddings.py"
+    $checks["migration_head_file"] = Test-Path -LiteralPath $migrationHeadFile -PathType Leaf
     if (-not $checks["migration_head_file"]) {
       Add-PreflightError "MIGRATION_HEAD_FILE_MISMATCH"
     }
-  } finally {
-    Pop-Location
   }
 }
 if (Get-Command node -ErrorAction SilentlyContinue) {
@@ -239,7 +265,7 @@ if ($ports.Count -eq 3) {
 
 $optionalMissing = New-Object System.Collections.Generic.List[string]
 $ocrmypdfAvailable = $false
-if (Get-Command uv -ErrorAction SilentlyContinue) {
+if ($pythonEnvironmentReady -and (Get-Command uv -ErrorAction SilentlyContinue)) {
   Push-Location (Join-Path $projectRoot "backend")
   try {
     $previousErrorAction = $ErrorActionPreference

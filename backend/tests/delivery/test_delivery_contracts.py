@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import json
+import os
+import shutil
+import subprocess
 from pathlib import Path
 
 
@@ -232,3 +235,54 @@ def test_delivery_scripts_do_not_embed_secrets_or_full_database_urls_in_results(
     assert "api_key_present" in preflight
     assert "DATABASE_URL=" not in preflight
     assert "DATABASE_URL=" not in health
+
+
+def test_preflight_supports_uninitialized_release_layout(tmp_path):
+    release_root = tmp_path / "release"
+    for relative_path in (
+        "delivery/toolchain-lock.json",
+        "delivery/release-policy.json",
+        "scripts/delivery/Delivery.Common.ps1",
+        "scripts/delivery/Test-Preflight.ps1",
+        "backend/alembic/versions/0012_chunk_embeddings.py",
+    ):
+        source = PROJECT_ROOT / relative_path
+        target = release_root / relative_path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, target)
+
+    environment = os.environ.copy()
+    environment.update(
+        {
+            "POSTGRES_PORT": "15432",
+            "BACKEND_PORT": "18000",
+            "FRONTEND_PORT": "13000",
+        }
+    )
+    powershell = Path(os.environ["WINDIR"]) / "System32/WindowsPowerShell/v1.0/powershell.exe"
+    completed = subprocess.run(
+        [
+            str(powershell),
+            "-NoLogo",
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            str(release_root / "scripts/delivery/Test-Preflight.ps1"),
+            "-Quiet",
+        ],
+        env=environment,
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=False,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    result = json.loads(
+        (release_root / "backend/data/runtime/logs/preflight.json").read_text(encoding="utf-8")
+    )
+    assert result["status"] == "ok"
+    assert result["checks"]["initialization_required"] is True
+    assert "INITIALIZATION_REQUIRED:CONFIG" in result["warnings"]
+    assert "INITIALIZATION_REQUIRED:PYTHON_ENVIRONMENT" in result["warnings"]
