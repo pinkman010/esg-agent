@@ -20,6 +20,8 @@ async def test_goldwind_digital_pdf_product_closure(
     api_session,
     monkeypatch,
 ):
+    if not GOLDWIND_PDF.is_file():
+        pytest.skip("authorized Goldwind regression asset is not installed")
     source_bytes = GOLDWIND_PDF.read_bytes()
     source_hash = sha256(source_bytes).hexdigest()
 

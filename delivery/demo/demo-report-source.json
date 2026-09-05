@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "company_name": "ESG-Agent Demo Manufacturing Co., Ltd.",
+  "report_year": 2025,
+  "title": "2025 Fictional Sustainability Report",
+  "fictional_notice": "This is a fictional report generated solely for ESG-Agent delivery verification. It contains no real company, person, credential, model response, or confidential data.",
+  "metadata": {
+    "author": "ESG-Agent delivery verification",
+    "subject": "Synthetic ESG workflow fixture",
+    "creator": "ESG-Agent deterministic report generator",
+    "keywords": "fictional, synthetic, delivery verification"
+  },
+  "pages": [
+    {
+      "title": "About this report",
+      "paragraphs": [
+        "Reporting period: 1 January 2025 to 31 December 2025. The reporting boundary is a fictional manufacturing site and its directly managed operations.",
+        "The report is a compact engineering fixture. It is not an assurance statement, certification, legal opinion, or claim of conformity with any reporting standard.",
+        "All names, figures, locations, policies, incidents, targets, and governance bodies in this document are invented for local workflow verification."
+      ]
+    },
+    {
+      "title": "Governance and ethics",
+      "paragraphs": [
+        "A fictional Sustainability Committee meets quarterly and reports to the fictional board. The committee reviews climate, workforce, safety, community, and product topics.",
+        "The fictional code of conduct covers conflicts of interest, anti-bribery expectations, speaking-up channels, retaliation prevention, and annual employee acknowledgement.",
+        "No real director, employee, customer, supplier, or public authority is identified in this synthetic report."
+      ]
+    },
+    {
+      "title": "Energy and climate",
+      "paragraphs": [
+        "Illustrative electricity consumption was 12,400 megawatt-hours in 2025. A fictional rooftop solar system supplied 1,860 megawatt-hours of that amount.",
+        "Illustrative direct greenhouse gas emissions were 2,140 tonnes CO2e and illustrative purchased-energy emissions were 4,720 tonnes CO2e. These numbers are intentionally synthetic.",
+        "The fictional company aims to reduce energy intensity by 8 percent from its synthetic 2025 baseline by 2028."
+      ]
+    },
+    {
+      "title": "Materials, water, and waste",
+      "paragraphs": [
+        "Illustrative material input was 18,300 tonnes, including 3,100 tonnes described as recycled content. No figure is sourced from a real company.",
+        "Illustrative water withdrawal was 96,000 cubic metres and illustrative discharge was 61,000 cubic metres. The site is assigned to a fictional location.",
+        "Illustrative waste generation was 1,240 tonnes, of which 910 tonnes was directed to reuse or recycling and 330 tonnes was directed to disposal."
+      ]
+    },
+    {
+      "title": "People and workplace",
+      "paragraphs": [
+        "The fictional year-end workforce was 620 employees. Illustrative learning time averaged 18 hours per employee, covering role skills, safety, ethics, and environmental awareness.",
+        "The fictional company describes equal-opportunity hiring, accessible grievance channels, privacy safeguards, and a prohibition on forced and child labour.",
+        "All workforce counts and practices are generated examples and do not describe an actual employer."
+      ]
+    },
+    {
+      "title": "Health and safety",
+      "paragraphs": [
+        "The fictional safety programme uses induction, task risk assessment, permit controls, incident reporting, and corrective-action tracking.",
+        "Illustrative 2025 performance included 1,120,000 hours worked, two recordable injuries, no fatalities, and four near-miss investigations.",
+        "A synthetic emergency exercise covered evacuation, first aid, chemical containment, and communication with fictional responders."
+      ]
+    },
+    {
+      "title": "Community and supply chain",
+      "paragraphs": [
+        "The fictional company describes annual community dialogue and a synthetic skills workshop. No donation, beneficiary, partner, or location is real.",
+        "Illustrative supplier screening covers labour, safety, environmental controls, business ethics, and information security. Findings are assigned corrective due dates.",
+        "The report contains no confidential supplier assessment, commercial term, personal data, or external model response."
+      ]
+    },
+    {
+      "title": "Product responsibility and contact",
+      "paragraphs": [
+        "The fictional product process includes design review, traceability, quality inspection, complaint logging, and corrective-action verification.",
+        "Illustrative 2025 data recorded 31 fictional customer cases, all closed through the synthetic workflow, and no fictional product recall.",
+        "Delivery verification contact: local operator of this ESG-Agent installation. No external address or personal contact is embedded in the fixture."
+      ]
+    }
+  ]
+}
