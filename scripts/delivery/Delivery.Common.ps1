@@ -221,7 +221,70 @@ function Get-EsgRuntimeStateRoot {
 }
 
 function Get-EsgLogRoot {
-  $root = Join-Path (Get-EsgProjectRoot) "tmp\logs"
+  $root = Join-Path (Get-EsgProjectRoot) "backend\data\runtime\logs"
   New-Item -ItemType Directory -Path $root -Force | Out-Null
   return [System.IO.Path]::GetFullPath($root)
+}
+
+function Get-EsgDeliveryStateRoot {
+  $root = Join-Path (Get-EsgProjectRoot) "backend\data\runtime\delivery"
+  New-Item -ItemType Directory -Path $root -Force | Out-Null
+  return [System.IO.Path]::GetFullPath($root)
+}
+
+function Get-EsgProcessManifestPath {
+  return (Join-Path (Get-EsgDeliveryStateRoot) "processes.json")
+}
+
+function Get-EsgBuildManifestPath {
+  return (Join-Path (Get-EsgDeliveryStateRoot) "frontend-build.json")
+}
+
+function Get-EsgRootHash {
+  $normalized = (Get-EsgProjectRoot).TrimEnd("\").ToLowerInvariant()
+  $bytes = [System.Text.Encoding]::UTF8.GetBytes($normalized)
+  $sha = [System.Security.Cryptography.SHA256]::Create()
+  try {
+    return -join ($sha.ComputeHash($bytes) | ForEach-Object { $_.ToString("x2") })
+  } finally {
+    $sha.Dispose()
+  }
+}
+
+function Write-EsgJsonFile {
+  param(
+    [Parameter(Mandatory)][string]$Path,
+    [Parameter(Mandatory)]$Value,
+    [int]$Depth = 8
+  )
+
+  New-Item -ItemType Directory -Path (Split-Path -Parent $Path) -Force | Out-Null
+  [System.IO.File]::WriteAllText(
+    $Path,
+    ($Value | ConvertTo-Json -Depth $Depth),
+    (New-Object System.Text.UTF8Encoding($false))
+  )
+}
+
+function Get-EsgPackageVersion {
+  $projectFile = Join-Path (Get-EsgProjectRoot) "backend\pyproject.toml"
+  $match = Select-String -LiteralPath $projectFile -Pattern '^version\s*=\s*"([^"]+)"' |
+    Select-Object -First 1
+  if (-not $match) {
+    throw "VERSION_UNKNOWN: backend package version is unavailable"
+  }
+  return $match.Matches[0].Groups[1].Value
+}
+
+function ConvertTo-EsgPort {
+  param(
+    [Parameter(Mandatory)][string]$Value,
+    [Parameter(Mandatory)][string]$Name
+  )
+
+  $port = 0
+  if (-not [int]::TryParse($Value, [ref]$port) -or $port -lt 1 -or $port -gt 65535) {
+    throw "PORT_INVALID: $Name must be between 1 and 65535"
+  }
+  return $port
 }

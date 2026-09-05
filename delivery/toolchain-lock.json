@@ -14,7 +14,7 @@
     "recipient_minimum": "5.1"
   },
   "powershell_7": {
-    "version": "7.6.4",
+    "version": "7.6.5",
     "recipient_required": false
   },
   "dotnet_framework": {

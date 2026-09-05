@@ -34,7 +34,7 @@ def test_toolchain_lock_matches_supported_delivery_baseline():
         "recovery_source": "5.1.26100.9168",
         "recipient_minimum": "5.1",
     }
-    assert toolchain["powershell_7"]["version"] == "7.6.4"
+    assert toolchain["powershell_7"]["version"] == "7.6.5"
     assert toolchain["powershell_7"]["recipient_required"] is False
     assert toolchain["dotnet_framework"] == {
         "recovery_release": 533509,
@@ -122,6 +122,7 @@ def test_delivery_environment_templates_are_safe_by_default():
     )
 
     assert root_env["APP_ENV"] == "demo"
+    assert root_env["COMPOSE_PROJECT_NAME"] == "esg-agent"
     assert root_env["DATABASE_URL"] == ""
     assert root_env["POSTGRES_PASSWORD"] == ""
     assert root_env["OCR_ENABLED"] == "false"
@@ -157,3 +158,77 @@ def test_compose_uses_pinned_image_secret_input_and_healthcheck():
     assert "interval: 5s" in compose
     assert "timeout: 5s" in compose
     assert "retries: 20" in compose
+
+
+def test_windows_lifecycle_scripts_follow_safety_contract():
+    script_root = PROJECT_ROOT / "scripts/delivery"
+    expected = {
+        "Delivery.Common.ps1",
+        "Test-Preflight.ps1",
+        "Initialize-Environment.ps1",
+        "Initialize-Database.ps1",
+        "Start-EsgAgent.ps1",
+        "Stop-EsgAgent.ps1",
+        "Test-EsgAgent.ps1",
+        "New-EsgAgentBackup.ps1",
+        "Restore-EsgAgentBackup.ps1",
+    }
+    texts = {
+        name: (script_root / name).read_text(encoding="utf-8")
+        for name in expected
+    }
+    combined = "\n".join(texts.values()).casefold()
+
+    assert "$psscriptroot" in combined
+    assert "uv sync --frozen" in texts["Initialize-Environment.ps1"]
+    assert "pnpm install --frozen-lockfile" in texts["Initialize-Environment.ps1"]
+    assert "corepack" in texts["Initialize-Environment.ps1"]
+    assert "['http://localhost:" not in texts["Initialize-Environment.ps1"]
+    assert "uv run --frozen --no-sync uvicorn" in texts["Start-EsgAgent.ps1"]
+    assert "pnpm start" in texts["Start-EsgAgent.ps1"]
+    assert "--reload" not in texts["Start-EsgAgent.ps1"]
+    assert "-WindowStyle Hidden" in texts["Start-EsgAgent.ps1"]
+    assert "-PassThru" in texts["Start-EsgAgent.ps1"]
+    assert "-RedirectStandardOutput" in texts["Start-EsgAgent.ps1"]
+    assert "-RedirectStandardError" in texts["Start-EsgAgent.ps1"]
+    assert "[switch]$OpenBrowser" in texts["Start-EsgAgent.ps1"]
+    assert "http://localhost:" in texts["Start-EsgAgent.ps1"]
+    assert "Get-EsgProcessManifestPath" in texts["Start-EsgAgent.ps1"]
+    assert "Get-EsgProcessManifestPath" in texts["Stop-EsgAgent.ps1"]
+    assert "processes.json" in texts["Delivery.Common.ps1"]
+    assert "root_hash" in texts["Start-EsgAgent.ps1"]
+    assert "root_hash" in texts["Stop-EsgAgent.ps1"]
+    assert "Get-NetTCPConnection" in texts["Test-Preflight.ps1"]
+    assert "excludedportrange" in texts["Test-Preflight.ps1"]
+    assert "PORT_IN_USE" in texts["Test-Preflight.ps1"]
+    assert "PORT_EXCLUDED" in texts["Test-Preflight.ps1"]
+    assert "StrictDelivery" in texts["Test-Preflight.ps1"]
+    assert "STARTUP_TIMEOUT_SECONDS" in texts["Start-EsgAgent.ps1"]
+    assert "BACKEND_PORT" in texts["Start-EsgAgent.ps1"]
+    assert "FRONTEND_PORT" in texts["Start-EsgAgent.ps1"]
+    assert "BACKEND_PORT" in texts["Test-EsgAgent.ps1"]
+    assert "FRONTEND_PORT" in texts["Test-EsgAgent.ps1"]
+    assert "-IncludeDatabase" in texts["Stop-EsgAgent.ps1"]
+    assert "docker compose" in texts["Stop-EsgAgent.ps1"]
+
+    for forbidden in (
+        "reset to factory defaults",
+        "clean up data",
+        "docker compose down -v",
+        "docker_data.vhdx",
+        "delete excludedportrange",
+        "remove-item -recurse $home",
+    ):
+        assert forbidden not in combined
+
+
+def test_delivery_scripts_do_not_embed_secrets_or_full_database_urls_in_results():
+    script_root = PROJECT_ROOT / "scripts/delivery"
+    preflight = (script_root / "Test-Preflight.ps1").read_text(encoding="utf-8")
+    health = (script_root / "Test-EsgAgent.ps1").read_text(encoding="utf-8")
+
+    assert "OPENAI_COMPATIBLE_API_KEY" in preflight
+    assert "EMBEDDING_API_KEY" in preflight
+    assert "api_key_present" in preflight
+    assert "DATABASE_URL=" not in preflight
+    assert "DATABASE_URL=" not in health
