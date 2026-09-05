@@ -14,7 +14,7 @@ v1.2 之后的发布后缺陷修复已纳入 `v1.3`：普通产品运行统一�
 
 2026-08-24 已完成 `v1.3.1` 后续前端视觉与 OCR 证据展示验收收尾：报告工作区和 ESG 报告入口统一主图体系，低质量 OCR 原文默认降级折叠并保留 PDF 原页核对。该基线已冻结，正式发布版本号与 tag 仍保持 `v1.3.1`，后续版本发布单独执行。完整结论见 `docs/product/frontend-visual-migration-acceptance.md`。
 
-`1.5` 可复现交付候选正在形成：发布 ZIP 以固定 Git commit 为来源，包含锁文件、配置模板、PowerShell 生命周期脚本、C# 轻量启动器、合成演示报告和逐文件 checksum。当前已完成本机启动、真实 demo HTTP 闭环与确定性归档验证；等价干净环境验收仍延期，因此 1.5 尚未成为正式发布，也未创建 tag 或 Release。接收方入口见 `docs/delivery/INSTALL-WINDOWS.md`。
+`1.5` 可复现交付候选已完成 Task 1–10 工程实现：后端包、前端包和 OpenAPI 使用内部包版本 `1.5.0`，公开交付名保持 `1.5`。发布 ZIP 以固定 Git commit 为来源，包含锁文件、配置模板、PowerShell 生命周期脚本、C# 轻量启动器、合成演示报告和逐文件 checksum；本机启动、真实 demo HTTP 闭环与确定性归档均已验证。等价干净环境验收仍延期，因此 `v1.3.1` 仍是最近正式发布 tag，`1.5` 尚未创建 tag 或 Release。接收方入口见 `docs/delivery/INSTALL-WINDOWS.md`。
 
 AI 候选路由已完成受控解冻：`image_body_not_extracted` evidence 不再进入默认外部模型候选，显式非实质证据和图片正文未提取证据使用统一 AI 本地分类；索引限定路由本身不被误判为非实质证据。`confirm_llm=false` 继续保持零调用和无逐项 suggestion；已授权但零合格候选的运行保存逐项跳过原因，便于前端解释和只读审计。Task 9 已通过新的 Envision 产品 run 完成授权对比：旧 run 的 4 次弱证据调用降为 0，499 项规则、风险、适用性和证据页差异均为 0。模型、Prompt、数据库、规则、风险、人工复核和导出口径均未改变。完整结论见 `docs/product/ai-candidate-routing-acceptance.md`。
 

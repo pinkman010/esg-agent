@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import ast
 import json
 import os
 import shutil
 import subprocess
+import tomllib
 from pathlib import Path
 
 
@@ -24,6 +26,42 @@ def _env(path: str) -> dict[str, str]:
         assert separator, f"invalid environment line in {path}: {raw_line}"
         values[key] = value
     return values
+
+
+def _assigned_string(path: str, name: str) -> str:
+    tree = ast.parse((PROJECT_ROOT / path).read_text(encoding="utf-8"))
+    for statement in tree.body:
+        if not isinstance(statement, ast.Assign):
+            continue
+        if any(isinstance(target, ast.Name) and target.id == name for target in statement.targets):
+            assert isinstance(statement.value, ast.Constant)
+            assert isinstance(statement.value.value, str)
+            return statement.value.value
+    raise AssertionError(f"missing {name} in {path}")
+
+
+def _launcher_versions() -> dict[str, str]:
+    powershell = Path(os.environ["WINDIR"]) / "System32/WindowsPowerShell/v1.0/powershell.exe"
+    script = (
+        "$item = Get-Item -LiteralPath $env:ESG_AGENT_LAUNCHER_VERSION_PATH; "
+        "[ordered]@{"
+        "product_version=$item.VersionInfo.ProductVersion; "
+        "file_version=$item.VersionInfo.FileVersion; "
+        "assembly_version=[Reflection.AssemblyName]::GetAssemblyName($item.FullName).Version.ToString()"
+        "} | ConvertTo-Json -Compress"
+    )
+    environment = os.environ.copy()
+    environment["ESG_AGENT_LAUNCHER_VERSION_PATH"] = str(PROJECT_ROOT / "ESG-Agent.exe")
+    completed = subprocess.run(
+        [str(powershell), "-NoLogo", "-NoProfile", "-Command", script],
+        env=environment,
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+    assert completed.returncode == 0, completed.stderr
+    return json.loads(completed.stdout)
 
 
 def test_toolchain_lock_matches_supported_delivery_baseline():
@@ -74,6 +112,43 @@ def test_release_policy_uses_public_version_1_5():
     assert policy["launcher_manifest"] == "delivery/launcher/launcher-manifest.json"
     assert policy["generated_demo_pdf"] == "demo/esg-agent-synthetic-report-2025.pdf"
     assert policy["checksum_algorithm"] == "SHA256"
+
+
+def test_release_versions_are_consistent_for_1_5_candidate():
+    policy = _json("delivery/release-policy.json")
+    launcher_manifest = _json("delivery/launcher/launcher-manifest.json")
+    backend_project = tomllib.loads(
+        (PROJECT_ROOT / "backend/pyproject.toml").read_text(encoding="utf-8")
+    )
+    backend_lock = tomllib.loads(
+        (PROJECT_ROOT / "backend/uv.lock").read_text(encoding="utf-8")
+    )
+    backend_lock_project = next(
+        package for package in backend_lock["package"] if package["name"] == "esg-agent-backend"
+    )
+    frontend_package = _json("frontend/package.json")
+    launcher_versions = _launcher_versions()
+
+    assert policy["public_version"] == "1.5"
+    assert policy["package_version"] == "1.5.0"
+    assert policy["archive_name"] == "esg-agent-1.5-windows-x64.zip"
+    assert launcher_manifest["public_version"] == "1.5"
+    assert launcher_manifest["package_version"] == "1.5.0"
+    assert backend_project["project"]["version"] == "1.5.0"
+    assert backend_lock_project["version"] == "1.5.0"
+    assert _assigned_string("backend/src/main.py", "APP_VERSION") == "1.5.0"
+    assert frontend_package["version"] == "1.5.0"
+    assert launcher_versions == {
+        "product_version": "1.5",
+        "file_version": "1.5.0.0",
+        "assembly_version": "1.5.0.0",
+    }
+
+    assert "`1.5` 可复现交付候选" in (PROJECT_ROOT / "README.md").read_text(
+        encoding="utf-8"
+    )
+    for path in ("docs/DESIGN.md", "docs/DEVELOPMENT.md"):
+        assert "1.5 可复现交付" in (PROJECT_ROOT / path).read_text(encoding="utf-8")
 
 
 def test_language_and_package_manager_versions_match_toolchain_lock():

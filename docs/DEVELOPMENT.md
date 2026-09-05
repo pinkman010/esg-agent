@@ -8,7 +8,7 @@ v1.3.1 发布门禁按顺序执行，避免 PostgreSQL、pytest、前端构建�
 
 完整发布范围、限制和终止条件见 `docs/product/v1.3.1-final-release-acceptance.md`；`docs/product/v1.3-final-release-acceptance.md` 保留为历史发布记录。
 
-1.5 可复现交付当前是 Task 1–10 候选。启动器、生命周期脚本、合成演示和确定性 ZIP 已纳入工程实现；等价干净环境验收仍延期，未创建 `v1.5` tag 或 Release。正式基线在 Task 10 元数据同步前继续保持 `v1.3.1`。
+1.5 可复现交付已完成 Task 1–10 工程实现。后端包、前端包和 OpenAPI `info.version` 使用 `1.5.0`，公开交付名保持 `1.5`；启动器、生命周期脚本、合成演示和确定性 ZIP 已纳入候选。等价干净环境验收仍延期，未创建 `v1.5` tag 或 Release，最近正式发布 tag 继续保持 `v1.3.1`。
 
 ## 1. 本地开发方式
 
