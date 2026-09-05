@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "python": "3.11.14",
+  "uv": "0.9.28",
+  "node": "24.15.0",
+  "corepack": "0.34.6",
+  "pnpm": "11.19.0",
+  "windows": {
+    "recovery_source": "Windows 11 x64 10.0.26200",
+    "recipient_support": "Windows 11 x64"
+  },
+  "windows_powershell": {
+    "recovery_source": "5.1.26100.9168",
+    "recipient_minimum": "5.1"
+  },
+  "powershell_7": {
+    "version": "7.6.4",
+    "recipient_required": false
+  },
+  "dotnet_framework": {
+    "recovery_release": 533509,
+    "recipient_minimum_release": 533320
+  },
+  "launcher_compiler": {
+    "file_version": "4.8.9221.0",
+    "sha256": "46809206887326D2D24DB1EFF1F3064DE972C3451ABE766B49111450A5E08E00",
+    "deterministic": false,
+    "maintainer_only": true
+  },
+  "docker": {
+    "recovery_source": {
+      "desktop": "4.80.0",
+      "engine": "29.6.1",
+      "compose": "5.1.4"
+    },
+    "current_validation": {
+      "desktop": "4.89.0",
+      "engine": "29.7.2",
+      "compose": "5.5.0"
+    },
+    "delivery_target": {
+      "desktop_minimum": "4.89.0",
+      "compose_bundled": "5.5.0"
+    }
+  },
+  "postgresql": "16.14",
+  "pgvector": "0.8.4",
+  "ocrmypdf": "17.8.0",
+  "ghostscript": "10.07.1",
+  "tesseract": "5.5.0.20241111",
+  "tesseract_languages": [
+    "chi_sim",
+    "eng",
+    "osd"
+  ],
+  "poppler_pdftoppm": "26.02.0",
+  "libreoffice": "26.2.1.2",
+  "browsers": {
+    "chrome_visual_acceptance": "151.0.7922.170",
+    "chrome_current_executable": "152.0.7977.76",
+    "edge_validated": "146.0.3856.109",
+    "support_policy": "validated version or later stable release"
+  },
+  "postgres_image": "pgvector/pgvector:pg16@sha256:ad2e18408bf447f62092a8a5259e7df10505c5a0360bd1a1853ac8b8b0763da2"
+}

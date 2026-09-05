@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "public_version": "1.5",
+  "package_version": "1.5.0",
+  "git_tag": "v1.5",
+  "archive_name": "esg-agent-1.5-windows-x64.zip",
+  "source_mode": "git_archive",
+  "launcher_artifact": "ESG-Agent.exe",
+  "launcher_manifest": "delivery/launcher/launcher-manifest.json",
+  "generated_demo_pdf": "demo/esg-agent-synthetic-report-2025.pdf",
+  "checksum_algorithm": "SHA256",
+  "pdf_policy": "deny_unless_explicitly_allowed",
+  "allowed_pdf_paths": [
+    "demo/esg-agent-synthetic-report-2025.pdf"
+  ],
+  "allowed_root_executables": [
+    "ESG-Agent.exe"
+  ],
+  "deny_patterns": [
+    ".env",
+    ".git/**",
+    "**/node_modules/**",
+    "**/.venv/**",
+    "frontend/.next/**",
+    "tmp/**",
+    "backend/data/runtime/**",
+    "**/*.dump",
+    "**/*.backup",
+    "**/*.log",
+    "**/*model-response*",
+    "**/*model_response*",
+    "首页.png",
+    "**/*.msi",
+    "**/setup.exe",
+    "**/*.exe"
+  ]
+}
