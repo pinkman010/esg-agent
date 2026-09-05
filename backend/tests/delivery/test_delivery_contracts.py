@@ -493,3 +493,38 @@ def test_preflight_reports_missing_volume_after_partial_initialization(tmp_path)
     )
     assert result["status"] == "failed"
     assert "DOCKER_VOLUME_MISSING" in result["errors"]
+
+
+def test_start_reopens_frontend_when_services_are_already_healthy(tmp_path):
+    release_root = tmp_path / "release"
+    scripts = release_root / "scripts/delivery"
+    scripts.mkdir(parents=True)
+    for name in ("Delivery.Common.ps1", "Start-EsgAgent.ps1"):
+        shutil.copy2(PROJECT_ROOT / "scripts/delivery" / name, scripts / name)
+    (scripts / "Test-EsgAgent.ps1").write_text("exit 0\n", encoding="utf-8")
+    (release_root / ".env").write_text(
+        "BACKEND_PORT=18000\nFRONTEND_PORT=13000\nSTARTUP_TIMEOUT_SECONDS=30\n",
+        encoding="utf-8",
+    )
+    manifest_path = release_root / "backend/data/runtime/delivery/processes.json"
+    manifest_path.parent.mkdir(parents=True)
+    manifest_path.write_text('{"browser_opened":true}\n', encoding="utf-8")
+
+    browser_log = tmp_path / "browser-open.log"
+    environment = os.environ.copy()
+    environment["ESG_AGENT_START_SCRIPT"] = str(scripts / "Start-EsgAgent.ps1")
+    environment["ESG_AGENT_BROWSER_LOG"] = str(browser_log)
+    command = (
+        "function Start-Process { param([string]$FilePath); "
+        "Add-Content -LiteralPath $env:ESG_AGENT_BROWSER_LOG -Value $FilePath }; "
+        "& $env:ESG_AGENT_START_SCRIPT -OpenBrowser"
+    )
+
+    for _ in range(2):
+        completed = _windows_powershell(command, environment)
+        assert completed.returncode == 0, completed.stderr
+
+    assert browser_log.read_text(encoding="utf-8").splitlines() == [
+        "http://localhost:13000",
+        "http://localhost:13000",
+    ]

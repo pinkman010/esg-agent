@@ -26,11 +26,9 @@ function Open-EsgLocalFrontendOnce {
     throw "PROCESS_MANIFEST_MISSING: cannot record browser state"
   }
   $manifest = Get-Content -LiteralPath $ManifestPath -Raw | ConvertFrom-Json
-  if (-not $manifest.browser_opened) {
-    Start-Process -FilePath $Url
-    $manifest.browser_opened = $true
-    Write-EsgJsonFile -Path $ManifestPath -Value $manifest
-  }
+  Start-Process -FilePath $Url
+  $manifest.browser_opened = $true
+  Write-EsgJsonFile -Path $ManifestPath -Value $manifest
 }
 
 try {
