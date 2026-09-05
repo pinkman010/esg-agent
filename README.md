@@ -14,6 +14,8 @@ v1.2 之后的发布后缺陷修复已纳入 `v1.3`：普通产品运行统一�
 
 2026-08-24 已完成 `v1.3.1` 后续前端视觉与 OCR 证据展示验收收尾：报告工作区和 ESG 报告入口统一主图体系，低质量 OCR 原文默认降级折叠并保留 PDF 原页核对。该基线已冻结，正式发布版本号与 tag 仍保持 `v1.3.1`，后续版本发布单独执行。完整结论见 `docs/product/frontend-visual-migration-acceptance.md`。
 
+`1.5` 可复现交付候选正在形成：发布 ZIP 以固定 Git commit 为来源，包含锁文件、配置模板、PowerShell 生命周期脚本、C# 轻量启动器、合成演示报告和逐文件 checksum。当前已完成本机启动、真实 demo HTTP 闭环与确定性归档验证；等价干净环境验收仍延期，因此 1.5 尚未成为正式发布，也未创建 tag 或 Release。接收方入口见 `docs/delivery/INSTALL-WINDOWS.md`。
+
 AI 候选路由已完成受控解冻：`image_body_not_extracted` evidence 不再进入默认外部模型候选，显式非实质证据和图片正文未提取证据使用统一 AI 本地分类；索引限定路由本身不被误判为非实质证据。`confirm_llm=false` 继续保持零调用和无逐项 suggestion；已授权但零合格候选的运行保存逐项跳过原因，便于前端解释和只读审计。Task 9 已通过新的 Envision 产品 run 完成授权对比：旧 run 的 4 次弱证据调用降为 0，499 项规则、风险、适用性和证据页差异均为 0。模型、Prompt、数据库、规则、风险、人工复核和导出口径均未改变。完整结论见 `docs/product/ai-candidate-routing-acceptance.md`。
 
 当前记录门禁：后端 823 项测试和 Ruff 通过；前端 lint 通过（0 error、2 条已知 warning），39 个测试文件、150 项测试、typecheck 和 production build 通过；Envision v3 回归的新增 false disclosed、wrong source page 和 global fallback 均为 0，audit 为 0 error、0 warning。Goldwind 52 页真实数字文本报告已完成独立上传、分析、复核、整改、草稿、下载和审计闭环，用作产品泛化工程证据。内置报告画像同时校验文件名、页数和源 PDF SHA-256，防止同名同页文件误用报告专属证据路由。
@@ -33,7 +35,11 @@ esg-agent/
     DESIGN.md
     DEVELOPMENT.md
     ASSETS.md
+    delivery/
     plan/
+  delivery/
+  scripts/delivery/
+  ESG-Agent.exe
 ```
 
 ## 核心文档
@@ -41,6 +47,10 @@ esg-agent/
 - 技术设计：`docs/DESIGN.md`
 - 开发、运行、测试：`docs/DEVELOPMENT.md`
 - 资产与证据边界：`docs/ASSETS.md`
+- Windows 接收方安装：`docs/delivery/INSTALL-WINDOWS.md`
+- 本地运维、备份与恢复：`docs/delivery/OPERATIONS.md`
+- 等价干净环境验收：`docs/delivery/CLEAN-ACCEPTANCE.md`
+- Docker 交付评估：`docs/delivery/DOCKER-EVALUATION.md`
 - API 契约：`docs/product/api-contract.md`
 - MVP 验收：`docs/product/mvp-acceptance-report.md`
 - LLM 辅助建议层验收：`docs/product/llm-assistance-acceptance.md`
@@ -86,33 +96,15 @@ esg-agent/
 
 ## 本地运行
 
-Windows 本地运行建议使用 Docker Desktop 4.89.0 或更高版本。若 Docker Desktop 因残留套接字无法启动，或后端绑定 `8000` 返回 `WinError 10013`，先按 [Windows 启动故障排查](docs/DEVELOPMENT.md#windows-启动故障排查) 处理；不要在 Docker 报错窗口选择 `Reset to factory defaults`。
+Windows 接收方建议使用 Docker Desktop 4.89.0 或更高版本。首次从 1.5 候选 ZIP 恢复时按 [Windows 安装与首次启动](docs/delivery/INSTALL-WINDOWS.md) 执行；安装完成后双击根目录 `ESG-Agent.exe` 即可启动服务并打开网页。
 
 ```powershell
-docker compose up -d postgres
-
-$demoDbExists = docker compose exec -T postgres `
-  psql -U esg_agent -d postgres -tAc `
-  "SELECT 1 FROM pg_database WHERE datname='esg_agent_demo'"
-if ($demoDbExists.Trim() -ne "1") {
-  docker compose exec -T postgres createdb -U esg_agent esg_agent_demo
-}
-
-cd backend
-uv sync
-$env:APP_ENV="demo"
-$env:DATABASE_URL="postgresql+psycopg://esg_agent:esg_agent@localhost:5432/esg_agent_demo"
-$env:UPLOAD_DIR="backend/data/runtime/demo/uploads"
-$env:DERIVED_DIR="backend/data/runtime/demo/derived"
-uv run alembic upgrade head
-uv run uvicorn src.main:app --reload --port 8000
-
-cd ../frontend
-pnpm install
-pnpm dev
+./scripts/delivery/Test-Preflight.ps1
+./scripts/delivery/Initialize-Environment.ps1
+./ESG-Agent.exe
 ```
 
-前端默认访问 `http://localhost:3000`，后端 OpenAPI 默认访问 `http://localhost:8000/docs`。数据库 head 为 `0012_chunk_embeddings`。普通产品运行和演示统一使用 `APP_ENV=demo`、`esg_agent_demo` 与 demo runtime；`esg_agent` 保留给开发和长期回归，其中允许存在 regeneration 技术记录。不得通过删除 `esg_agent` 中的历史记录改善首页展示。
+初始化固定使用 demo 环境并生成本地随机数据库密码；外部模型、embedding、OCR 和 VLM 保持关闭。开发者的逐服务命令、Windows Docker 恢复记录和端口处理见 `docs/DEVELOPMENT.md`，不要在 Docker 报错窗口选择 `Reset to factory defaults` 或 `Clean up data`。
 
 ## 验证命令
 

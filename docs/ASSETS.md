@@ -184,3 +184,28 @@ Get-FileHash "backend/data/reports/Envision Energy 2024-zh.pdf" -Algorithm SHA25
 | `frontend/public/visuals/module-materiality-benchmark.webp` | `1524ccf1fe7da03c233f917edc57debdd570d53ea0ff847805871ae3473f4682` | 备用视觉图 |
 | `frontend/public/visuals/module-claw-monitor.webp` | `928659018577a2d8e9d543caf6a634c87193de13da87eae4174d1da10ac9f9d8` | 备用视觉图 |
 
+## 12. 1.5 发布包与迁移资产边界
+
+### 12.1 可进入发布包
+
+- Git 指定 commit 中已跟踪的源码、migration、锁文件、配置模板和文档；
+- `delivery/toolchain-lock.json`、`delivery/release-policy.json` 与 launcher manifest；
+- 根目录已核验的 `ESG-Agent.exe` 及其 C# 源码和应用 manifest；
+- `frontend/public/` 中已登记的静态视觉资产；
+- GRI 结构、规则、来源与编译 manifest，以及不含原始报告内容的 report profile；
+- `delivery/demo/demo-report-source.json` 及由它确定性生成的唯一演示 PDF。
+
+演示 PDF 使用虚构企业和合成数据，只验证交付流程。它不复制 Envision、Goldwind 或 GRI 原始文本，不宣称认证，也不作为规则准确率或专家判断样本。
+
+### 12.2 只允许授权本地恢复
+
+Envision、Goldwind、GRI 官方 PDF、人工复核工作簿、工程 gold、真实模型评估和非公开验收截图继续按 `backend/data/manifests/assets_manifest.json` 管理。它们可以用于维护者门禁，但不进入 Release ZIP。缺少 Goldwind 时发布包测试只允许以 `authorized Goldwind regression asset is not installed` 明确跳过；维护者正式门禁必须先核对资产 SHA-256，并断言没有跳过。
+
+### 12.3 运行时与备份
+
+真实 `.env`、数据库密码、API key、PostgreSQL volume、数据库 dump、上传报告、派生 PDF/OCR、导出、日志和测试输出属于运行或备份数据，默认全部排除。`backend/data/runtime/` 在源码包内只保留目录 `.gitkeep`。
+
+数据库与 runtime 迁移通过 `New-EsgAgentBackup.ps1` 和 `Restore-EsgAgentBackup.ps1` 完成。`-IncludeRuntime` 可能包含非公开报告，必须取得资产授权；备份 ZIP、sidecar checksum 和恢复目标库不进入源码归档。恢复始终写入新目标库，不覆盖原库。
+
+发布构建器对 commit payload 执行路径拒绝、配置模板敏感值检查、launcher 哈希校验和 PDF 白名单。未跟踪文件不会被 `git archive` 读取；`首页.png` 被显式拒绝并保持用户本地文件状态。
+

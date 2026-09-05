@@ -8,6 +8,8 @@ v1.3.1 发布门禁按顺序执行，避免 PostgreSQL、pytest、前端构建�
 
 完整发布范围、限制和终止条件见 `docs/product/v1.3.1-final-release-acceptance.md`；`docs/product/v1.3-final-release-acceptance.md` 保留为历史发布记录。
 
+1.5 可复现交付当前是 Task 1–10 候选。启动器、生命周期脚本、合成演示和确定性 ZIP 已纳入工程实现；等价干净环境验收仍延期，未创建 `v1.5` tag 或 Release。正式基线在 Task 10 元数据同步前继续保持 `v1.3.1`。
+
 ## 1. 本地开发方式
 
 本项目采用前后端单仓：
@@ -782,7 +784,50 @@ uv run --no-sync python -m src.tools.evaluate_shadow_rag `
 
 影子输出使用 `shadow_*` 字段和 `shadow-chunk:<chunk_id>`，不构成最终合规结论。真实 SiliconFlow 和真实 DeepSeek 调用需要分别批准。
 
-## 12. 开发日志
+## 12. 可复现交付与本地启动
+
+接收方流程与开发流程分开维护：
+
+- 接收方以 `docs/delivery/INSTALL-WINDOWS.md` 为入口，使用 release ZIP、`Test-Preflight.ps1`、`Initialize-Environment.ps1` 和 `ESG-Agent.exe`；
+- 开发者可继续使用本文件既有的逐服务命令，但必须加载 demo 配置并保持外部能力关闭；
+- 运维与恢复统一使用 `scripts/delivery/`，不得在启动器二进制中复制数据库或服务逻辑；
+- 全栈 Docker 延期，当前 Compose 只管理 PostgreSQL/pgvector。
+
+固定版本的唯一机器可读来源为 `delivery/toolchain-lock.json`：Python 3.11.14、uv 0.9.28、Node.js 24.15.0、Corepack 0.34.6、pnpm 11.19.0、PostgreSQL 16.14、pgvector 0.8.4、Docker Desktop 接收方最低 4.89.0。PowerShell 7 是维护者可选工具；接收脚本和 launcher 固定兼容系统 Windows PowerShell 5.1。
+
+首次初始化前的 preflight 只核对基础工具、固定版本、Docker daemon、端口、交付锁和 migration head 文件；`.env`、Python 环境或 pnpm 尚未生成时返回 `INITIALIZATION_REQUIRED:*` warning。初始化生成 `.env` 后，preflight 恢复为完整门禁，要求 Python 环境、Compose 配置、确认过的 volume、demo 环境和所有外部能力关闭。
+
+维护者门禁：
+
+```powershell
+./scripts/delivery/Test-Preflight.ps1 -StrictDelivery
+./scripts/delivery/Build-Launcher.ps1 -VerifyTrackedArtifact
+
+cd backend
+uv lock --check
+uv run --no-sync pytest
+uv run --no-sync ruff check .
+
+cd ../frontend
+pnpm test -- --run
+pnpm lint
+pnpm typecheck
+pnpm build
+```
+
+归档只允许 tracked worktree 无差异时构建：
+
+```powershell
+cd backend
+uv run --no-sync python -m src.tools.build_release_archive `
+  --repo-root .. `
+  --commit HEAD `
+  --output-dir ../tmp/release
+```
+
+输出 ZIP、SHA256SUMS、解压审计和合成演示结果只保存在 `tmp/` 或 runtime。候选包不得包含 `.env`、密钥、数据库 dump、授权原始报告、人工工作簿、模型响应、上传缓存、派生 OCR、日志、`首页.png` 或额外安装程序。
+
+## 13. 开发日志
 
 ### 2026-09-03
 

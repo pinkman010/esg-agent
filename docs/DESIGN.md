@@ -516,3 +516,32 @@ Phase 1.5 固定使用向量候选池 Top 10、最终 context Top 5、规则与�
 2. Phase 3 保持关闭。只有取得独立高质量 gold 或专家条件后才重新决策；届时必须重新设计证据准入、审计、降级、risk-v2.1、review、export 和历史 run 重放，并通过 Envision 全量及独立报告泛化门禁。
 
 当前 migration 和环境开关不能自动启用 Phase 2 或 Phase 3。
+
+## 21. 可复现交付架构
+
+1.5 交付采用两层结构：Release ZIP 是授权接收方入口，Git 仓库的固定 commit 与拟定 `v1.5` tag 是审计和重建底座。tag、托管平台 Release 与正式发布结论只在等价干净环境验收完成并经用户确认后创建。
+
+ZIP 由 `git archive` 读取指定 commit，不读取工作区未跟踪文件。归档构建器只额外加入由 commit 内固定 JSON 和生成器产生的合成 PDF，并生成 `release-manifest.json` 与外部 SHA256SUMS。根目录 `ESG-Agent.exe`、C# 源码、应用 manifest、编译器指纹和 launcher manifest 必须哈希一致；归档阶段不重新编译 EXE。
+
+运行架构保持简单：
+
+```text
+ESG-Agent.exe
+  -> 固定调用 scripts/delivery/*.ps1
+  -> PostgreSQL/pgvector：固定 digest 的 Docker Compose 服务
+  -> FastAPI：Windows 本机隐藏进程
+  -> Next.js production server：Windows 本机隐藏进程
+  -> 默认浏览器：http://localhost:<frontend-port>
+```
+
+启动器不安装依赖、不执行 migration、不解析 `.env`、不接受任意脚本参数。初始化、启停、health、备份和恢复语义只在 PowerShell 脚本中实现。全栈 Docker Compose 因 OCR/PDF 系统依赖、Windows 路径、持久化卷、镜像体积和离线成本延期，当前 Compose 只管理数据库。
+
+新写入数据库的报告路径保存为项目相对路径。读取层兼容历史绝对路径，迁移或恢复时先按文件哈希 dry-run 唯一匹配，再由人工确认规范化；无法唯一匹配时保留原记录并报告，不猜测替换。上传、派生、导出、日志、备份与验收输出只写入运行时或 `tmp/`，不进入源码归档。
+
+交付资产分为：
+
+- 可公开交付：源码、锁文件、配置模板、migration、脚本、launcher、静态前端资产、结构/规则 manifest、报告 profile 与虚构演示 PDF；
+- 授权本地回归：Envision、Goldwind、GRI 原始 PDF、人工工作簿及模型评估材料，只按 manifest 恢复，不进入 ZIP；
+- 运行与备份：真实 `.env`、数据库、上传报告、派生 OCR、导出、日志和 dump，默认排除并按授权单独迁移。
+
+demo 安装强制 `APP_ENV=demo`、`confirm_llm=false`、`OCR_ENABLED=false`、`EMBEDDING_ENABLED=false`，模型与 embedding 密钥为空。合成演示客户端只创建草稿输出，核对 `577/499/78/0` 和 AI suggestion 为 0；它不改变规则、风险、人工优先级或正式导出口径。
