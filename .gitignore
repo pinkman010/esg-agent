@@ -32,6 +32,8 @@ dist/
 *.xls
 *.xlsx
 *.xlsm
+*.exe
+!ESG-Agent.exe
 
 # 敏感凭证和证书
 *.pem

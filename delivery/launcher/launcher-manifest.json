@@ -1,0 +1,54 @@
+{
+    "schema_version":  1,
+    "public_version":  "1.5",
+    "package_version":  "1.5.0",
+    "target_framework":  ".NET Framework 4.8.1",
+    "assembly_version":  "1.5.0.0",
+    "file_version":  "1.5.0.0",
+    "product_version":  "1.5",
+    "source_sha256":  "934274499B544DF71C7235F5FD1C7160B476CA3DBFC1B4ABA667476BF5ADDD1B",
+    "app_manifest_sha256":  "8D40B00B963E951F8A55E08AEC6E4547FC65EC039E568B4873EE159123024AD6",
+    "compiler":  {
+                     "file_version":  "4.8.9221.0",
+                     "sha256":  "46809206887326D2D24DB1EFF1F3064DE972C3451ABE766B49111450A5E08E00",
+                     "deterministic":  false,
+                     "maintainer_only":  true
+                 },
+    "compile_arguments":  [
+                              "/nologo",
+                              "/target:winexe",
+                              "/platform:anycpu",
+                              "/optimize+",
+                              "/checked+",
+                              "/reference:System.dll",
+                              "/reference:System.Core.dll",
+                              "/reference:System.Windows.Forms.dll",
+                              "/win32manifest:delivery/launcher/EsgAgentLauncher.exe.manifest",
+                              "/out:tmp/launcher-build/ESG-Agent.exe",
+                              "delivery/launcher/EsgAgentLauncher.cs"
+                          ],
+    "actions":  {
+                    "double_click":  {
+                                         "script":  "Start-EsgAgent.ps1",
+                                         "argument":  "-OpenBrowser"
+                                     },
+                    "--no-browser":  {
+                                         "script":  "Start-EsgAgent.ps1",
+                                         "argument":  null
+                                     },
+                    "--status":  {
+                                     "script":  "Test-EsgAgent.ps1",
+                                     "argument":  null
+                                 },
+                    "--stop":  {
+                                   "script":  "Stop-EsgAgent.ps1",
+                                   "argument":  null
+                               }
+                },
+    "artifact":  {
+                     "path":  "ESG-Agent.exe",
+                     "size_bytes":  14336,
+                     "sha256":  "E3B6346518368605718F8B8BFA39819C6B21C6BF3E9B1179A4ABF6008762AE27"
+                 },
+    "generated_at_utc":  "2026-09-05T07:19:44.8113639Z"
+}
